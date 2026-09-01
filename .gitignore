@@ -1,0 +1,26 @@
+# deps
+node_modules/
+.pnpm-store/
+
+# foundry
+contracts/out/
+contracts/cache/
+contracts/broadcast/
+contracts/lib/
+
+# env & secrets
+.env
+.env.*
+!.env.example
+
+# builds
+dist/
+.next/
+build/
+*.tsbuildinfo
+
+# runtime artifacts
+*.log
+.DS_Store
+apps/api/data/
+deployments/*.local.json
