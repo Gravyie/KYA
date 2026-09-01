@@ -323,14 +323,16 @@ const server = createServer(async (req, res) => {
     const result = await match.r.handler(req, body, match.m.slice(1), url);
     return json(res, 200, result);
   } catch (err) {
-    const status = err.status || 500;
+    const revert = revertName(err);
+    // A revert is the caller's request being refused, not the server failing —
+    // 4xx, and no console.error noise on stage.
+    const status = err.status || (revert ? 400 : 500);
     if (status >= 500) console.error(`[${req.method} ${url.pathname}]`, err);
     return json(res, status, {
       error: err.shortMessage || err.message || 'internal error',
-      // Named custom error, when the chain gave us one. "The contract function
-      // reverted" tells a judge nothing; "OwnerNotHumanVerified" is the whole
-      // point of the gate, so it must survive to the response.
-      revert: revertName(err),
+      // The contract's own error name. "The contract function reverted" tells a
+      // judge nothing; "OwnerNotHumanVerified" is the whole point of the gate.
+      revert,
       code: err.code,
       ...(err.worldResponse ? {worldResponse: err.worldResponse} : {}),
     });
