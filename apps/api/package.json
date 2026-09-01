@@ -1,0 +1,14 @@
+{
+  "name": "@kya/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node src/server.js",
+    "seed": "node src/seed.js"
+  },
+  "dependencies": {
+    "@kya/sdk": "workspace:*",
+    "viem": "2.21.55"
+  }
+}
