@@ -239,3 +239,47 @@ export async function simulateSettle({agentId, capability, value, outcome, evide
 }
 
 export {Outcome, keccak256, toHex};
+
+/**
+ * Move the chain's clock. Used only by the seeder, to spread witnessed history
+ * across real calendar time.
+ *
+ * Without this every seeded receipt lands in the same block second, so an agent
+ * reads as "123 actions, registered 28 minutes ago" — which tells a judge the
+ * history is fabricated before they ask a question. It also makes the staleness
+ * signal meaningless, since nothing can ever be dormant.
+ *
+ * Two RPCs, because they do different jobs and anvil is strict about ordering:
+ *   evm_setNextBlockTimestamp — exact stamp for the NEXT block. Must be strictly
+ *     increasing, so it only works going forward.
+ *   evm_setTime — moves the node's whole clock, forwards or backwards. Needed for
+ *     the initial rewind to the history's genesis.
+ */
+export async function timeTravel(toUnixSeconds) {
+  if (config.chainId !== 31337) return false;
+  const target = BigInt(Math.floor(toUnixSeconds));
+  const current = BigInt(await chainNow());
+
+  try {
+    if (target > current) {
+      await publicClient.request({
+        method: 'evm_setNextBlockTimestamp',
+        params: [`0x${target.toString(16)}`],
+      });
+    } else {
+      // Rewinding: setNextBlockTimestamp would be rejected as non-increasing.
+      await publicClient.request({method: 'evm_setTime', params: [`0x${target.toString(16)}`]});
+    }
+    await publicClient.request({method: 'evm_mine', params: []});
+    return true;
+  } catch {
+    // A node without these RPCs (or a live chain) simply keeps its own clock.
+    return false;
+  }
+}
+
+export async function chainNow() {
+  const block = await publicClient.getBlock({blockTag: 'latest'});
+  return Number(block.timestamp);
+}
+

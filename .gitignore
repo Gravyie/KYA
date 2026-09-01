@@ -22,6 +22,7 @@ build/
 
 # runtime artifacts
 *.log
+.logs/
 .DS_Store
 apps/api/data/
 deployments/*.local.json

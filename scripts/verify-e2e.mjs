@@ -218,12 +218,34 @@ async function main() {
     overspend.onchain.reason,
   );
 
+  /**
+   * Dispatch something that must be refused, and confirm the refusal is written.
+   *
+   * Two deliberate choices:
+   *  - The capability is a REAL task type. /api/dispatch rejects an unknown
+   *    capability with a 400 before it ever reaches the trust engine, so asking
+   *    for "pay" would test the argument validator rather than the mandate.
+   *  - It targets BLOCKED, not LIMITED. This call permanently appends a rejection
+   *    to whichever agent it hits; pointing it at the rookie would flip that
+   *    agent from LIMIT to DECLINE and quietly destroy the demo cast. The agent
+   *    whose story already includes an over-mandate attempt is the safe target.
+   */
   const dispatchBlocked = await api('/api/dispatch', {
-    query: LIMITED,
+    query: BLOCKED,
     capability: 'flight.quote',
-    input: {from: 'BOM', to: 'DEL', date: '2026-09-20', maxValue: '0'},
+    input: {
+      from: 'BOM',
+      to: 'DEL',
+      date: '2026-09-20',
+      maxValue: '500000000000000000000', // 500 against a 2/day mandate
+    },
   });
   check('A blocked dispatch is not executed', dispatchBlocked.accepted === false);
+  check(
+    'Refused for the mandate reason, not a bad request',
+    dispatchBlocked.decision?.checks?.some((c) => c.id === 'authority.onchain' && !c.pass),
+    dispatchBlocked.decision?.summary?.slice(0, 70),
+  );
   check(
     'The blocked attempt is written on-chain, not just refused',
     Boolean(dispatchBlocked.rejection?.hash),

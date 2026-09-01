@@ -117,6 +117,15 @@ route('GET', /^\/api\/agents$/, async () => {
   };
 });
 
+/**
+ * Compact roster for the rail. One batched call for every agent, so the sidebar
+ * populates in a single round-trip instead of N passport reads.
+ */
+route('GET', /^\/api\/directory$/, async () => {
+  const rows = await kyaClient().directory();
+  return {count: rows.length, agents: rows, parentName: config.parentName};
+});
+
 route('GET', /^\/api\/agents\/([^/]+)$/, async (_req, _body, [query]) => {
   const passport = await kyaClient().passportByQuery(decodeURIComponent(query));
   if (!passport) {
