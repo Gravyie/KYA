@@ -19,7 +19,12 @@ async function call(path, body) {
     throw new Error('Cannot reach the KYA API. Is it running on :5055?');
   }
   const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw Object.assign(new Error(json.error || `HTTP ${res.status}`), {status: res.status, payload: json});
+  if (!res.ok) {
+    // Prefer the contract's own error name. "The contract function reverted" is
+    // useless on stage; "OwnerNotHumanVerified" is the demonstration.
+    const message = json.revert ? `${json.revert} — the contract refused this` : json.error || `HTTP ${res.status}`;
+    throw Object.assign(new Error(message), {status: res.status, revert: json.revert, payload: json});
+  }
   return json;
 }
 

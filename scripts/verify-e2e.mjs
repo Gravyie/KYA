@@ -130,6 +130,26 @@ async function main() {
       `kind=${sim.onchain.kind} canRegister=${sim.canRegisterAgent}`,
     );
     check('Simulator response carries an explicit warning', typeof sim.warning === 'string' && sim.warning.length > 0);
+
+    // The refusal must be demonstrable, not just asserted in a warning string.
+    let refusal = null;
+    try {
+      await api('/api/agents', {
+        operator: `0x${'cd'.repeat(20)}`,
+        domain: `refused-${Date.now()}.kya.eth`,
+        capabilities: ['research'],
+        spendLimitPerDay: '0',
+        maxActionsPerDay: 1,
+        expiresAt: 0,
+      });
+    } catch (err) {
+      refusal = err.json || {};
+    }
+    check(
+      'The contract itself refuses registration for an unverified owner',
+      refusal?.revert === 'OwnerNotHumanVerified',
+      refusal?.revert || 'no revert reported',
+    );
   }
 
   // ── 2. ENS ─────────────────────────────────────────────────────────────

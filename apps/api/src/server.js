@@ -327,11 +327,27 @@ const server = createServer(async (req, res) => {
     if (status >= 500) console.error(`[${req.method} ${url.pathname}]`, err);
     return json(res, status, {
       error: err.shortMessage || err.message || 'internal error',
+      // Named custom error, when the chain gave us one. "The contract function
+      // reverted" tells a judge nothing; "OwnerNotHumanVerified" is the whole
+      // point of the gate, so it must survive to the response.
+      revert: revertName(err),
       code: err.code,
       ...(err.worldResponse ? {worldResponse: err.worldResponse} : {}),
     });
   }
 });
+
+/** Dig the custom-error name out of a viem contract error, if present. */
+function revertName(err) {
+  for (let e = err, depth = 0; e && depth < 6; e = e.cause, depth++) {
+    const name = e?.data?.errorName || e?.errorName;
+    if (name) {
+      const args = e?.data?.args;
+      return args?.length ? `${name}(${args.map(String).join(', ')})` : name;
+    }
+  }
+  return null;
+}
 
 server.listen(config.port, () => {
   console.log(`KYA api        http://127.0.0.1:${config.port}`);

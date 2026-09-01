@@ -4,7 +4,7 @@ Rehearsed timings. Every number below is what the seeded stack actually produces
 so if a figure on screen disagrees with this page, something is wrong — re-run
 `pnpm up` before going on.
 
-**Before you present:** `pnpm up`. Wait for `PASS 54/54`. If it doesn't say that,
+**Before you present:** `pnpm up`. Wait for `PASS 55/55`. If it doesn't say that,
 do not demo. Browser at `http://127.0.0.1:5173/#/compare`, window at ~1440px.
 
 Note on counts: `pnpm up` runs the e2e suite, which dispatches real work, so
@@ -133,7 +133,7 @@ and the Issue button stays disabled.
 | A number disagrees with this script | Re-run `pnpm up`. The seed is deterministic; the same cast comes back identically. |
 | Judge asks about the local badges | Answer directly: no World app id or 0G key is configured on this machine, both are labeled, and the Integrations screen states it. Offer to show `/api/integrations`. |
 | Judge asks "why not just verify the zk proof onchain?" | No World ID Router on 0G. We chose one chain for identity *and* receipts, and attest the verification result via EIP-712. The nullifier binding is real; the trust assumption is the verifier key. |
-| Anything is visibly broken | `pnpm down && pnpm up`. Takes ~15 seconds and re-verifies 54 checks. |
+| Anything is visibly broken | `pnpm down && pnpm up`. Takes ~15 seconds and re-verifies 55 checks. |
 
 ## Questions we expect
 

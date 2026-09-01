@@ -80,9 +80,12 @@ export default function Issue({onPick, integrations}) {
     }
   }
 
+  // The step number stays visible in every state. Swapping it for a bare "!"
+  // loses the reader's place in a three-step sequence; the colour already
+  // carries the error.
   const Step = ({n, title, children, state}) => (
     <div className="tl-step" data-state={state}>
-      <span className="tl-node">{state === 'done' ? '✓' : state === 'error' ? '!' : n}</span>
+      <span className="tl-node">{state === 'done' ? '✓' : n}</span>
       <div style={{minWidth: 0}}>
         <div className="tl-label">{title}</div>
         <div style={{marginTop: 8}}>{children}</div>
@@ -127,12 +130,12 @@ export default function Issue({onPick, integrations}) {
                   />
                   <div className="row" style={{gap: 8}}>
                     <button
-                      className="btn btn-primary"
+                      className={human ? 'btn' : 'btn btn-primary'}
                       onClick={verify}
                       disabled={busy === 'verify' || !/^0x[0-9a-fA-F]{40}$/.test(owner.trim())}
                     >
                       {busy === 'verify' ? <IconSpinner size={12} className="spin" /> : <IconShield size={12} />}
-                      {worldLive ? 'Verify with World ID' : 'Run local stand-in'}
+                      {human ? 'Re-run' : worldLive ? 'Verify with World ID' : 'Run local stand-in'}
                     </button>
                     {health?.accounts?.owner && (
                       <button className="btn btn-sm" onClick={() => setOwner(health.accounts.owner)}>
@@ -162,13 +165,34 @@ export default function Issue({onPick, integrations}) {
                               : 'Simulator-level proof — registration will be refused'}
                           </span>
                         </div>
-                        {human.warning && <div className="dim" style={{fontSize: 12}}>{human.warning}</div>}
-                        <div className="mono dimmer" style={{fontSize: 10.5, wordBreak: 'break-all'}}>
-                          nullifier {human.proof.nullifierHash}
-                        </div>
-                        <div className="mono dimmer" style={{fontSize: 10.5, wordBreak: 'break-all'}}>
-                          tx {human.tx?.hash}
-                        </div>
+                        {!human.canRegisterAgent && (
+                          <div className="dim" style={{fontSize: 12}}>
+                            Supply a production World ID proof to continue. Configure{' '}
+                            <span className="mono">WORLD_APP_ID</span> and this step opens IDKit instead.
+                          </div>
+                        )}
+                        {/* Truncated: nobody reads a 32-byte hash off a screen,
+                            and two of them full-length cost four wrapped lines
+                            right where the refusal needs to be legible. The full
+                            value stays available on hover. */}
+                        <dl className="kv" style={{marginTop: 2}}>
+                          <dt>nullifier</dt>
+                          <dd className="mono" title={human.proof.nullifierHash}>
+                            {short(human.proof.nullifierHash, 12, 8)}
+                          </dd>
+                          <dt>attestation tx</dt>
+                          <dd className="mono" title={human.tx?.hash}>
+                            {short(human.tx?.hash, 12, 8)}
+                          </dd>
+                        </dl>
+                        {/* The caveat applies to the whole attestation, not just
+                            the hash, so it gets its own line rather than wrapping
+                            out of the value column. */}
+                        {!worldLive && (
+                          <div className="dimmer" style={{fontSize: 11}}>
+                            Signed by the local attestor key — no call was made to World.
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}

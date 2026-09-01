@@ -20,7 +20,7 @@ pnpm up
 
 That's the whole thing. `up.sh` starts anvil, compiles and deploys the contracts,
 syncs ABIs, seeds the demo cast, starts the API and the web app, then runs a
-52-check end-to-end verification. **If verification fails it exits non-zero and
+55-check end-to-end verification. **If verification fails it exits non-zero and
 tells you not to demo the build** — the point is to find a broken link before a
 judge does, not after.
 
@@ -36,7 +36,7 @@ Other entry points:
 |---|---|
 | `pnpm up` | Full reset: chain, deploy, seed, api, web, verify |
 | `pnpm up --no-seed` | Same, but keeps existing chain state |
-| `pnpm verify` | Run the 52-check gate against a running stack |
+| `pnpm verify` | Run the 55-check gate against a running stack |
 | `pnpm contracts:test` | 41 Foundry tests including fuzz |
 | `pnpm seed` | Re-seed the demo cast (~1.3s) |
 
@@ -214,7 +214,7 @@ apps/api/           dependency-free HTTP layer + the dispatch pipeline
 apps/web/           React console: compare, lookup, relying app, issue, sponsors
 scripts/
   up.sh             one command to a demo-ready stack
-  verify-e2e.mjs    52 checks over HTTP — the pre-demo gate
+  verify-e2e.mjs    55 checks over HTTP — the pre-demo gate
 ```
 
 ### Endpoints
@@ -254,8 +254,8 @@ demo can run offline without weakening the integrity claim.
 ```
 $ pnpm verify
 
-0  Stack                      3 checks
-1  World ID                   5 checks   incl. simulator cannot register
+0  Stack                      6 checks
+1  World ID                   8 checks   incl. the contract refusing a simulator proof
 2  ENS                        6 checks   forward, reverse, derived text records
 3  Trust engine               7 checks
 4  Comparison                 3 checks
@@ -264,7 +264,7 @@ $ pnpm verify
 7  Routing                    4 checks
 8  Honesty                    4 checks   nothing simulated renders as live
 
-PASS  52/52 checks. The PRD demo script works end to end.
+PASS  55/55 checks. The PRD demo script works end to end.
 ```
 
 Contracts: `pnpm contracts:test` → 41 passed, including fuzz tests that assert the

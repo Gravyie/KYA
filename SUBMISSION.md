@@ -48,7 +48,7 @@ there's a test named `test_AgentCannotSelfReport` asserting it reverts.
 pnpm install && pnpm up
 ```
 
-One command: chain, contracts, seed, API, web, then a 54-check end-to-end
+One command: chain, contracts, seed, API, web, then a 55-check end-to-end
 verification. **It exits non-zero and refuses to declare itself ready if any
 check fails.** Demo at `http://127.0.0.1:5173/#/compare`.
 
@@ -175,7 +175,7 @@ offline without weakening the integrity claim.
 
 ```
 pnpm contracts:test   41 Foundry tests pass, including fuzz
-pnpm verify           54 end-to-end checks pass over HTTP
+pnpm verify           55 end-to-end checks pass over HTTP
 ```
 
 The e2e suite talks to the HTTP API rather than importing the SDK, because that's
