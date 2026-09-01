@@ -184,7 +184,9 @@ export default function App() {
                 {pct(a.score, 0)}
               </span>
               <span className="roster-meta">
-                <span>#{a.agentId}</span>
+                {/* id, not rank — the roster is sorted best-first, so a bare
+                    "#2" in third place looks like a stale ranking. */}
+                <span>id {a.agentId}</span>
                 <span>{a.total} acts</span>
                 {a.rejected > 0 && <span style={{color: 'var(--decline)'}}>{a.rejected} blocked</span>}
                 {!a.active && <span style={{color: 'var(--decline)'}}>off</span>}

@@ -131,9 +131,10 @@ export async function dispatch({query, capability, input, policy = {}, dryRun = 
     at: new Date().toISOString(),
   };
   const stored = await persistRecord(record);
-  mark('persist', `Action record stored via ${stored.backend} → ${stored.uri}`, {
+  mark('persist', `Action record stored via ${stored.backend} → ${stored.digest.slice(0, 14)}…`, {
     backend: stored.backend,
     digest: stored.digest,
+    uri: stored.uri,
   });
 
   // 6 ─ settle on-chain

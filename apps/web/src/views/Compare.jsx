@@ -129,7 +129,7 @@ export default function Compare({tasks, onPick}) {
           </div>
 
           <div className="ask-field">
-            <span className="label">Value at risk</span>
+            <span className="label">Value at risk (OG)</span>
             <input value={value} onChange={(e) => setValue(e.target.value)} className="field-input" style={{width: 92}} />
           </div>
 
@@ -188,7 +188,8 @@ export default function Compare({tasks, onPick}) {
                   {data.recommended}
                 </span>
                 <span className="dim">
-                  is the only candidate that clears every hard gate at {value} for <span className="mono">{capability}</span>.
+                  is the only candidate that clears every hard gate for{' '}
+                  <span className="mono">{capability}</span> at {value} OG.
                 </span>
               </>
             ) : (
@@ -221,18 +222,14 @@ export default function Compare({tasks, onPick}) {
         )}
         {data?.results.map((r, i) => (
           <div key={r.query} className="stack-sm">
-            {/* fixed-height header keeps every card's top edge on one line */}
+            {/* Fixed-height header so every card's top edge lands on one line.
+                The name is not repeated here — it is the document's own title
+                below. The recommendation is LEFT-anchored next to this column's
+                number: right-aligned it floated near the gutter and read as
+                possibly belonging to the next column over. */}
             <div className="col-head">
               <span className="col-tag">{i + 1}</span>
-              <button
-                className="label"
-                onClick={() => r.passport && onPick(nameOf(r.passport))}
-                style={{color: 'var(--t3)', cursor: r.passport ? 'pointer' : 'default'}}
-                title={r.passport ? 'Open full passport' : undefined}
-              >
-                {r.query}
-              </button>
-              <span className="spacer" />
+              <span className="label">Column {i + 1}</span>
               {data.recommended === r.query && <VerdictBadge verdict="trust">Recommended</VerdictBadge>}
             </div>
             <Passport
@@ -243,6 +240,7 @@ export default function Compare({tasks, onPick}) {
               showHeadBadge={false}
               collapsedChecks
               compact
+              onOpen={r.passport ? () => onPick(nameOf(r.passport)) : undefined}
             />
           </div>
         ))}
@@ -254,8 +252,7 @@ export default function Compare({tasks, onPick}) {
             <span className="label">Policy applied to every column</span>
           </div>
           <div className="panel-body">
-            <div className="sponsor" style={{border: 'none', padding: 0, background: 'none'}}>
-              <dl>
+            <dl className="kv">
                 <dt>human</dt>
                 <dd>{data.policy.requireHumanVerified ? 'World ID production proof required' : 'not required'}</dd>
                 <dt>min score</dt>
@@ -271,7 +268,6 @@ export default function Compare({tasks, onPick}) {
                 <dt>staleness</dt>
                 <dd>{data.policy.maxStalenessDays} days max since last witnessed action</dd>
               </dl>
-            </div>
           </div>
         </div>
       )}

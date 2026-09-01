@@ -138,6 +138,7 @@ export class KYAClient {
     const id = BigInt(agentId);
     const registry = {address: this.contracts.registry, abi: PassportRegistryABI};
     const names = {address: this.contracts.names, abi: AgentNameRegistrarABI};
+    const attestor = {address: this.contracts.attestor, abi: HumanhoodAttestorABI};
 
     const [passportRes, countRes, logRes] = await this.batch([
       {...registry, functionName: 'passportOf', args: [id]},
@@ -149,9 +150,13 @@ export class KYAClient {
     const [agent, authority, reputation, capabilities, score, ownerProof, ownerNullifier, spendRemaining] =
       passportRes.result;
 
-    const [ensNameRes, nodeRes] = await this.batch([
+    const [ensNameRes, nodeRes, humanhoodRes] = await this.batch([
       {...names, functionName: 'nameOfAddress', args: [agent.operator]},
       {...names, functionName: 'nodeForLabel', args: [agent.domain.split('.')[0]]},
+      // The World app id the attestation was issued under. Carried through so the
+      // UI can distinguish a real World ID proof from a locally-attested one
+      // instead of rendering both as an identical "human-backed" badge.
+      {...attestor, functionName: 'humanhoodOf', args: [agent.owner]},
     ]);
 
     const ensName = ensNameRes.status === 'success' && ensNameRes.result ? ensNameRes.result : null;
@@ -183,6 +188,11 @@ export class KYAClient {
 
     const proofKind = Number(ownerProof);
     const total = Number(reputation.total);
+    const humanhood = humanhoodRes.status === 'success' ? humanhoodRes.result : null;
+    // A locally-attested proof carries the seed/local app id. Surfacing it lets
+    // the UI say "attested locally" instead of implying a real World ID check.
+    const proofAppId = humanhood?.appId || null;
+    const proofIsWorldApp = Boolean(proofAppId && /^(app_|rp_)/.test(proofAppId));
 
     return {
       agentId: id.toString(),
@@ -199,6 +209,9 @@ export class KYAClient {
       humanVerified: PRODUCTION_PROOFS.has(proofKind),
       proofKind,
       proofKindName: ProofKindName[proofKind] || 'none',
+      proofAppId,
+      proofIsWorldApp,
+      proofVerifiedAt: humanhood ? Number(humanhood.verifiedAt) : 0,
       ownerNullifier,
       capabilities,
       authority: {

@@ -75,27 +75,38 @@ export function Dial({score, size = 62, verdict = 'trust', label = 'rep'}) {
  * A 5x5 symmetric identicon derived from the operator address. An identity
  * document without a holder mark reads as a dashboard widget, and a photo would
  * be a lie — an agent has no face. The address itself is the likeness, so it is
- * rendered directly: same address always produces the same mark, and two agents
- * are visually distinct at a glance in a side-by-side comparison.
+ * rendered directly: the same address always produces the same mark, and two
+ * agents are distinguishable at a glance in a side-by-side comparison.
  */
 function Holder({address, verdict}) {
-  const hex = (address || '0x0').replace(/^0x/, '').padEnd(40, '0');
+  if (!address) {
+    // Explicit void mark. An empty frame reads as a broken image; a struck-out
+    // frame reads as "there is nobody here", which is the actual fact.
+    return (
+      <div className="holder holder-none" title="No holder on record" aria-hidden="true">
+        ✕
+      </div>
+    );
+  }
+
+  const hex = address.replace(/^0x/, '').toLowerCase().padEnd(40, '0');
   const tone = {trust: 'var(--trust)', limit: 'var(--limit)', decline: 'var(--decline)'}[verdict] || 'var(--accent)';
 
+  // 15 independent nibbles feed the 15 unmirrored cells (3 columns x 5 rows).
+  // An earlier version indexed with `row * 3 + src`, which made rows overlap and
+  // collapsed the entropy — most addresses came out as the same near-solid block.
   const cells = [];
   for (let row = 0; row < 5; row++) {
     for (let col = 0; col < 5; col++) {
-      // Mirror columns 3-4 onto 1-0 so the mark is symmetric like a real emblem.
+      // Mirror columns 3-4 back onto 1-0 so the mark is symmetric like an emblem.
       const src = col > 2 ? 4 - col : col;
-      const nib = parseInt(hex[(row * 3 + src) % hex.length], 16);
-      const on = nib % 10 > 3;
-      const strong = nib > 11;
+      const nib = parseInt(hex[row * 3 + src], 16);
+      const state = nib < 6 ? 0 : nib < 12 ? 1 : 2; // ~empty / neutral / accent
       cells.push(
         <i
           key={`${row}-${col}`}
           style={{
-            background: on ? (strong ? tone : 'rgba(255,255,255,0.14)') : 'transparent',
-            opacity: on ? (strong ? 0.85 : 1) : 1,
+            background: state === 0 ? 'transparent' : state === 1 ? 'rgba(255,255,255,0.32)' : tone,
           }}
         />,
       );
@@ -104,6 +115,41 @@ function Holder({address, verdict}) {
   return (
     <div className="holder" title={address} aria-hidden="true">
       {cells}
+    </div>
+  );
+}
+
+/**
+ * The document's five identity fields, in one fixed schema.
+ *
+ * Rendered identically whether or not a passport exists, with an em dash in
+ * every missing cell. In a side-by-side comparison a column that drops fields
+ * breaks row-to-row scanning and reads as "not loaded" rather than "absent",
+ * which is exactly the wrong conclusion for a judge to reach.
+ */
+function DataFields({passport}) {
+  const auth = passport?.authority;
+  // Absolute dates, not relative time. "42d ago" is dashboard language; an
+  // identity document states when it was issued and when it lapses. The relative
+  // value survives as the title attribute for anyone who wants it.
+  const iso = (ts) => new Date(ts * 1000).toISOString().slice(0, 10);
+  const fields = [
+    ['Passport', passport ? `#${passport.agentId}` : '—', null],
+    ['Operator', passport ? short(passport.operator) : '—', passport?.operator],
+    ['Accountable owner', passport ? short(passport.owner) : '—', passport?.owner],
+    ['Issued', passport ? iso(passport.registeredAt) : '—', passport ? ago(passport.registeredAt) : null],
+    ['Expires', !passport ? '—' : auth.expiresAt === 0 ? 'no expiry' : iso(auth.expiresAt), null],
+  ];
+  return (
+    <div className="pp-meta">
+      {fields.map(([k, v, hint]) => (
+        <div key={k}>
+          <span className="label">{k}</span>
+          <span className="v" title={hint || undefined}>
+            {v}
+          </span>
+        </div>
+      ))}
     </div>
   );
 }
@@ -122,12 +168,29 @@ export function VerdictBadge({verdict, children}) {
 
 /* ── humanhood badge ────────────────────────────────────────────────────── */
 
+/**
+ * The humanhood claim, with its provenance attached.
+ *
+ * A World-verified owner and a locally-attested one must not render as the same
+ * badge. `proofIsWorldApp` is true only when the on-chain attestation carries a
+ * real World app/rp id, so a demo running without `WORLD_APP_ID` says "attested
+ * locally" rather than implying a proof that was never checked against World.
+ */
 function HumanBadge({passport}) {
   if (passport.humanVerified) {
+    const world = passport.proofIsWorldApp;
     return (
-      <span className="verdict" data-v="trust" title={`World ID ${passport.proofKindName} proof, nullifier bound on-chain`}>
+      <span
+        className="verdict"
+        data-v={world ? 'trust' : 'limit'}
+        title={
+          world
+            ? `World ID ${passport.proofKindName} proof under ${passport.proofAppId}; nullifier bound on-chain`
+            : `Attested locally under "${passport.proofAppId || 'local'}" — no World ID app configured. The nullifier is bound on-chain, but it was not checked against World.`
+        }
+      >
         <IconShield size={11} />
-        Human-backed
+        {world ? `Human-backed · World ${passport.proofKindName}` : 'Human-backed · attested locally'}
       </span>
     );
   }
@@ -220,25 +283,28 @@ export function Passport({
   showHeadBadge = true,
   collapsedChecks = false,
   compact = false,
+  onOpen = null,
 }) {
   const verdict = decision?.verdict || 'decline';
 
   if (!passport) {
     return (
       <div className="passport" data-verdict="decline">
+        <div className="pp-band">
+          <span>Agent passport</span>
+          <span className="spacer" />
+          <span>not on record</span>
+        </div>
         <div className="pp-head">
-          <div className="holder" aria-hidden="true" style={{opacity: 0.3}} />
+          <Holder address={null} />
           <div className="pp-title">
             <div className="pp-name dim">No passport on record</div>
-            <div className="pp-meta">
-              <div>
-                <span className="label">Holder</span>
-                <span className="v">—</span>
-              </div>
-              <div>
-                <span className="label">Issued</span>
-                <span className="v">never</span>
-              </div>
+            <DataFields passport={null} />
+            <div className="row" style={{marginTop: 9, flexWrap: 'wrap', gap: 6}}>
+              <span className="verdict" data-v="decline">
+                <IconX size={11} />
+                No accountable human
+              </span>
             </div>
           </div>
         </div>
@@ -248,7 +314,7 @@ export function Passport({
             <div className="verdict-headline">Nothing to verify</div>
             <div className="verdict-summary">
               There is no registry entry, so there is no accountable owner, no declared mandate and no witnessed
-              history. This is the default state of every agent on the internet today.
+              history. This is the default state of every AI agent on the internet today.
             </div>
           </div>
         </div>
@@ -265,42 +331,37 @@ export function Passport({
 
   return (
     <div className="passport" data-verdict={verdict}>
+      {/* ── document title band: what this artifact is, and who issued it ── */}
+      <div className="pp-band">
+        <span>Agent passport</span>
+        <span className="spacer" />
+        <span>
+          KYA registry · eip155:{passport.chainId}
+        </span>
+      </div>
+
       {/* ── data page header ── */}
       <div className="pp-head">
         <Holder address={passport.operator} verdict={verdict} />
         <div className="pp-title">
           <div className="pp-name">
-            {nameOf(passport)}
+            {/* The document's own title is the click target through to the full
+                passport. Repeating the name in a column header above the card
+                just to make it clickable would say the same thing twice. */}
+            {onOpen ? (
+              <button className="pp-name-link" onClick={onOpen} title="Open the full passport">
+                {nameOf(passport)}
+              </button>
+            ) : (
+              nameOf(passport)
+            )}
             {!passport.active && (
               <span className="verdict" data-v="decline">
                 deactivated
               </span>
             )}
           </div>
-          <div className="pp-meta">
-            <div>
-              <span className="label">Passport</span>
-              <span className="v">#{passport.agentId}</span>
-            </div>
-            <div>
-              <span className="label">Operator</span>
-              <span className="v">{short(passport.operator)}</span>
-            </div>
-            <div>
-              <span className="label">Accountable owner</span>
-              <span className="v">{short(passport.owner)}</span>
-            </div>
-            <div>
-              <span className="label">Issued</span>
-              <span className="v">{ago(passport.registeredAt)}</span>
-            </div>
-            <div>
-              <span className="label">Expires</span>
-              <span className="v">
-                {auth.expiresAt === 0 ? 'never' : new Date(auth.expiresAt * 1000).toISOString().slice(0, 10)}
-              </span>
-            </div>
-          </div>
+          <DataFields passport={passport} />
           <div className="row" style={{marginTop: 9, flexWrap: 'wrap', gap: 6}}>
             <HumanBadge passport={passport} />
             {/* The verdict lives in the block below. Repeating it here as a badge
@@ -337,7 +398,7 @@ export function Passport({
           <div className="label">Reputation</div>
           <div className="field-value num">{pct(rep.score)}</div>
           <div className="field-note">
-            {rep.success}/{rep.total} witnessed
+            {rep.success} of {rep.total} witnessed succeeded
             {rep.rejected > 0 && <span style={{color: 'var(--decline)'}}> · {rep.rejected} blocked</span>}
           </div>
         </div>
@@ -348,10 +409,14 @@ export function Passport({
           <div className="field-note">how much the record can be leaned on</div>
         </div>
 
+        {/* "24.91 / 25" alone reads as spent-of-limit. It is the opposite — what
+            is LEFT — and a mandate display that can be read backwards is worse
+            than no display, so the label says so explicitly. */}
         <div className="field">
-          <div className="label">Spend today</div>
+          <div className="label">Spend left today</div>
           <div className="field-value num">
-            {amount(auth.spendRemainingTodayEth)} <span className="dimmer">/ {amount(auth.spendLimitPerDayEth)}</span>
+            {amount(auth.spendRemainingTodayEth)}{' '}
+            <span className="dimmer">of {amount(auth.spendLimitPerDayEth)}</span>
           </div>
           <div className="meter" data-tone={spendFrac > 0.4 ? 'trust' : spendFrac > 0.1 ? 'limit' : 'decline'}>
             <span style={{width: `${Math.max(2, spendFrac * 100)}%`}} />
@@ -364,18 +429,22 @@ export function Passport({
           <div className="field-note">per UTC day, enforced on settle</div>
         </div>
 
+        {/* Expiry is already a header field; this slot carries the thing a relying
+            party actually needs to know about the mandate's stability. */}
         <div className="field">
-          <div className="label">Authority</div>
-          <div className="field-value">
-            {auth.expiresAt === 0 ? 'No expiry' : new Date(auth.expiresAt * 1000).toISOString().slice(0, 10)}
-          </div>
-          <div className="field-note">owner can revoke at any time</div>
+          <div className="label">Volume handled</div>
+          <div className="field-value num">{amount(rep.volumeHandledEth)}</div>
+          <div className="field-note">across successful actions only</div>
         </div>
 
         <div className="field">
           <div className="label">Last action</div>
-          <div className="field-value">{rep.total ? ago(rep.lastActionAt) : 'never'}</div>
-          <div className="field-note">{rep.total ? `volume ${amount(rep.volumeHandledEth)}` : 'no history yet'}</div>
+          <div className="field-value" title={rep.total ? new Date(rep.lastActionAt * 1000).toISOString() : undefined}>
+            {rep.total ? ago(rep.lastActionAt) : 'never'}
+          </div>
+          <div className="field-note">
+            {rep.total ? `first ${new Date(rep.firstActionAt * 1000).toISOString().slice(0, 10)}` : 'no history yet'}
+          </div>
         </div>
       </div>
 

@@ -65,12 +65,16 @@ async function verifyHuman(subject, kind) {
     kind, // seed forces production-grade kinds so registration is possible offline
     nullifierHash: stub.nullifierHash,
     verifiedAt: await chain.chainNow(),
-    appId: config.world.appId || 'app_seed_local',
+    // NOT an `app_`-prefixed id. Anything matching World's app/rp id shape makes
+    // the passport claim a World-verified owner, which would be exactly the kind
+    // of unlabeled simulation this codebase treats as a bug. `local:kya-seed`
+    // reads as what it is, and the UI renders "attested locally" for it.
+    appId: config.world.appId || 'local:kya-seed',
     action: config.world.action,
   });
   await chain.recordHumanhood(signed);
   const state = await chain.humanhoodOf(subject);
-  console.log(`  world id      ${subject} kind=${state.kind} verified=${state.humanVerified}`);
+  console.log(`  world id      ${subject} kind=${state.kind} verified=${state.humanVerified} app=${state.appId}`);
   return state;
 }
 

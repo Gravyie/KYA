@@ -134,7 +134,7 @@ export default function Lookup({query, tasks, onPick}) {
             </select>
           </div>
           <div className="ask-field">
-            <span className="label">Value at risk</span>
+            <span className="label">Value at risk (OG)</span>
             <input
               value={value}
               onChange={(e) => setValue(e.target.value)}
@@ -168,8 +168,7 @@ export default function Lookup({query, tasks, onPick}) {
           {Object.keys(passport.textRecords || {}).length === 0 ? (
             <div className="dimmer">No text records set.</div>
           ) : (
-            <div className="sponsor" style={{border: 'none', padding: 0, background: 'none'}}>
-              <dl>
+            <dl className="kv">
                 {Object.entries(passport.textRecords).map(([k, v]) => (
                   <React.Fragment key={k}>
                     <dt>{k}</dt>
@@ -177,7 +176,6 @@ export default function Lookup({query, tasks, onPick}) {
                   </React.Fragment>
                 ))}
               </dl>
-            </div>
           )}
         </div>
       </div>

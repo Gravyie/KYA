@@ -12,7 +12,7 @@
  * record is content-addressed and stored, the receipt is a real transaction, and
  * the reputation number that ticks up is re-read from the chain afterwards.
  */
-import React, {useEffect, useMemo, useState} from 'react';
+import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {api, pct, nameOf, short} from '../lib/api.js';
 import {Dial, VerdictBadge} from '../components/Passport.jsx';
 import {
@@ -49,6 +49,7 @@ export default function Relying({tasks, onPick}) {
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   const [preview, setPreview] = useState(null);
+  const resultRef = useRef(null);
 
   const maxValue = useMemo(() => {
     const n = Number(budget);
@@ -81,13 +82,29 @@ export default function Relying({tasks, onPick}) {
     try {
       const input =
         capability === 'research' ? {question, maxValue} : {from, to, date, maxValue};
-      setResult(await api.route({capability, candidates: candidates.filter(Boolean), input, policy: {}}));
+      const run = await api.route({capability, candidates: candidates.filter(Boolean), input, policy: {}});
+      setResult(run);
     } catch (e) {
       setError(e.message);
     } finally {
       setBusy(false);
     }
   }
+
+  /**
+   * Scroll the outcome into view once it has actually rendered.
+   *
+   * Done in an effect rather than inline after setResult: the node does not exist
+   * until React commits, so a call in the handler (even inside
+   * requestAnimationFrame) can target a ref that is still null. The result is the
+   * payload of this screen — if it lands below the fold, a judge watches a button
+   * go idle and nothing else.
+   */
+  useEffect(() => {
+    if (!result?.run) return;
+    const t = setTimeout(() => resultRef.current?.scrollIntoView({behavior: 'smooth', block: 'start'}), 60);
+    return () => clearTimeout(t);
+  }, [result]);
 
 
   const run = result?.run;
@@ -159,7 +176,7 @@ export default function Relying({tasks, onPick}) {
           )}
 
           <div className="ask-field">
-            <span className="label">Budget ceiling</span>
+            <span className="label">Budget ceiling (OG)</span>
             <input value={budget} onChange={(e) => setBudget(e.target.value)} className="field-input" style={{width: 90}} />
           </div>
 
@@ -222,7 +239,7 @@ export default function Relying({tasks, onPick}) {
 
       {/* the run */}
       {run && (
-        <div className="grid-2 fade-in">
+        <div className="grid-2 fade-in" ref={resultRef} style={{scrollMarginTop: 60}}>
           <div className="panel">
             <div className="panel-head">
               <IconLayers size={13} />
@@ -313,8 +330,7 @@ export default function Relying({tasks, onPick}) {
                   >
                     {JSON.stringify(run.execution.result, null, 2)}
                   </pre>
-                  <div className="sponsor" style={{border: 'none', padding: 0, background: 'none'}}>
-                    <dl>
+                  <dl className="kv">
                       <dt>engine</dt>
                       <dd className="mono">{run.execution.engine}</dd>
                       <dt>model</dt>
@@ -341,7 +357,6 @@ export default function Relying({tasks, onPick}) {
                         {run.settlement?.hash}
                       </dd>
                     </dl>
-                  </div>
                   <div className="dimmer" style={{fontSize: 11.5}}>
                     The evidence digest above is what the registry stored. The agent never touched it — only the
                     allowlisted executor can submit a receipt, which is what makes this history witnessed rather than

@@ -54,10 +54,17 @@ export default function Sponsors() {
         </p>
       </div>
 
-      <div className="grid-3">
+      <div className="sponsor-grid">
         {['world', 'ens', 'og'].map((key) => {
           const s = data[key];
           const Icon = ICON[key];
+          // 0G reports two surfaces (compute / storage) in one mode string. Split
+          // it into chips so it never wraps mid-string on a slash and push the
+          // card's later rows out of alignment with its neighbours.
+          const modeChips = String(s.mode)
+            .split('/')
+            .map((m) => m.trim())
+            .filter(Boolean);
           return (
             <div key={key} className="sponsor">
               <div className="row-between">
@@ -71,8 +78,12 @@ export default function Sponsors() {
                 </span>
               </div>
 
-              <div className="mono dimmer" style={{fontSize: 10.5}}>
-                {s.mode}
+              <div className="modes">
+                {modeChips.map((m) => (
+                  <span key={m} className="mono dimmer" style={{fontSize: 10.5}}>
+                    {m}
+                  </span>
+                ))}
               </div>
 
               <div>
@@ -85,60 +96,51 @@ export default function Sponsors() {
                 <div style={{marginTop: 3, color: 'var(--t2)'}}>{s.role}</div>
               </div>
 
-              <div
-                style={{
-                  padding: '10px 12px',
-                  border: '1px solid var(--line)',
-                  borderRadius: 8,
-                  background: 'rgba(255,255,255,0.014)',
-                }}
-              >
+              <div className="why">
                 <div className="label">Why it is not interchangeable</div>
                 <div style={{marginTop: 4, color: 'var(--t2)', fontSize: 12.5}}>{s.whyNecessary}</div>
               </div>
 
-              <div className="sponsor" style={{border: 'none', padding: 0, background: 'none', gap: 0}}>
-                <dl>
-                  {s.contract && (
-                    <>
-                      <dt>contract</dt>
-                      <dd className="mono">{short(s.contract, 10, 8)}</dd>
-                    </>
-                  )}
-                  {s.appId && (
-                    <>
-                      <dt>app id</dt>
-                      <dd className="mono">{s.appId}</dd>
-                    </>
-                  )}
-                  {s.action && (
-                    <>
-                      <dt>action</dt>
-                      <dd className="mono">{s.action}</dd>
-                    </>
-                  )}
-                  {s.parentName && (
-                    <>
-                      <dt>parent</dt>
-                      <dd className="mono">{s.parentName}</dd>
-                    </>
-                  )}
-                  {s.model && (
-                    <>
-                      <dt>model</dt>
-                      <dd className="mono">{s.model}</dd>
-                    </>
-                  )}
-                  {s.attestorSigner && (
-                    <>
-                      <dt>signer</dt>
-                      <dd className="mono">{short(s.attestorSigner, 10, 8)}</dd>
-                    </>
-                  )}
-                </dl>
-              </div>
+              <dl>
+                {s.contract && (
+                  <>
+                    <dt>contract</dt>
+                    <dd className="mono">{short(s.contract, 10, 8)}</dd>
+                  </>
+                )}
+                {s.appId && (
+                  <>
+                    <dt>app id</dt>
+                    <dd className="mono">{s.appId}</dd>
+                  </>
+                )}
+                {s.action && (
+                  <>
+                    <dt>action</dt>
+                    <dd className="mono">{s.action}</dd>
+                  </>
+                )}
+                {s.parentName && (
+                  <>
+                    <dt>parent</dt>
+                    <dd className="mono">{s.parentName}</dd>
+                  </>
+                )}
+                {s.model && (
+                  <>
+                    <dt>model</dt>
+                    <dd className="mono">{s.model}</dd>
+                  </>
+                )}
+                {s.attestorSigner && (
+                  <>
+                    <dt>signer</dt>
+                    <dd className="mono">{short(s.attestorSigner, 10, 8)}</dd>
+                  </>
+                )}
+              </dl>
 
-              <div className="dimmer" style={{fontSize: 11.5, marginTop: 'auto'}}>
+              <div className="dimmer" style={{fontSize: 11.5}}>
                 {s.note}
               </div>
             </div>
@@ -152,8 +154,7 @@ export default function Sponsors() {
           <span className="label">Deployment · everything the UI reads comes from these addresses</span>
         </div>
         <div className="panel-body">
-          <div className="sponsor" style={{border: 'none', padding: 0, background: 'none'}}>
-            <dl>
+          <dl className="kv">
               <dt>chain</dt>
               <dd className="mono">
                 {health?.chainId} · {health?.rpcUrl}
@@ -171,7 +172,6 @@ export default function Sponsors() {
               <dt>executor</dt>
               <dd className="mono">{health?.accounts?.executor}</dd>
             </dl>
-          </div>
         </div>
       </div>
 

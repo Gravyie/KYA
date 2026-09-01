@@ -89,11 +89,25 @@ async function main() {
   // ── 1. World ID gating ─────────────────────────────────────────────────
   section('1  World ID — human verification gates the passport');
   const trusted = await api(`/api/agents/${encodeURIComponent(TRUSTED)}`);
-  check('Trusted agent owner is human-verified', trusted.passport.humanVerified === true);
+  check(
+    'Trusted agent owner is human-verified',
+    trusted.passport.humanVerified === true,
+    trusted.passport.proofIsWorldApp ? `World app ${trusted.passport.proofAppId}` : 'attested locally, labeled',
+  );
   check(
     'Proof kind is a production level, not simulator',
     ['orb', 'device'].includes(trusted.passport.proofKindName),
     trusted.passport.proofKindName,
+  );
+  check(
+    'Proof provenance is exposed, not just its level',
+    typeof trusted.passport.proofIsWorldApp === 'boolean' && trusted.passport.proofAppId !== undefined,
+    `worldApp=${trusted.passport.proofIsWorldApp} appId=${trusted.passport.proofAppId}`,
+  );
+  check(
+    'A locally-attested proof is never described as World-verified',
+    trusted.passport.proofIsWorldApp || !/World ID-verified/.test(trusted.decision.summary),
+    trusted.decision.summary.slice(0, 74),
   );
   check(
     'Owner nullifier is bound on-chain',

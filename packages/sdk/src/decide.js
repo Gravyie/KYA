@@ -92,7 +92,9 @@ export function check(passport, policy = {}, onchain = null) {
 
   if (p.requireHumanVerified) {
     const detail = passport.humanVerified
-      ? `Owner ${passport.owner.slice(0, 10)}… holds a World ID ${passport.proofKindName} proof; nullifier is bound on-chain.`
+      ? passport.proofIsWorldApp
+        ? `Owner ${passport.owner.slice(0, 10)}… holds a World ID ${passport.proofKindName} proof under ${passport.proofAppId}; nullifier is bound on-chain.`
+        : `Owner ${passport.owner.slice(0, 10)}… holds a ${passport.proofKindName}-level attestation issued locally (no World ID app configured). The nullifier is bound on-chain but was not checked against World.`
       : passport.proofKind === 3
         ? 'Owner has only a World ID simulator proof — staging credential, not proof of a unique human.'
         : 'Owner has no World ID proof on record. Nobody is accountable for this agent.';
@@ -262,7 +264,10 @@ const REASON_COPY = {
 function summarize(verdict, passport, hardFailures, softFailures, policy) {
   const name = passport.ensName || passport.domain || `#${passport.agentId}`;
   if (verdict === VERDICT.TRUST) {
-    return `${name} is backed by a World ID-verified owner, is acting inside its declared mandate, and has ${passport.reputation.total} witnessed actions at ${bp(passport.reputation.score)} reputation.`;
+    const backing = passport.proofIsWorldApp
+      ? 'a World ID-verified owner'
+      : 'an owner whose personhood attestation was issued locally';
+    return `${name} is backed by ${backing}, is acting inside its declared mandate, and has ${passport.reputation.total} witnessed actions at ${bp(passport.reputation.score)} reputation.`;
   }
   if (verdict === VERDICT.DECLINE) {
     // Hard gates first. Among soft failures a blocked over-mandate attempt is the

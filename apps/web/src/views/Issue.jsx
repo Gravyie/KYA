@@ -281,8 +281,7 @@ export default function Issue({onPick, integrations}) {
                     {created.passport.ensName || created.passport.domain}
                   </button>
                 </div>
-                <div className="sponsor" style={{border: 'none', padding: 0, background: 'none'}}>
-                  <dl>
+                <dl className="kv">
                     <dt>agent id</dt>
                     <dd className="mono">#{created.created.agentId}</dd>
                     <dt>owner</dt>
@@ -306,7 +305,6 @@ export default function Issue({onPick, integrations}) {
                       </>
                     )}
                   </dl>
-                </div>
                 <div className="dim" style={{fontSize: 12}}>
                   Reputation starts at zero — not at a friendly default. A passport with no history is an unknown
                   quantity, and the trust engine reports it as <span className="mono">INSUFFICIENT_HISTORY</span> rather

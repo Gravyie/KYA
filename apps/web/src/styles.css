@@ -571,6 +571,9 @@ select.field-input option {
   align-items: end;
   gap: 8px;
   margin-left: auto;
+  /* The grid's auto-fit columns can push this flush to the panel edge; keep a
+     gutter so the primary button never reads as touching the border. */
+  padding-right: 2px;
 }
 
 .ask .btn,
@@ -687,9 +690,29 @@ select.field-input option {
   --edge: linear-gradient(90deg, transparent, var(--decline-line) 18%, var(--decline) 50%, var(--decline-line) 82%, transparent);
 }
 
-/* Document chrome: a guilloche-style watermark, the closest honest analogue to
-   the security print on a real data page. Pure CSS, no asset request, and low
-   enough in contrast that it never competes with content. */
+/* Document title band. Names the artifact and its issuing authority, which is
+   what actually makes the card read as a passport rather than as a card about
+   one. Structurally the analogue of the cover line on a real document. */
+.pp-band {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 14px 4px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.018);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: var(--t4);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+/* Document chrome. A guilloche-style rosette — the honest analogue of the
+   security print on a real data page. Pure CSS, so no asset request on a
+   conference network. Kept subtle enough that it never competes with content,
+   but present enough to actually read as an engraved ground. */
 .pp-head {
   padding: 15px 18px 13px;
   border-bottom: 1px solid var(--line);
@@ -698,42 +721,85 @@ select.field-input option {
   gap: 14px;
   position: relative;
   overflow: hidden;
+  isolation: isolate;
 }
 
 .pp-head::after {
   content: '';
   position: absolute;
-  right: -40px;
-  top: -60px;
-  width: 210px;
-  height: 210px;
+  right: 6px;
+  top: -34px;
+  width: 168px;
+  height: 168px;
   border-radius: 50%;
   pointer-events: none;
-  opacity: 0.5;
+  z-index: -1;
+  opacity: 0.85;
   background:
-    repeating-radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.028) 0 1px, transparent 1px 9px),
-    repeating-conic-gradient(from 0deg at 50% 50%, rgba(255, 255, 255, 0.02) 0deg 2deg, transparent 2deg 12deg);
-  mask-image: radial-gradient(circle at 50% 50%, #000 42%, transparent 72%);
-  -webkit-mask-image: radial-gradient(circle at 50% 50%, #000 42%, transparent 72%);
+    repeating-radial-gradient(
+      circle at 50% 50%,
+      rgba(255, 255, 255, 0.075) 0 0.5px,
+      transparent 0.5px 7px
+    ),
+    conic-gradient(
+      from 0deg at 50% 50%,
+      rgba(255, 255, 255, 0.05) 0deg,
+      transparent 24deg,
+      rgba(255, 255, 255, 0.05) 48deg,
+      transparent 72deg,
+      rgba(255, 255, 255, 0.05) 96deg,
+      transparent 120deg,
+      rgba(255, 255, 255, 0.05) 144deg,
+      transparent 168deg,
+      rgba(255, 255, 255, 0.05) 192deg,
+      transparent 216deg,
+      rgba(255, 255, 255, 0.05) 240deg,
+      transparent 264deg,
+      rgba(255, 255, 255, 0.05) 288deg,
+      transparent 312deg,
+      rgba(255, 255, 255, 0.05) 336deg,
+      transparent 360deg
+    );
+  mask-image: radial-gradient(circle at 50% 50%, #000 26%, rgba(0, 0, 0, 0.45) 56%, transparent 76%);
+  -webkit-mask-image: radial-gradient(circle at 50% 50%, #000 26%, rgba(0, 0, 0, 0.45) 56%, transparent 76%);
 }
 
 /* Holder mark: an identicon derived from the operator address. An identity
-   document without a holder mark reads as a widget. */
+   document without a holder mark reads as a widget; a photo would be a lie,
+   because an agent has no face — so the address itself is the likeness. */
 .holder {
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   border-radius: 7px;
-  border: 1px solid var(--line-strong);
+  border: 1px solid var(--line-bright);
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   grid-template-rows: repeat(5, 1fr);
   overflow: hidden;
   flex-shrink: 0;
-  background: rgba(0, 0, 0, 0.3);
+  background: rgba(0, 0, 0, 0.34);
+  padding: 3px;
+  gap: 1px;
 }
 
 .holder i {
   display: block;
+  border-radius: 1px;
+}
+
+/* Absent holder: an explicit void mark, never an empty tile — a blank frame
+   reads as a failed image load rather than "there is nobody here". */
+.holder-none {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-style: dashed;
+  border-color: var(--decline-line);
+  color: var(--decline);
+  font-family: var(--mono);
+  font-size: 17px;
+  padding: 0;
+  gap: 0;
 }
 
 .pp-title {
@@ -751,6 +817,22 @@ select.field-input option {
   gap: 8px;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* The document title doubles as the link through to the full passport. */
+.pp-name-link {
+  font: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.14s var(--ease);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pp-name-link:hover {
+  border-bottom-color: var(--line-bright);
 }
 
 /* Document fields, not a run-on meta line: each fact gets a caption. */
@@ -1237,6 +1319,10 @@ select.field-input option {
   font-size: 11.5px;
   color: var(--t3);
   margin-top: 2px;
+  /* Storage URIs and digests appear inline here; without this a 66-char hash is
+     clipped at the panel edge instead of wrapping, so the digest is unreadable. */
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .tl-time {
@@ -1264,16 +1350,80 @@ select.field-input option {
   font-family: var(--mono);
 }
 
+/* ── key/value list ─────────────────────────────────────────────────────── */
+
+/* Shared label→value list used across views. Kept separate from .sponsor, which
+   is a subgrid card and would drag its grid-row span into anything reusing it. */
+.kv {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 5px 10px;
+  font-size: 12px;
+  align-content: start;
+}
+
+.kv dt {
+  color: var(--t4);
+  font-family: var(--mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  padding-top: 2px;
+}
+
+.kv dd {
+  color: var(--t2);
+  min-width: 0;
+  word-break: break-word;
+}
+
 /* ── sponsor cards ──────────────────────────────────────────────────────── */
+
+/**
+ * Three cards whose equivalent sections must sit on shared baselines — the whole
+ * point is reading ACROSS them ("what does each sponsor do for this?"). Without
+ * subgrid each card flows independently and the same label lands at three
+ * different heights, which defeats the comparison.
+ */
+.sponsor-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: auto auto auto auto 1fr auto auto;
+  gap: 16px;
+}
 
 .sponsor {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
   padding: 16px;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-row: span 7;
+  grid-template-rows: subgrid;
   gap: 9px;
+  align-content: start;
+}
+
+/* Browsers without subgrid still get a sane card, just not cross-aligned rows. */
+@supports not (grid-template-rows: subgrid) {
+  .sponsor {
+    display: flex;
+    flex-direction: column;
+  }
+  .sponsor .why {
+    flex: 1;
+  }
+}
+
+@media (max-width: 1000px) {
+  .sponsor-grid {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+  }
+  .sponsor {
+    grid-row: auto;
+    grid-template-rows: none;
+  }
 }
 
 .sponsor h3 {
@@ -1281,11 +1431,19 @@ select.field-input option {
   font-weight: 450;
 }
 
+.sponsor .why {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.014);
+}
+
 .sponsor dl {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   gap: 5px 10px;
   font-size: 12px;
+  align-content: start;
 }
 
 .sponsor dt {
@@ -1301,6 +1459,13 @@ select.field-input option {
   color: var(--t2);
   min-width: 0;
   word-break: break-word;
+}
+
+/* Mode chips stack rather than wrapping mid-string on a slash. */
+.modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
 }
 
 .mode {
