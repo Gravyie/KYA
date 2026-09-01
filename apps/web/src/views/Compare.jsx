@@ -78,7 +78,7 @@ export default function Compare({tasks, onPick}) {
   return (
     <div className="view">
       <div className="view-head">
-        <h1 className="display">Compare before you delegate</h1>
+        <h1 className="display-sm">Compare before you delegate</h1>
         <p>
           Two agents, one request. The same policy is applied to both, and every column states why it did or did not
           clear it. Identity and mandate are hard gates; track record only shapes the limit.
@@ -222,20 +222,24 @@ export default function Compare({tasks, onPick}) {
         )}
         {data?.results.map((r, i) => (
           <div key={r.query} className="stack-sm">
-            {/* Fixed-height header so every card's top edge lands on one line.
-                The name is not repeated here — it is the document's own title
-                below. The recommendation is LEFT-anchored next to this column's
-                number: right-aligned it floated near the gutter and read as
-                possibly belonging to the next column over. */}
+            {/* The header names the agent, not a slot — "COLUMN 1" told a reader
+                nothing the input above hadn't already said, and it made the
+                RECOMMENDED badge read as labelling a position rather than an
+                agent. Fixed height so every card's top edge lands on one line. */}
             <div className="col-head">
               <span className="col-tag">{i + 1}</span>
-              <span className="label">Column {i + 1}</span>
-              {data.recommended === r.query && <VerdictBadge verdict="trust">Recommended</VerdictBadge>}
+              <span className="label" style={{overflow: 'hidden', textOverflow: 'ellipsis'}}>
+                {r.query}
+              </span>
+              {data.recommended === r.query && (
+                <VerdictBadge verdict="trust">Recommended · route here</VerdictBadge>
+              )}
             </div>
             <Passport
               passport={r.passport}
               decision={r.decision}
               requestedCapability={capability}
+              recommended={data.recommended === r.query}
               showLog={false}
               showHeadBadge={false}
               collapsedChecks

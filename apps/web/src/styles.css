@@ -366,20 +366,23 @@ button {
 }
 
 .view {
-  padding: 26px;
+  padding: 20px 26px 26px;
   max-width: 1240px;
   width: 100%;
   flex: 1;
 }
 
+/* The demo screen is judged on a laptop. Every pixel above the fold spent on
+   chrome is a pixel not spent on the passport, so the header stack is tight. */
 .view-head {
-  margin-bottom: 22px;
+  margin-bottom: 16px;
 }
 
 .view-head p {
   color: var(--t3);
-  max-width: 68ch;
-  margin-top: 7px;
+  max-width: 74ch;
+  margin-top: 5px;
+  font-size: 13px;
 }
 
 /* ── search ─────────────────────────────────────────────────────────────── */
@@ -688,6 +691,14 @@ select.field-input option {
 }
 .passport[data-verdict='decline'] {
   --edge: linear-gradient(90deg, transparent, var(--decline-line) 18%, var(--decline) 50%, var(--decline-line) 82%, transparent);
+}
+
+/* The recommended document carries the verdict on its own frame, so the badge
+   above it isn't the only thing tying a verdict to a card. Colour is never the
+   sole cue — the badge, its check icon and its text all carry the same signal. */
+.passport[data-recommended='true'] {
+  border-color: var(--trust);
+  box-shadow: 0 0 0 1px var(--trust-line), 0 0 22px rgba(76, 157, 118, 0.1);
 }
 
 /* Document title band. Names the artifact and its issuing authority, which is

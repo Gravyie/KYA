@@ -284,6 +284,7 @@ export function Passport({
   collapsedChecks = false,
   compact = false,
   onOpen = null,
+  recommended = false,
 }) {
   const verdict = decision?.verdict || 'decline';
 
@@ -330,7 +331,7 @@ export function Passport({
       : 1;
 
   return (
-    <div className="passport" data-verdict={verdict}>
+    <div className="passport" data-verdict={verdict} data-recommended={String(recommended)}>
       {/* ── document title band: what this artifact is, and who issued it ── */}
       <div className="pp-band">
         <span>Agent passport</span>
