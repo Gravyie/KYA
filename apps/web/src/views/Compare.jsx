@@ -1,20 +1,12 @@
-/**
- * Side-by-side comparison — the demo's central screen.
- *
- * The PRD's scene is a trusted, reputable agent next to an anonymous one. The
- * layout is deliberately asymmetric in emphasis rather than a symmetric grid of
- * equal cards: the recommended agent is marked, and every other column is
- * explicitly explained away. A symmetric comparison implies the choice is close.
- * It isn't, and the screen should say so.
- *
- * Both columns are evaluated against the SAME ask, shown at the top, because a
- * comparison without a stated request is meaningless — the whole point is that
- * trust is relative to what you are about to delegate.
- */
 import React, {useCallback, useEffect, useState} from 'react';
-import {api, nameOf} from '../lib/api.js';
+import {api, nameOf, SPEND_SYMBOL} from '../lib/api.js';
 import {Passport, VerdictBadge} from '../components/Passport.jsx';
 import {IconScales, IconSpinner, IconArrowRight, IconX} from '../components/icons.jsx';
+import {Button} from '../components/ui/button';
+import {Card, CardContent, CardHeader} from '../components/ui/card';
+import {Input} from '../components/ui/input';
+import {Badge} from '../components/ui/badge';
+import {AnimatePresence, motion} from 'motion/react';
 
 const PRESETS = [
   {
@@ -74,165 +66,154 @@ export default function Compare({tasks, onPick}) {
     setValue(p.value);
   };
 
-
   return (
-    <div className="view">
-      <div className="view-head">
-        <h1 className="display-sm">Compare before you delegate</h1>
-        <p>
-          Two agents, one request. The same policy is applied to both, and every column states why it did or did not
-          clear it. Identity and mandate are hard gates; track record only shapes the limit.
+    <div className="p-8 max-w-7xl mx-auto w-full">
+      <div className="mb-8">
+        <h1 className="text-3xl font-semibold tracking-tight text-foreground">Compare before you delegate</h1>
+        <p className="text-muted-foreground mt-2 text-sm max-w-[74ch]">
+          Two agents, one request. The same policy is applied to both, and every column states why it did or did not clear it. Identity and mandate are hard gates; track record only shapes the limit.
         </p>
       </div>
 
-      {/* presets */}
-      <div className="row" style={{gap: 8, marginBottom: 14, flexWrap: 'wrap'}}>
+      <div className="flex flex-wrap gap-2 mb-6">
         {PRESETS.map((p) => {
           const active = p.queries.join() === queries.join() && p.capability === capability;
           return (
-            <button
+            <Button
               key={p.label}
-              className="btn btn-sm"
+              variant={active ? 'default' : 'outline'}
+              size="sm"
               onClick={() => applyPreset(p)}
-              style={
-                active
-                  ? {borderColor: 'var(--accent-line)', color: 'var(--accent-bright)', background: 'var(--accent-dim)'}
-                  : undefined
-              }
+              className={active ? "bg-primary/20 text-primary hover:bg-primary/30 border-primary/50" : "border-white/10 hover:bg-white/5"}
             >
-              {p.label}
-              <span className="dimmer" style={{fontSize: 10.5}}>
-                {p.hint}
-              </span>
-            </button>
+              <div className="flex items-center gap-2">
+                <span>{p.label}</span>
+                <span className={`text-[10px] ${active ? 'text-primary/70' : 'text-muted-foreground'}`}>
+                  {p.hint}
+                </span>
+              </div>
+            </Button>
           );
         })}
       </div>
 
-      {/* the shared ask */}
-      <div className="panel" style={{marginBottom: 16}}>
-        <div className="panel-head">
-          <IconScales size={13} />
-          <span className="label">The request both are judged against</span>
-        </div>
-        <div className="ask">
-          <div className="ask-field">
-            <span className="label">Capability requested</span>
-            <select value={capability} onChange={(e) => setCapability(e.target.value)} className="field-input">
-              {(tasks?.length ? tasks.map((t) => t.capability) : ['flight.quote', 'research']).map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-              <option value="pay">pay</option>
-            </select>
-          </div>
-
-          <div className="ask-field">
-            <span className="label">Value at risk (OG)</span>
-            <input value={value} onChange={(e) => setValue(e.target.value)} className="field-input" style={{width: 92}} />
-          </div>
-
-          {queries.map((q, i) => (
-            <div className="ask-field" key={i}>
-              <span className="label row" style={{gap: 5}}>
-                <span className="col-tag">{i + 1}</span>
-                Column {i + 1}
-              </span>
-              <input
-                value={q}
-                onChange={(e) => setQueries(queries.map((v, j) => (j === i ? e.target.value : v)))}
-                placeholder="ENS name or address"
-                className="field-input"
-                style={{width: 176}}
-              />
+      <Card className="mb-8 border-white/10 bg-black/40 backdrop-blur-md overflow-visible">
+        <CardHeader className="py-3 px-5 border-b border-white/5 flex flex-row items-center gap-2 bg-white/5">
+          <IconScales size={14} className="text-muted-foreground" />
+          <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">The request both are judged against</span>
+        </CardHeader>
+        <CardContent className="p-5">
+          <div className="flex flex-wrap items-end gap-4">
+            <div className="flex flex-col gap-1.5 flex-1 min-w-[140px]">
+              <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Capability requested</label>
+              <select 
+                value={capability} 
+                onChange={(e) => setCapability(e.target.value)} 
+                className="flex h-10 w-full rounded-md border border-input bg-background/50 px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 appearance-none font-mono"
+              >
+                {(tasks?.length ? tasks.map((t) => t.capability) : ['flight.quote', 'research']).map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+                <option value="pay">pay</option>
+              </select>
             </div>
-          ))}
 
-          <div className="ask-actions">
-            {queries.length < 4 && (
-              <button className="btn" onClick={() => setQueries([...queries, ''])} title="Add a column">
-                + column
-              </button>
-            )}
-            {queries.length > 2 && (
-              <button className="btn" onClick={() => setQueries(queries.slice(0, -1))} title="Remove last column">
-                <IconX size={11} />
-              </button>
-            )}
-            <button className="btn btn-primary" onClick={run} disabled={loading}>
-              {loading ? <IconSpinner size={12} className="spin" /> : <IconArrowRight size={12} />}
-              Evaluate
-            </button>
+            <div className="flex flex-col gap-1.5 w-[120px]">
+              <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Value at risk ({SPEND_SYMBOL})</label>
+              <Input value={value} onChange={(e) => setValue(e.target.value)} className="font-mono bg-background/50" />
+            </div>
+
+            {queries.map((q, i) => (
+              <div className="flex flex-col gap-1.5 flex-1 min-w-[160px]" key={i}>
+                <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                  <span className="inline-flex items-center justify-center w-[15px] h-[15px] rounded-[3px] border border-white/20 text-[9px]">{i + 1}</span>
+                  Column {i + 1}
+                </label>
+                <Input
+                  value={q}
+                  onChange={(e) => setQueries(queries.map((v, j) => (j === i ? e.target.value : v)))}
+                  placeholder="ENS name or address"
+                  className="font-mono bg-background/50"
+                />
+              </div>
+            ))}
+
+            <div className="flex items-center gap-2 h-10">
+              {queries.length < 4 && (
+                <Button variant="outline" size="sm" onClick={() => setQueries([...queries, ''])} title="Add a column" className="border-white/10 hover:bg-white/5">
+                  + col
+                </Button>
+              )}
+              {queries.length > 2 && (
+                <Button variant="outline" size="icon" onClick={() => setQueries(queries.slice(0, -1))} title="Remove last column" className="border-white/10 hover:bg-white/5 w-10">
+                  <IconX size={14} />
+                </Button>
+              )}
+              <Button onClick={run} disabled={loading} className="font-mono uppercase tracking-wider text-xs">
+                {loading ? <IconSpinner size={14} className="animate-spin mr-2" /> : <IconArrowRight size={14} className="mr-2" />}
+                Evaluate
+              </Button>
+            </div>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
-      {error && <div className="err">{error}</div>}
+      {error && <div className="bg-destructive/10 text-destructive border border-destructive/20 p-4 rounded-md text-sm font-mono mb-8">{error}</div>}
 
-      {/* the recommendation, stated before the evidence */}
-      {data && (
-        <div
-          className="panel"
-          style={{
-            marginBottom: 16,
-            borderColor: data.recommended ? 'var(--trust-line)' : 'var(--decline-line)',
-            background: data.recommended ? 'var(--trust-dim)' : 'var(--decline-dim)',
-          }}
-        >
-          <div className="panel-body row" style={{gap: 12}}>
-            {data.recommended ? (
-              <>
-                <VerdictBadge verdict="trust">Route here</VerdictBadge>
-                <span className="t1" style={{fontSize: 14}}>
-                  {data.recommended}
-                </span>
-                <span className="dim">
-                  is the only candidate that clears every hard gate for{' '}
-                  <span className="mono">{capability}</span> at {value} OG.
-                </span>
-              </>
-            ) : (
-              <>
-                <VerdictBadge verdict="decline">Route nowhere</VerdictBadge>
-                <span className="dim">
-                  No candidate cleared the policy. The correct action is to decline the task, not to pick the least-bad
-                  option.
-                </span>
-              </>
-            )}
-          </div>
-        </div>
-      )}
+      <AnimatePresence mode="wait">
+        {data && (
+          <motion.div
+            initial={{opacity: 0, y: -10}}
+            animate={{opacity: 1, y: 0}}
+            exit={{opacity: 0, y: -10}}
+          >
+            <Card className={`mb-8 ${data.recommended ? 'bg-primary/10 border-primary/30' : 'bg-destructive/10 border-destructive/30'}`}>
+              <CardContent className="p-5 flex items-center gap-4 flex-wrap">
+                {data.recommended ? (
+                  <>
+                    <VerdictBadge verdict="trust">Route here</VerdictBadge>
+                    <span className="text-foreground font-medium text-sm">
+                      {data.recommended}
+                    </span>
+                    <span className="text-muted-foreground text-sm">
+                      is the only candidate that clears every hard gate for <span className="font-mono text-primary/80">{capability}</span> at {value} OG.
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <VerdictBadge verdict="decline">Route nowhere</VerdictBadge>
+                    <span className="text-muted-foreground text-sm">
+                      No candidate cleared the policy. The correct action is to decline the task, not to pick the least-bad option.
+                    </span>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* columns */}
-      <div
+      <div 
+        className="grid gap-6 items-start"
         style={{
-          display: 'grid',
           gridTemplateColumns: `repeat(${Math.min(data?.results?.length || 2, 3)}, minmax(0, 1fr))`,
-          gap: 16,
-          alignItems: 'start',
         }}
       >
         {loading && !data && (
           <>
-            <div className="skeleton" style={{height: 500, borderRadius: 12}} />
-            <div className="skeleton" style={{height: 500, borderRadius: 12}} />
+            <div className="h-[500px] bg-white/5 rounded-xl animate-pulse" />
+            <div className="h-[500px] bg-white/5 rounded-xl animate-pulse" />
           </>
         )}
         {data?.results.map((r, i) => (
-          <div key={r.query} className="stack-sm">
-            {/* The header names the agent, not a slot — "COLUMN 1" told a reader
-                nothing the input above hadn't already said, and it made the
-                RECOMMENDED badge read as labelling a position rather than an
-                agent. Fixed height so every card's top edge lands on one line. */}
-            <div className="col-head">
-              <span className="col-tag">{i + 1}</span>
-              <span className="label" style={{overflow: 'hidden', textOverflow: 'ellipsis'}}>
+          <div key={r.query} className="flex flex-col gap-4">
+            <div className="flex items-center gap-3 h-[26px]">
+              <span className="inline-flex items-center justify-center w-[15px] h-[15px] rounded-[3px] border border-white/20 text-[9px] font-mono text-muted-foreground shrink-0">{i + 1}</span>
+              <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground overflow-hidden text-ellipsis whitespace-nowrap">
                 {r.query}
               </span>
               {data.recommended === r.query && (
-                <VerdictBadge verdict="trust">Recommended · route here</VerdictBadge>
+                <VerdictBadge verdict="trust">Recommended</VerdictBadge>
               )}
             </div>
             <Passport
@@ -251,29 +232,33 @@ export default function Compare({tasks, onPick}) {
       </div>
 
       {data && (
-        <div className="panel" style={{marginTop: 16}}>
-          <div className="panel-head">
-            <span className="label">Policy applied to every column</span>
-          </div>
-          <div className="panel-body">
-            <dl className="kv">
-                <dt>human</dt>
-                <dd>{data.policy.requireHumanVerified ? 'World ID production proof required' : 'not required'}</dd>
-                <dt>min score</dt>
-                <dd>{(data.policy.minScore / 100).toFixed(1)}%</dd>
-                <dt>min actions</dt>
-                <dd>{data.policy.minActions} witnessed</dd>
-                <dt>rejections</dt>
-                <dd>
-                  {data.policy.maxRejections === 0
-                    ? 'any blocked over-mandate attempt is disqualifying'
-                    : `up to ${data.policy.maxRejections}`}
-                </dd>
-                <dt>staleness</dt>
-                <dd>{data.policy.maxStalenessDays} days max since last witnessed action</dd>
-              </dl>
-          </div>
-        </div>
+        <Card className="mt-8 border-white/10 bg-black/40 backdrop-blur-md">
+          <CardHeader className="py-3 px-5 border-b border-white/5 bg-white/5">
+            <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Policy applied to every column</span>
+          </CardHeader>
+          <CardContent className="p-5">
+            <dl className="grid grid-cols-[140px_1fr] gap-x-4 gap-y-3 text-sm">
+              <dt className="text-muted-foreground">human</dt>
+              <dd className="text-foreground">{data.policy.requireHumanVerified ? 'World ID production proof required' : 'not required'}</dd>
+              
+              <dt className="text-muted-foreground">min score</dt>
+              <dd className="text-foreground">{(data.policy.minScore / 100).toFixed(1)}%</dd>
+              
+              <dt className="text-muted-foreground">min actions</dt>
+              <dd className="text-foreground">{data.policy.minActions} witnessed</dd>
+              
+              <dt className="text-muted-foreground">rejections</dt>
+              <dd className="text-foreground">
+                {data.policy.maxRejections === 0
+                  ? 'any blocked over-mandate attempt is disqualifying'
+                  : `up to ${data.policy.maxRejections}`}
+              </dd>
+              
+              <dt className="text-muted-foreground">staleness</dt>
+              <dd className="text-foreground">{data.policy.maxStalenessDays} days max since last witnessed action</dd>
+            </dl>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

@@ -267,7 +267,7 @@ function summarize(verdict, passport, hardFailures, softFailures, policy) {
     const backing = passport.proofIsWorldApp
       ? 'a World ID-verified owner'
       : 'an owner whose personhood attestation was issued locally';
-    return `${name} is backed by ${backing}, is acting inside its declared mandate, and has ${passport.reputation.total} witnessed actions at ${bp(passport.reputation.score)} reputation.`;
+    return `${name} is backed by ${backing}, is acting inside its declared mandate, and has ${passport.reputation.total} witnessed actions with a ${bp(passport.reputation.score)} reputation score.`;
   }
   if (verdict === VERDICT.DECLINE) {
     // Hard gates first. Among soft failures a blocked over-mandate attempt is the

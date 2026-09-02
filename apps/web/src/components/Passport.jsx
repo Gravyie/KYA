@@ -1,19 +1,5 @@
-/**
- * The passport document.
- *
- * Structured like a real machine-readable travel document rather than a
- * dashboard card: a human-readable data page (identity, authority, reputation)
- * above a machine-readable zone carrying the actual on-chain primary keys. The
- * MRZ is not ornament — it is the agent id, the owner nullifier, the capability
- * root and the log-chain head, selectable so a judge can copy one and check it
- * against the chain.
- *
- * The verdict is rendered ABOVE the data, because the product's output is a
- * decision, not a data dump. Hard gates are visually separated from soft signals
- * so it is obvious that a good track record cannot outvote a missing identity.
- */
 import React, {useEffect, useRef, useState} from 'react';
-import {pct, short, amount, ago, clock, nameOf} from '../lib/api.js';
+import {pct, short, amount, ago, clock, nameOf, SPEND_SYMBOL} from '../lib/api.js';
 import {IconCheck, IconX, IconWarn, IconShield, IconLock} from './icons.jsx';
 
 /* ── score dial ─────────────────────────────────────────────────────────── */
@@ -23,8 +9,6 @@ export function Dial({score, size = 62, verdict = 'trust', label = 'rep'}) {
   const [bump, setBump] = useState(false);
   const prev = useRef(score);
 
-  // Animate on change so a live reputation update is visible from the back of
-  // the room, then get out of the way.
   useEffect(() => {
     if (prev.current === score) return;
     const rising = score > prev.current;
@@ -40,30 +24,28 @@ export function Dial({score, size = 62, verdict = 'trust', label = 'rep'}) {
   const r = (size - 6) / 2;
   const circ = 2 * Math.PI * r;
   const frac = Math.max(0, Math.min(1, shown / 10_000));
-  const tone = {trust: 'var(--trust)', limit: 'var(--limit)', decline: 'var(--decline)'}[verdict] || 'var(--accent)';
+  const tone = {trust: '#22c55e', limit: '#eab308', decline: '#ef4444'}[verdict] || '#3b82f6';
 
   return (
-    <div className={`dial${bump ? ' bump' : ''}`} style={{width: size, height: size}}>
-      <svg width={size} height={size}>
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="3" />
+    <div className={`relative flex items-center justify-center transition-transform duration-300 ${bump ? 'scale-110' : 'scale-100'}`} style={{width: size, height: size}}>
+      <svg width={size} height={size} className="-rotate-90">
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="4" />
         <circle
-          className="dial-arc"
           cx={size / 2}
           cy={size / 2}
           r={r}
           fill="none"
           stroke={tone}
-          strokeWidth="3"
+          strokeWidth="4"
           strokeLinecap="round"
           strokeDasharray={circ}
           strokeDashoffset={circ * (1 - frac)}
+          className="transition-all duration-1000 ease-out"
         />
       </svg>
-      {/* Value carries its unit. "90.6" next to a sidebar reading "91%" looks like
-          two different numbers for the same thing. */}
-      <div className="dial-center">
-        <span className="dial-value">{(shown / 100).toFixed(1)}%</span>
-        <span className="dial-unit">{label}</span>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="font-mono font-medium text-foreground" style={{fontSize: size * 0.28, lineHeight: 1}}>{Math.round(shown / 100)}%</span>
+        <span className="font-mono uppercase tracking-widest text-muted-foreground/80 mt-0.5" style={{fontSize: size * 0.14, lineHeight: 1}}>{label}</span>
       </div>
     </div>
   );
@@ -71,83 +53,79 @@ export function Dial({score, size = 62, verdict = 'trust', label = 'rep'}) {
 
 /* ── holder mark ────────────────────────────────────────────────────────── */
 
-/**
- * A 5x5 symmetric identicon derived from the operator address. An identity
- * document without a holder mark reads as a dashboard widget, and a photo would
- * be a lie — an agent has no face. The address itself is the likeness, so it is
- * rendered directly: the same address always produces the same mark, and two
- * agents are distinguishable at a glance in a side-by-side comparison.
- */
 function Holder({address, verdict}) {
   if (!address) {
-    // Explicit void mark. An empty frame reads as a broken image; a struck-out
-    // frame reads as "there is nobody here", which is the actual fact.
     return (
-      <div className="holder holder-none" title="No holder on record" aria-hidden="true">
+      <div className="w-[60px] h-[60px] shrink-0 border border-destructive/20 bg-destructive/5 text-destructive flex items-center justify-center font-bold text-xl" title="No holder on record" aria-hidden="true">
         ✕
       </div>
     );
   }
 
   const hex = address.replace(/^0x/, '').toLowerCase().padEnd(40, '0');
-  const tone = {trust: 'var(--trust)', limit: 'var(--limit)', decline: 'var(--decline)'}[verdict] || 'var(--accent)';
+  const tone = {trust: '#22c55e', limit: '#eab308', decline: '#ef4444'}[verdict] || '#3b82f6';
 
-  // 15 independent nibbles feed the 15 unmirrored cells (3 columns x 5 rows).
-  // An earlier version indexed with `row * 3 + src`, which made rows overlap and
-  // collapsed the entropy — most addresses came out as the same near-solid block.
   const cells = [];
   for (let row = 0; row < 5; row++) {
     for (let col = 0; col < 5; col++) {
-      // Mirror columns 3-4 back onto 1-0 so the mark is symmetric like an emblem.
       const src = col > 2 ? 4 - col : col;
       const nib = parseInt(hex[row * 3 + src], 16);
-      const state = nib < 6 ? 0 : nib < 12 ? 1 : 2; // ~empty / neutral / accent
+      const state = nib < 6 ? 0 : nib < 12 ? 1 : 2;
       cells.push(
         <i
           key={`${row}-${col}`}
+          className="w-full h-full block"
           style={{
-            background: state === 0 ? 'transparent' : state === 1 ? 'rgba(255,255,255,0.32)' : tone,
+            background: state === 0 ? 'transparent' : state === 1 ? 'rgba(255,255,255,0.2)' : tone,
           }}
         />,
       );
     }
   }
   return (
-    <div className="holder" title={address} aria-hidden="true">
+    <div className="w-[60px] h-[60px] shrink-0 grid grid-cols-5 grid-rows-5 gap-0.5 border border-white/10 p-1 bg-black/40" title={address} aria-hidden="true">
       {cells}
     </div>
   );
 }
 
-/**
- * The document's five identity fields, in one fixed schema.
- *
- * Rendered identically whether or not a passport exists, with an em dash in
- * every missing cell. In a side-by-side comparison a column that drops fields
- * breaks row-to-row scanning and reads as "not loaded" rather than "absent",
- * which is exactly the wrong conclusion for a judge to reach.
- */
 function DataFields({passport}) {
   const auth = passport?.authority;
-  // Absolute dates, not relative time. "42d ago" is dashboard language; an
-  // identity document states when it was issued and when it lapses. The relative
-  // value survives as the title attribute for anyone who wants it.
   const iso = (ts) => new Date(ts * 1000).toISOString().slice(0, 10);
   const fields = [
-    ['Passport', passport ? `#${passport.agentId}` : '—', null],
-    ['Operator', passport ? short(passport.operator) : '—', passport?.operator],
-    ['Accountable owner', passport ? short(passport.owner) : '—', passport?.owner],
-    ['Issued', passport ? iso(passport.registeredAt) : '—', passport ? ago(passport.registeredAt) : null],
-    ['Expires', !passport ? '—' : auth.expiresAt === 0 ? 'no expiry' : iso(auth.expiresAt), null],
+    ['Passport', passport ? `#${passport.agentId}` : 'none', null],
+    ['Operator', passport ? short(passport.operator) : 'none', passport?.operator],
+    ['Accountable owner', passport ? short(passport.owner) : 'nobody', passport?.owner],
+    ['Issued', passport ? iso(passport.registeredAt) : 'never', passport ? ago(passport.registeredAt) : null],
+    ['Expires', !passport ? 'n/a' : auth.expiresAt === 0 ? 'no expiry' : iso(auth.expiresAt), null],
   ];
   return (
-    <div className="pp-meta">
+    <div className="flex flex-wrap gap-x-6 gap-y-3 mt-3 text-xs">
       {fields.map(([k, v, hint]) => (
-        <div key={k}>
-          <span className="label">{k}</span>
-          <span className="v" title={hint || undefined}>
+        <div key={k} className="flex flex-col gap-1">
+          <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">{k}</span>
+          <span className="font-mono text-foreground" title={hint || undefined}>
             {v}
           </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Mrz({passport, auth, rep, rows = 4}) {
+  const all = [
+    ['AGT', `eip155:${passport.chainId}:${passport.registry}/${passport.agentId}`],
+    ['NUL', passport.ownerNullifier],
+    ['CAP', auth.capabilityRoot],
+    ['LOG', rep.logHead],
+  ];
+  return (
+    <div className="bg-black text-muted-foreground/70 p-4 font-mono text-[10px] md:text-xs leading-relaxed border-t border-white/10 uppercase tracking-widest">
+      {all.slice(0, rows).map(([k, v]) => (
+        <div className="flex gap-4 mb-1 last:mb-0 break-all" key={k}>
+          <span className="font-bold text-muted-foreground w-8 shrink-0">{k}</span>
+          <span>{v}</span>
         </div>
       ))}
     </div>
@@ -158,9 +136,14 @@ function DataFields({passport}) {
 
 export function VerdictBadge({verdict, children}) {
   const Icon = verdict === 'trust' ? IconCheck : verdict === 'limit' ? IconWarn : IconX;
+  const colors = {
+    trust: 'bg-[#22c55e]/10 text-[#22c55e] border-[#22c55e]/30',
+    limit: 'bg-[#eab308]/10 text-[#eab308] border-[#eab308]/30',
+    decline: 'bg-[#ef4444]/10 text-[#ef4444] border-[#ef4444]/30',
+  };
   return (
-    <span className="verdict" data-v={verdict}>
-      <Icon size={11} />
+    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded border text-[11px] font-mono tracking-wider uppercase ${colors[verdict]}`}>
+      <Icon size={12} />
       {children || verdict}
     </span>
   );
@@ -168,28 +151,19 @@ export function VerdictBadge({verdict, children}) {
 
 /* ── humanhood badge ────────────────────────────────────────────────────── */
 
-/**
- * The humanhood claim, with its provenance attached.
- *
- * A World-verified owner and a locally-attested one must not render as the same
- * badge. `proofIsWorldApp` is true only when the on-chain attestation carries a
- * real World app/rp id, so a demo running without `WORLD_APP_ID` says "attested
- * locally" rather than implying a proof that was never checked against World.
- */
 function HumanBadge({passport}) {
   if (passport.humanVerified) {
     const world = passport.proofIsWorldApp;
     return (
       <span
-        className="verdict"
-        data-v={world ? 'trust' : 'limit'}
+        className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded border text-[11px] font-mono tracking-wider uppercase bg-[#22c55e]/10 text-[#22c55e] border-[#22c55e]/30"
         title={
           world
             ? `World ID ${passport.proofKindName} proof under ${passport.proofAppId}; nullifier bound on-chain`
-            : `Attested locally under "${passport.proofAppId || 'local'}" — no World ID app configured. The nullifier is bound on-chain, but it was not checked against World.`
+            : `Attested locally under "${passport.proofAppId || 'local'}". No World ID app is configured, so the nullifier is bound on-chain but was never checked against World.`
         }
       >
-        <IconShield size={11} />
+        <IconShield size={12} />
         {world ? `Human-backed · World ${passport.proofKindName}` : 'Human-backed · attested locally'}
       </span>
     );
@@ -197,11 +171,10 @@ function HumanBadge({passport}) {
   const simulator = passport.proofKind === 3;
   return (
     <span
-      className="verdict"
-      data-v="decline"
-      title={simulator ? 'World ID simulator proof — a staging credential, not proof of a unique human' : 'No World ID proof on record'}
+      className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded border text-[11px] font-mono tracking-wider uppercase bg-[#ef4444]/10 text-[#ef4444] border-[#ef4444]/30"
+      title={simulator ? 'World ID simulator proof. A staging credential, not proof of a unique human.' : 'No World ID proof on record'}
     >
-      <IconX size={11} />
+      <IconX size={12} />
       {simulator ? 'Simulator only' : 'Unverified'}
     </span>
   );
@@ -218,46 +191,47 @@ export function Checks({decision, collapsed = false}) {
 
   const Row = ({c}) => {
     const Icon = c.pass ? IconCheck : c.level === 'hard' ? IconX : IconWarn;
+    const toneClass = c.pass ? 'text-primary' : c.level === 'hard' ? 'text-destructive' : 'text-amber-500';
     return (
-      <div className="check" data-pass={String(c.pass)} data-level={c.level}>
-        <span className="tick">
-          <Icon size={12} />
+      <div className="flex items-start gap-3 py-2 border-b border-white/5 last:border-0 text-sm">
+        <span className={`mt-0.5 shrink-0 ${toneClass}`}>
+          <Icon size={14} />
         </span>
-        <span className="check-id">{c.id}</span>
-        <span className="check-detail">{c.detail}</span>
+        <span className="font-mono text-xs w-[120px] shrink-0 text-foreground">{c.id}</span>
+        <span className="text-muted-foreground leading-snug">{c.detail}</span>
       </div>
     );
   };
 
   return (
-    <div>
+    <div className="border-t border-white/10 px-6 py-4 bg-white/[0.02]">
       {collapsed && (
-        <div className="gate-split row-between">
-          <span className="label">
+        <div className="flex items-center justify-between mb-2">
+          <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
             {decision.checks.filter((c) => c.pass).length}/{decision.checks.length} checks passed
           </span>
-          <button className="btn btn-sm" onClick={() => setOpen((v) => !v)}>
+          <button className="text-xs font-mono uppercase text-muted-foreground hover:text-foreground transition-colors" onClick={() => setOpen((v) => !v)}>
             {open ? 'Hide evidence' : 'Show evidence'}
           </button>
         </div>
       )}
       {open && (
-        <div className="fade-in">
-          <div className="gate-split row">
-            <IconLock size={11} />
-            <span className="label">Hard gates — identity &amp; mandate. A failure here cannot be outvoted.</span>
+        <div className="animate-in fade-in duration-300">
+          <div className="flex items-center gap-2 mb-3 mt-2">
+            <IconLock size={12} className="text-muted-foreground" />
+            <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Hard gates: identity and mandate. A failure here cannot be outvoted.</span>
           </div>
-          <div className="checks">
+          <div className="flex flex-col mb-4 bg-black/20 rounded-md border border-white/5 p-2">
             {hard.map((c) => (
               <Row key={c.id} c={c} />
             ))}
           </div>
           {soft.length > 0 && (
             <>
-              <div className="gate-split">
-                <span className="label">Soft signals — track record. Shapes the limit, not the identity.</span>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Soft signals: track record. Shapes the limit, not the identity.</span>
               </div>
-              <div className="checks">
+              <div className="flex flex-col bg-black/20 rounded-md border border-white/5 p-2">
                 {soft.map((c) => (
                   <Row key={c.id} c={c} />
                 ))}
@@ -281,39 +255,44 @@ export function Passport({
   showLog = true,
   showChecks = true,
   showHeadBadge = true,
+  showCapabilities = true,
+  showDial = true,
+  mrzRows = 4,
   collapsedChecks = false,
   compact = false,
   onOpen = null,
   recommended = false,
+  maxFields = null,
 }) {
   const verdict = decision?.verdict || 'decline';
+  const borderColors = {
+    trust: 'border-primary',
+    limit: 'border-amber-500/50',
+    decline: 'border-destructive/50',
+  };
 
   if (!passport) {
     return (
-      <div className="passport" data-verdict="decline">
-        <div className="pp-band">
+      <div className={`rounded-xl border ${borderColors['decline']} bg-black/60 backdrop-blur-xl overflow-hidden flex flex-col shadow-2xl`}>
+        <div className="flex items-center justify-between px-5 py-2.5 bg-black/40 border-b border-white/10 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
           <span>Agent passport</span>
-          <span className="spacer" />
           <span>not on record</span>
         </div>
-        <div className="pp-head">
+        <div className="p-6 flex items-start gap-6">
           <Holder address={null} />
-          <div className="pp-title">
-            <div className="pp-name dim">No passport on record</div>
+          <div className="flex flex-col flex-1">
+            <div className="text-xl font-medium font-mono text-muted-foreground/60 mb-2">No passport on record</div>
             <DataFields passport={null} />
-            <div className="row" style={{marginTop: 9, flexWrap: 'wrap', gap: 6}}>
-              <span className="verdict" data-v="decline">
-                <IconX size={11} />
-                No accountable human
-              </span>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <VerdictBadge verdict="decline">No accountable human</VerdictBadge>
             </div>
           </div>
         </div>
-        <div className="verdict-block">
-          <IconX size={16} style={{color: 'var(--decline)', flexShrink: 0, marginTop: 2}} />
-          <div className="verdict-copy">
-            <div className="verdict-headline">Nothing to verify</div>
-            <div className="verdict-summary">
+        <div className="flex items-start gap-4 p-6 bg-destructive/10 border-t border-destructive/20">
+          <IconX size={20} className="text-destructive mt-1 shrink-0" />
+          <div>
+            <div className="text-lg font-medium text-destructive mb-1">Nothing to verify</div>
+            <div className="text-sm text-destructive/80 leading-relaxed max-w-[60ch]">
               There is no registry entry, so there is no accountable owner, no declared mandate and no witnessed
               history. This is the default state of every AI agent on the internet today.
             </div>
@@ -330,205 +309,176 @@ export function Passport({
       ? Number(auth.spendRemainingToday) / Number(auth.spendLimitPerDay)
       : 1;
 
+  const TrustIcon = verdict === 'trust' ? IconCheck : verdict === 'limit' ? IconWarn : IconX;
+  const verdictColors = {
+    trust: 'text-primary bg-primary/10 border-primary/20',
+    limit: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
+    decline: 'text-destructive bg-destructive/10 border-destructive/20',
+  };
+
   return (
-    <div className="passport" data-verdict={verdict} data-recommended={String(recommended)}>
-      {/* ── document title band: what this artifact is, and who issued it ── */}
-      <div className="pp-band">
+    <div className={`rounded-xl border ${recommended ? 'border-primary shadow-[0_0_30px_rgba(34,197,94,0.15)]' : 'border-white/10'} bg-[#121314]/90 backdrop-blur-xl overflow-hidden flex flex-col shadow-xl transition-all`}>
+      <div className="flex items-center justify-between px-5 py-2.5 bg-black/60 border-b border-white/10 font-mono text-[10px] uppercase tracking-widest text-muted-foreground/80">
         <span>Agent passport</span>
-        <span className="spacer" />
-        <span>
-          KYA registry · eip155:{passport.chainId}
-        </span>
+        <span>KYA registry · eip155:{passport.chainId}</span>
       </div>
 
-      {/* ── data page header ── */}
-      <div className="pp-head">
+      <div className="p-5 md:p-6 flex flex-col md:flex-row items-start gap-5 md:gap-6 border-b border-white/5 relative">
         <Holder address={passport.operator} verdict={verdict} />
-        <div className="pp-title">
-          <div className="pp-name">
-            {/* The document's own title is the click target through to the full
-                passport. Repeating the name in a column header above the card
-                just to make it clickable would say the same thing twice. */}
+        <div className="flex flex-col flex-1 min-w-0">
+          <div className="flex items-center gap-3">
             {onOpen ? (
-              <button className="pp-name-link" onClick={onOpen} title="Open the full passport">
+              <button className="text-xl md:text-2xl font-mono text-foreground hover:text-primary transition-colors hover:underline truncate" onClick={onOpen} title="Open the full passport">
                 {nameOf(passport)}
               </button>
             ) : (
-              nameOf(passport)
+              <span className="text-xl md:text-2xl font-mono text-foreground truncate">{nameOf(passport)}</span>
             )}
             {!passport.active && (
-              <span className="verdict" data-v="decline">
+              <span className="inline-flex px-2 py-0.5 rounded bg-destructive/20 text-destructive text-[10px] font-mono uppercase tracking-widest border border-destructive/30">
                 deactivated
               </span>
             )}
           </div>
           <DataFields passport={passport} />
-          <div className="row" style={{marginTop: 9, flexWrap: 'wrap', gap: 6}}>
+          <div className="mt-4 flex flex-wrap gap-2">
             <HumanBadge passport={passport} />
-            {/* The verdict lives in the block below. Repeating it here as a badge
-                gives the same claim two voices with no stated authority. */}
             {showHeadBadge && decision && <VerdictBadge verdict={verdict}>{decision.headline}</VerdictBadge>}
           </div>
         </div>
       </div>
 
-      {/* ── verdict, above the data: the output is a decision ── */}
       {decision && (
-        <div className="verdict-block">
-          {verdict === 'trust' ? (
-            <IconCheck size={16} style={{color: 'var(--trust)', flexShrink: 0, marginTop: 2}} />
-          ) : verdict === 'limit' ? (
-            <IconWarn size={16} style={{color: 'var(--limit)', flexShrink: 0, marginTop: 2}} />
-          ) : (
-            <IconX size={16} style={{color: 'var(--decline)', flexShrink: 0, marginTop: 2}} />
-          )}
-          <div className="verdict-copy">
-            <div className="verdict-headline">{decision.headline}</div>
-            <div className="verdict-summary">{decision.summary}</div>
+        <div className={`flex items-center gap-4 p-5 md:p-6 border-b border-white/5 ${verdictColors[verdict].replace('text-', 'bg-').replace('/10', '/5')}`}>
+          <TrustIcon size={24} className={`shrink-0 ${verdictColors[verdict].split(' ')[0]}`} />
+          <div className="flex-1">
+            <div className={`text-lg font-medium mb-1 ${verdictColors[verdict].split(' ')[0]}`}>{decision.headline}</div>
+            <div className="text-sm text-foreground/80 leading-relaxed max-w-[70ch]">{decision.summary}</div>
           </div>
-          {/* The dial sits beside the verdict rather than above it. Reputation is a
-              soft signal — it shapes the limit, it does not decide the gate — so it
-              should not be the largest object on the document. */}
-          <Dial score={rep.score} verdict={verdict} size={compact ? 52 : 58} />
+          {showDial && (
+            <div className="shrink-0 hidden sm:block">
+              <Dial score={rep.score} verdict={verdict} size={compact ? 52 : 64} />
+            </div>
+          )}
         </div>
       )}
 
-      {/* ── fields ── */}
-      <div className="pp-grid">
-        <div className="field">
-          <div className="label">Reputation</div>
-          <div className="field-value num">{pct(rep.score)}</div>
-          <div className="field-note">
-            {rep.success} of {rep.total} witnessed succeeded
-            {rep.rejected > 0 && <span style={{color: 'var(--decline)'}}> · {rep.rejected} blocked</span>}
-          </div>
-        </div>
-
-        <div className="field">
-          <div className="label">Confidence</div>
-          <div className="field-value num">{decision ? `${Math.round(decision.confidence * 100)}%` : '—'}</div>
-          <div className="field-note">how much the record can be leaned on</div>
-        </div>
-
-        {/* "24.91 / 25" alone reads as spent-of-limit. It is the opposite — what
-            is LEFT — and a mandate display that can be read backwards is worse
-            than no display, so the label says so explicitly. */}
-        <div className="field">
-          <div className="label">Spend left today</div>
-          <div className="field-value num">
-            {amount(auth.spendRemainingTodayEth)}{' '}
-            <span className="dimmer">of {amount(auth.spendLimitPerDayEth)}</span>
-          </div>
-          <div className="meter" data-tone={spendFrac > 0.4 ? 'trust' : spendFrac > 0.1 ? 'limit' : 'decline'}>
-            <span style={{width: `${Math.max(2, spendFrac * 100)}%`}} />
-          </div>
-        </div>
-
-        <div className="field">
-          <div className="label">Action cap</div>
-          <div className="field-value num">{auth.maxActionsPerDay || '∞'}</div>
-          <div className="field-note">per UTC day, enforced on settle</div>
-        </div>
-
-        {/* Expiry is already a header field; this slot carries the thing a relying
-            party actually needs to know about the mandate's stability. */}
-        <div className="field">
-          <div className="label">Volume handled</div>
-          <div className="field-value num">{amount(rep.volumeHandledEth)}</div>
-          <div className="field-note">across successful actions only</div>
-        </div>
-
-        <div className="field">
-          <div className="label">Last action</div>
-          <div className="field-value" title={rep.total ? new Date(rep.lastActionAt * 1000).toISOString() : undefined}>
-            {rep.total ? ago(rep.lastActionAt) : 'never'}
-          </div>
-          <div className="field-note">
-            {rep.total ? `first ${new Date(rep.firstActionAt * 1000).toISOString().slice(0, 10)}` : 'no history yet'}
-          </div>
-        </div>
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-y-6 gap-x-8 p-5 md:p-6 bg-white/[0.01]">
+        {[
+          <div className="flex flex-col gap-1" key="rep">
+            <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Reputation</div>
+            <div className="text-2xl font-mono font-medium text-foreground">{pct(rep.score)}</div>
+            <div className="text-xs text-muted-foreground mt-1 leading-snug">
+              {rep.successRatePct.toFixed(1)}% raw ({rep.success}/{rep.total})
+              {rep.rejected > 0 && (
+                <span className="text-destructive"> and {rep.rejected} blocked</span>
+              )}
+            </div>
+          </div>,
+          <div className="flex flex-col gap-1" key="conf">
+            <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Confidence</div>
+            <div className="text-2xl font-mono text-foreground">{decision ? `${Math.round(decision.confidence * 100)}%` : 'n/a'}</div>
+            <div className="text-xs text-muted-foreground mt-1 leading-snug">how much the record can be leaned on</div>
+          </div>,
+          <div className="flex flex-col gap-1" key="spend">
+            <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Spend left today</div>
+            <div className="text-2xl font-mono text-foreground">
+              {amount(auth.spendRemainingTodayEth)} <span className="text-muted-foreground/60">{SPEND_SYMBOL}</span>{' '}
+              <span className="text-muted-foreground text-sm">of {amount(auth.spendLimitPerDayEth)}</span>
+            </div>
+            <div className="w-full h-1 bg-white/10 rounded-full mt-1.5 overflow-hidden">
+              <div 
+                className={`h-full rounded-full ${spendFrac > 0.4 ? 'bg-primary' : spendFrac > 0.1 ? 'bg-amber-500' : 'bg-destructive'}`} 
+                style={{width: `${Math.max(2, spendFrac * 100)}%`}} 
+              />
+            </div>
+            <div className="text-xs text-muted-foreground mt-1 leading-snug">resets at 00:00 UTC</div>
+          </div>,
+          <div className="flex flex-col gap-1" key="cap">
+            <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Action cap</div>
+            <div className="text-2xl font-mono text-foreground">{auth.maxActionsPerDay || '∞'}</div>
+            <div className="text-xs text-muted-foreground mt-1 leading-snug">per UTC day, enforced on settle</div>
+          </div>,
+          <div className="flex flex-col gap-1" key="vol">
+            <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Volume handled</div>
+            <div className="text-2xl font-mono text-foreground">
+              {amount(rep.volumeHandledEth)} <span className="text-muted-foreground/60">{SPEND_SYMBOL}</span>
+            </div>
+            <div className="text-xs text-muted-foreground mt-1 leading-snug">across successful actions only</div>
+          </div>,
+          <div className="flex flex-col gap-1" key="last">
+            <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Last action</div>
+            <div className="text-base md:text-lg font-mono text-foreground py-0.5">
+              {rep.total ? ago(rep.lastActionAt) : 'never'}
+            </div>
+            <div className="text-xs text-muted-foreground mt-1 leading-snug">
+              {rep.total ? `first ${new Date(rep.firstActionAt * 1000).toISOString().slice(0, 10)}` : 'no history yet'}
+            </div>
+          </div>,
+        ].slice(0, maxFields || undefined)}
       </div>
 
-      {/* ── capabilities ── */}
-      <div className="field" style={{borderRight: 'none'}}>
-        <div className="label">Granted capabilities · from ENS text record agent.capabilities</div>
-        <div className="chips">
-          {passport.capabilities.length === 0 && <span className="dimmer">none granted</span>}
-          {passport.capabilities.map((c) => (
-            <span key={c} className="chip" data-requested={String(c === requestedCapability)}>
-              {c}
-            </span>
-          ))}
-          {requestedCapability && !passport.capabilities.includes(requestedCapability) && (
-            <span className="chip" data-missing="true">
-              {requestedCapability}
-            </span>
+      {showCapabilities && (
+        <div className="px-5 md:px-6 py-4 border-t border-white/5 bg-white/[0.01]">
+          <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-3">Granted capabilities · from ENS text record agent.capabilities</div>
+          <div className="flex flex-wrap gap-2">
+            {passport.capabilities.length === 0 && <span className="text-sm text-muted-foreground">none granted</span>}
+            {passport.capabilities.map((c) => (
+              <span key={c} className={`px-2.5 py-1 rounded text-xs font-mono border ${c === requestedCapability ? 'bg-primary/20 text-primary border-primary/50' : 'bg-white/5 text-foreground border-white/10'}`}>
+                {c}
+              </span>
+            ))}
+            {requestedCapability && !passport.capabilities.includes(requestedCapability) && (
+              <span className="px-2.5 py-1 rounded text-xs font-mono bg-destructive/10 text-destructive border border-destructive/30 line-through decoration-destructive/50 decoration-2">
+                {requestedCapability}
+              </span>
+            )}
+          </div>
+          {passport.textRecords?.description && (
+            <div className="text-sm text-muted-foreground mt-4 leading-relaxed border-l-2 border-white/10 pl-3">
+              {passport.textRecords.description}
+            </div>
           )}
         </div>
-        {passport.textRecords?.description && (
-          <div className="field-note" style={{marginTop: 8, whiteSpace: 'normal'}}>
-            {passport.textRecords.description}
-          </div>
-        )}
-      </div>
+      )}
 
-      {/* ── evidence ── */}
       {showChecks && decision && <Checks decision={decision} collapsed={collapsedChecks} />}
 
-      {/* ── action log ── */}
       {showLog && (
-        <>
-          <div className="gate-split row-between">
-            <span className="label">
+        <div className="border-t border-white/10">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between px-5 md:px-6 py-3 bg-white/5 gap-2">
+            <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
               Witnessed action log · {passport.actionCount} receipts
               {integrity && (
-                <span style={{color: integrity.verified ? 'var(--trust)' : 'var(--decline)', marginLeft: 8}}>
+                <span className={`ml-3 ${integrity.verified ? 'text-primary' : 'text-destructive'}`}>
                   {integrity.verified ? 'hash chain verified' : 'CHAIN MISMATCH'}
                 </span>
               )}
             </span>
-            <span className="label">executor-witnessed, never self-reported</span>
+            <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60 hidden md:block">executor-witnessed, never self-reported</span>
           </div>
-          <div className="log">
-            {passport.actions.length === 0 && <div className="empty">No actions witnessed yet.</div>}
-            {passport.actions.map((a) => (
-              <div key={`${a.index}-${a.evidence}`} className={`log-row${a.index === freshActionIndex ? ' fresh' : ''}`}>
-                <span className="dimmer num">#{a.index}</span>
-                <span className="out" data-o={a.outcome}>
-                  <span className="dot" />
-                  {a.outcome}
-                </span>
-                <span style={{overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
-                  {a.kind} <span className="dimmer">· {a.evidence.slice(0, 14)}…</span>
-                </span>
-                <span className="dimmer num">{a.valueEth === '0' ? '—' : amount(a.valueEth)}</span>
-              </div>
-            ))}
+          <div className="bg-[#0a0a0a] max-h-[300px] overflow-y-auto custom-scrollbar p-2">
+            {passport.actions.length === 0 && <div className="text-sm text-muted-foreground p-4 text-center">No actions witnessed yet.</div>}
+            <div className="flex flex-col gap-1">
+              {passport.actions.map((a) => (
+                <div key={`${a.index}-${a.evidence}`} className={`grid grid-cols-[30px_100px_1fr_80px] gap-2 md:gap-4 items-center px-3 py-2 rounded text-xs font-mono ${a.index === freshActionIndex ? 'bg-white/10' : 'hover:bg-white/5'}`}>
+                  <span className="text-muted-foreground/50">#{a.index}</span>
+                  <span className={`flex items-center gap-1.5 ${a.outcome === 'success' ? 'text-primary' : a.outcome === 'rejected' ? 'text-destructive' : 'text-amber-500'}`}>
+                    <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                    {a.outcome}
+                  </span>
+                  <span className="text-foreground truncate" title={`${a.kind} · ${a.evidence}`}>
+                    {a.kind} <span className="text-muted-foreground">· {a.evidence.slice(0, 14)}…</span>
+                  </span>
+                  <span className="text-muted-foreground text-right">{a.valueEth === '0' ? 'no value' : amount(a.valueEth)}</span>
+                </div>
+              ))}
+            </div>
           </div>
-        </>
+        </div>
       )}
 
-      {/* ── machine-readable zone: the real on-chain primary keys ── */}
-      <div className="mrz">
-        <div className="mrz-row">
-          <span className="mrz-key">AGT</span>
-          <span>
-            eip155:{passport.chainId}:{passport.registry}/{passport.agentId}
-          </span>
-        </div>
-        <div className="mrz-row">
-          <span className="mrz-key">NUL</span>
-          <span>{passport.ownerNullifier}</span>
-        </div>
-        <div className="mrz-row">
-          <span className="mrz-key">CAP</span>
-          <span>{auth.capabilityRoot}</span>
-        </div>
-        <div className="mrz-row">
-          <span className="mrz-key">LOG</span>
-          <span>{rep.logHead}</span>
-        </div>
-      </div>
+      <Mrz passport={passport} auth={auth} rep={rep} rows={mrzRows} />
     </div>
   );
 }

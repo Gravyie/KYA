@@ -22,7 +22,7 @@ async function call(path, body) {
   if (!res.ok) {
     // Prefer the contract's own error name. "The contract function reverted" is
     // useless on stage; "OwnerNotHumanVerified" is the demonstration.
-    const message = json.revert ? `${json.revert} — the contract refused this` : json.error || `HTTP ${res.status}`;
+    const message = json.revert ? `${json.revert}: the contract refused this` : json.error || `HTTP ${res.status}`;
     throw Object.assign(new Error(message), {status: res.status, revert: json.revert, payload: json});
   }
   return json;
@@ -49,12 +49,12 @@ export const api = {
 export const pct = (bp, digits = 1) => `${(bp / 100).toFixed(digits)}%`;
 
 export const short = (addr, head = 6, tail = 4) =>
-  !addr ? '—' : `${addr.slice(0, head)}…${addr.slice(-tail)}`;
+  !addr ? 'none' : `${addr.slice(0, head)}…${addr.slice(-tail)}`;
 
 /** Compact ETH-ish amount. The demo's spend unit is wei-denominated. */
 export function amount(eth) {
   const n = Number(eth);
-  if (!Number.isFinite(n)) return '—';
+  if (!Number.isFinite(n)) return 'n/a';
   if (n === 0) return '0';
   if (n < 0.0001) return '<0.0001';
   if (n < 1) return n.toFixed(4).replace(/0+$/, '');
@@ -72,9 +72,19 @@ export function ago(ts) {
 }
 
 export function clock(ts) {
-  if (!ts) return '—';
+  if (!ts) return 'n/a';
   return new Date(ts * 1000).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', second: '2-digit'});
 }
+
+/**
+ * The spend unit's ticker.
+ *
+ * Sourced as a named constant rather than typed inline in two components: the
+ * chain is "0G" with a digit zero and the native currency is "OG" with a letter
+ * O, and the two are visually identical in uppercase mono. Declaring it once
+ * means the UI cannot drift from `chains.js` nativeCurrency.symbol.
+ */
+export const SPEND_SYMBOL = 'OG';
 
 export const VERDICT_COPY = {
   trust: 'Trust',
