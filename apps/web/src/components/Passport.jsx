@@ -62,29 +62,9 @@ function Holder({address, verdict}) {
     );
   }
 
-  const hex = address.replace(/^0x/, '').toLowerCase().padEnd(40, '0');
-  const tone = {trust: '#22c55e', limit: '#eab308', decline: '#ef4444'}[verdict] || '#3b82f6';
-
-  const cells = [];
-  for (let row = 0; row < 5; row++) {
-    for (let col = 0; col < 5; col++) {
-      const src = col > 2 ? 4 - col : col;
-      const nib = parseInt(hex[row * 3 + src], 16);
-      const state = nib < 6 ? 0 : nib < 12 ? 1 : 2;
-      cells.push(
-        <i
-          key={`${row}-${col}`}
-          className="w-full h-full block"
-          style={{
-            background: state === 0 ? 'transparent' : state === 1 ? 'rgba(255,255,255,0.2)' : tone,
-          }}
-        />,
-      );
-    }
-  }
   return (
-    <div className="w-[60px] h-[60px] shrink-0 grid grid-cols-5 grid-rows-5 gap-0.5 border border-white/10 p-1 bg-black/40" title={address} aria-hidden="true">
-      {cells}
+    <div className="w-[60px] h-[60px] shrink-0 border border-white/10 p-0.5 bg-black/40 overflow-hidden" title={address} aria-hidden="true">
+      <img src="/images/passport-avatar.jpg" alt="" className="w-full h-full object-cover grayscale contrast-150" />
     </div>
   );
 }

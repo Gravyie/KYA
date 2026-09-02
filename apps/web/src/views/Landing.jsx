@@ -84,16 +84,11 @@ export default function Landing({onGo, integrations}) {
 
   return (
     <div className="min-h-screen bg-black relative selection:bg-primary selection:text-black">
-      {/* Background imagery: Halftone & ASCII */}
-      <div className="fixed right-0 top-20 w-1/2 h-full opacity-30 pointer-events-none mix-blend-screen z-0">
-        <img src="/images/halftone.jpg" alt="" className="w-full h-full object-cover filter contrast-125" />
-        <div className="absolute inset-0 bg-gradient-to-l from-transparent to-black" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
-      </div>
-      
-      <div className="absolute top-0 left-0 w-full h-[500px] opacity-10 pointer-events-none mix-blend-screen z-0">
-        <img src="/images/ascii.jpg" alt="" className="w-full h-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black" />
+      {/* Background imagery: img-16.png */}
+      <div className="fixed left-0 top-20 w-1/2 h-full opacity-40 pointer-events-none mix-blend-screen z-0">
+        <img src="/images/bg-texture.png" alt="" className="w-full h-full object-cover filter contrast-125" />
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent to-black/80" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
       </div>
 
       <div className="relative z-10 max-w-7xl mx-auto px-6 pt-16 pb-16">
@@ -313,22 +308,25 @@ export default function Landing({onGo, integrations}) {
         </section>
         
         {/* Footer CTA */}
-        <section className="mb-8 border-t-2 border-white/10 pt-20 text-center relative overflow-hidden">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] opacity-10 pointer-events-none mix-blend-screen">
-            <img src="/images/holo.jpg" alt="" className="w-full h-full object-cover rounded-full filter contrast-150 saturate-200" />
-          </div>
-          <div className="relative z-10 bg-black/60 backdrop-blur p-8 inline-block border-2 border-white/10">
-            <h2 className="text-3xl font-sans font-bold tracking-tighter text-white mb-6 uppercase">
-              We are not building another AI agent.<br/>
-              <span className="text-primary font-mono text-2xl mt-4 block">We are building the layer that lets you trust one.</span>
-            </h2>
-            <div className="flex flex-wrap justify-center gap-4 mt-8">
-              <Button size="lg" onClick={() => onGo('compare')} className="font-mono uppercase font-bold tracking-widest text-xs rounded-none bg-primary text-black hover:bg-white hover:text-black border-2 border-primary hover:border-white transition-colors h-12 px-8">
-                Open console <ArrowRight size={16} className="ml-2" />
-              </Button>
-              <Button size="lg" variant="outline" onClick={() => onGo('issue')} className="font-mono uppercase font-bold tracking-widest text-xs rounded-none border-2 border-white/20 hover:bg-white/10 hover:text-white transition-colors h-12 px-8">
-                Issue passport
-              </Button>
+        <section className="mb-8 border-t-2 border-white/10 pt-20 pb-20 text-center">
+          <div className="relative inline-block border-2 border-white/10 p-8 overflow-hidden bg-black shadow-2xl">
+            <div className="absolute inset-0 opacity-40 pointer-events-none mix-blend-screen z-0">
+              <img src="/images/footer-cta-bg.png" alt="" className="w-full h-full object-contain filter contrast-150 saturate-200" />
+            </div>
+            
+            <div className="relative z-10">
+              <h2 className="text-3xl font-sans font-bold tracking-tighter text-white mb-6 uppercase">
+                We are not building another AI agent.<br/>
+                <span className="text-primary font-mono text-2xl mt-4 block">We are building the layer that lets you trust one.</span>
+              </h2>
+              <div className="flex flex-wrap justify-center gap-4 mt-8">
+                <Button size="lg" onClick={() => onGo('compare')} className="font-mono uppercase font-bold tracking-widest text-xs rounded-none bg-primary text-black hover:bg-white hover:text-black border-2 border-primary hover:border-white transition-colors h-12 px-8">
+                  Open console <ArrowRight size={16} className="ml-2" />
+                </Button>
+                <Button size="lg" variant="outline" onClick={() => onGo('issue')} className="font-mono uppercase font-bold tracking-widest text-xs rounded-none border-2 border-white/20 hover:bg-white/10 hover:text-white transition-colors h-12 px-8 bg-black/50 backdrop-blur">
+                  Issue passport
+                </Button>
+              </div>
             </div>
           </div>
         </section>

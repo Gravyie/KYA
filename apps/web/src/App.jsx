@@ -50,6 +50,7 @@ export default function App() {
   const [suggestOpen, setSuggestOpen] = useState(false);
   const searchRef = useRef(null);
   const mainRef = useRef(null);
+  const lenisRef = useRef(null);
 
   const isHome = view === 'home';
 
@@ -66,6 +67,7 @@ export default function App() {
         lerp: 0.08,
         smoothWheel: true,
       });
+      lenisRef.current = lenis;
       
       let animationFrameId;
       function raf(time) {
@@ -77,6 +79,7 @@ export default function App() {
       return () => {
         cancelAnimationFrame(animationFrameId);
         lenis.destroy();
+        lenisRef.current = null;
       };
     }, 0);
     
@@ -164,14 +167,14 @@ export default function App() {
       <div className="flex flex-col h-screen w-full bg-background">
         <header className="flex-none h-[60px] flex items-center px-8 border-b border-white/5 backdrop-blur-md bg-background/80 z-50 fixed top-0 w-full">
           <button className="flex items-center gap-3 group cursor-pointer" onClick={() => go('home')}>
-            <strong className="text-lg font-bold tracking-tighter text-white font-sans bg-primary text-black px-2 py-0.5 border border-primary transition-colors group-hover:bg-black group-hover:text-primary">KYA</strong>
+            <motion.strong layoutId="logo-kya" className="text-lg font-bold tracking-tighter text-white font-sans bg-primary text-black px-2 py-0.5 border border-primary transition-colors group-hover:bg-black group-hover:text-primary">KYA</motion.strong>
             <span className="text-[11px] font-mono tracking-widest text-muted-foreground uppercase flex items-center gap-2 group-hover:text-white transition-colors">
               <span className="text-primary/50">//</span> KNOW YOUR AGENT
             </span>
           </button>
 
           <nav className="hidden md:flex items-center gap-6 ml-auto mr-6">
-            <a href="#loop" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors border-b border-transparent hover:border-white/20">How it works</a>
+            <a href="#loop" onClick={(e) => { e.preventDefault(); lenisRef.current?.scrollTo('#loop'); }} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors border-b border-transparent hover:border-white/20">How it works</a>
             <button onClick={() => go('sponsors')} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors border-b border-transparent hover:border-white/20">Integrations</button>
             <button onClick={() => go('issue')} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors border-b border-transparent hover:border-white/20">Issue a passport</button>
           </nav>
@@ -193,11 +196,18 @@ export default function App() {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-[240px_1fr] h-screen w-full overflow-hidden bg-background">
-      <aside className="hidden md:flex flex-col border-r-2 border-white/10 bg-black min-h-0">
-        <div className="p-5 border-b-2 border-white/10 bg-black">
+      <aside className="hidden md:flex flex-col border-r-2 border-white/10 bg-black min-h-0 relative overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none z-0">
+          <div className="absolute inset-0 mix-blend-screen opacity-50">
+            <img src="/images/bg-texture.png" alt="" className="w-full h-full object-cover object-[80%_center] filter contrast-125 grayscale" />
+          </div>
+          <div className="absolute inset-0 bg-black/60" />
+        </div>
+
+        <div className="p-5 border-b-2 border-white/10 bg-black/40 relative z-10">
           <button className="flex flex-col gap-3 cursor-pointer group w-full" onClick={() => go('home')} title="Back to the overview">
             <div className="flex items-center gap-3">
-              <strong className="text-lg font-bold tracking-tighter text-white font-sans bg-primary text-black px-2 py-0.5 border border-primary transition-colors group-hover:bg-black group-hover:text-primary">KYA</strong>
+              <motion.strong layoutId="logo-kya" className="text-lg font-bold tracking-tighter text-white font-sans bg-primary text-black px-2 py-0.5 border border-primary transition-colors group-hover:bg-black group-hover:text-primary">KYA</motion.strong>
               <span className="text-[10px] font-mono tracking-widest text-muted-foreground uppercase flex items-center gap-1 group-hover:text-white transition-colors">
                 <span className="text-primary/50">//</span> KNOW YOUR AGENT
               </span>
@@ -208,11 +218,12 @@ export default function App() {
           </button>
         </div>
 
-        <nav className="p-3 flex flex-col gap-[2px]">
+        <div className="flex-1 flex flex-col min-h-0 relative z-10">
+          <nav className="p-3 flex flex-col gap-[2px]">
           {VIEWS.map((v) => (
             <button
               key={v.id}
-              className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] text-left w-full transition-all duration-200 ${view === v.id ? 'bg-white/10 text-white font-medium' : 'text-muted-foreground hover:bg-white/5 hover:text-foreground'}`}
+              className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] text-left w-full transition-all duration-200 ${view === v.id ? 'bg-white/10 text-white font-medium' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
               aria-current={view === v.id}
               onClick={() => go(v.id, v.id === 'lookup' ? query : '')}
             >
@@ -223,13 +234,13 @@ export default function App() {
           ))}
         </nav>
 
-        <div className="px-5 pt-3 pb-2 border-t border-white/5 mt-1 flex justify-between items-center">
-          <span className="font-mono text-[9.5px] uppercase tracking-[0.9px] text-muted-foreground font-medium">Registry · best first</span>
-          <span className="font-mono text-[10px] text-muted-foreground">{roster.length}</span>
+          <div className="px-5 pt-3 pb-2 border-t border-white/5 mt-1 flex justify-between items-center">
+          <span className="font-mono text-[9.5px] uppercase tracking-[0.9px] text-white/60 font-medium">Registry · best first</span>
+          <span className="font-mono text-[10px] text-white/60">{roster.length}</span>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-2 pb-3 min-h-0 custom-scrollbar">
-          {roster.length === 0 && <div className="p-3 text-[13px] text-muted-foreground">No passports yet.</div>}
+          <div className="flex-1 overflow-y-auto px-2 pb-3 min-h-0 custom-scrollbar">
+          {roster.length === 0 && <div className="p-3 text-[13px] text-white/70">No passports yet.</div>}
           <AnimatePresence>
             {roster.map((a, i) => (
               <motion.button
@@ -237,18 +248,18 @@ export default function App() {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.05 }}
                 key={a.agentId}
-                className={`w-full text-left p-2 rounded-md grid grid-cols-[1fr_auto] gap-x-2 gap-y-[2px] items-center transition-colors ${query === a.domain ? 'bg-white/10' : 'hover:bg-white/5'}`}
+                className={`w-full text-left p-2 rounded-md grid grid-cols-[1fr_auto] gap-x-2 gap-y-[2px] items-center transition-colors ${query === a.domain ? 'bg-white/10' : 'hover:bg-white/10'}`}
                 aria-current={query === a.domain}
                 onClick={() => go('lookup', a.domain)}
               >
-                <span className={`text-[12.5px] overflow-hidden text-ellipsis whitespace-nowrap ${query === a.domain ? 'text-white' : 'text-muted-foreground'}`}>{a.domain}</span>
+                <span className={`text-[12.5px] overflow-hidden text-ellipsis whitespace-nowrap ${query === a.domain ? 'text-white' : 'text-white/70'}`}>{a.domain}</span>
                 <span
                   className="font-mono text-[10px]"
                   style={{ color: a.rejected > 0 ? 'var(--color-destructive)' : a.score >= 7500 ? 'var(--color-primary)' : 'var(--color-foreground)' }}
                 >
                   {pct(a.score, 0)}
                 </span>
-                <span className="col-span-2 font-mono text-[10px] text-muted-foreground/60 flex gap-[7px]">
+                <span className="col-span-2 font-mono text-[10px] text-white/40 flex gap-[7px]">
                   <span>id {a.agentId}</span>
                   <span>{a.total} acts</span>
                   {a.rejected > 0 && <span className="text-destructive">{a.rejected} blocked</span>}
@@ -256,10 +267,11 @@ export default function App() {
                 </span>
               </motion.button>
             ))}
-          </AnimatePresence>
+            </AnimatePresence>
+          </div>
         </div>
 
-        <div className="border-t-2 border-white/10 p-4 flex flex-col gap-1.5 bg-black">
+        <div className="border-t-2 border-white/10 p-4 flex flex-col gap-1.5 bg-black/40 relative z-10">
           {integrations ? (
             ['world', 'ens', 'og'].map((k) => (
               <div key={k} className="flex justify-between items-center">
