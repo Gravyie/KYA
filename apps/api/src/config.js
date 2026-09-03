@@ -47,7 +47,11 @@ export const deployment = loadDeployment(CHAIN_ID);
  * rendered in the UI. Nothing in this codebase presents a local stand-in as a
  * live sponsor call — an unlabeled simulation is a bug, not a fallback.
  */
-const normalizeKey = (key) => (key && !key.startsWith('0x') ? `0x${key}` : key) || null;
+const normalizeKey = (key) => {
+  if (!key) return null;
+  const t = key.trim();
+  return !t.startsWith('0x') ? `0x${t}` : t;
+};
 
 export const config = {
   chainId: CHAIN_ID,
