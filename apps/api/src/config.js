@@ -47,6 +47,8 @@ export const deployment = loadDeployment(CHAIN_ID);
  * rendered in the UI. Nothing in this codebase presents a local stand-in as a
  * live sponsor call — an unlabeled simulation is a bug, not a fallback.
  */
+const normalizeKey = (key) => (key && !key.startsWith('0x') ? `0x${key}` : key) || null;
+
 export const config = {
   chainId: CHAIN_ID,
   rpcUrl: process.env.RPC_URL || (CHAIN_ID === 31337 ? 'http://127.0.0.1:8545' : 'https://evmrpc-testnet.0g.ai'),
@@ -54,9 +56,9 @@ export const config = {
   parentName: deployment.parentName,
   port: Number(process.env.PORT || 5055),
 
-  attestorKey: process.env.ATTESTOR_PRIVATE_KEY || null,
-  executorKey: process.env.EXECUTOR_PRIVATE_KEY || process.env.PRIVATE_KEY || null,
-  ownerKey: process.env.OWNER_PRIVATE_KEY || process.env.PRIVATE_KEY || null,
+  attestorKey: normalizeKey(process.env.ATTESTOR_PRIVATE_KEY),
+  executorKey: normalizeKey(process.env.EXECUTOR_PRIVATE_KEY || process.env.PRIVATE_KEY),
+  ownerKey: normalizeKey(process.env.OWNER_PRIVATE_KEY || process.env.PRIVATE_KEY),
 
   world: {
     appId: process.env.WORLD_APP_ID || null,
