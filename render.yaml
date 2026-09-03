@@ -1,6 +1,7 @@
 services:
   - type: web
     name: kya-api
+    plan: free
     env: node
     buildCommand: pnpm install --frozen-lockfile
     startCommand: node apps/api/src/server.js
