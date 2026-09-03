@@ -49,7 +49,8 @@ export const deployment = loadDeployment(CHAIN_ID);
  */
 const normalizeKey = (key) => {
   if (!key) return null;
-  const t = key.trim();
+  // Strip whitespace and any stray quotes from copy-pasting
+  const t = key.trim().replace(/^['"]|['"]$/g, '');
   return !t.startsWith('0x') ? `0x${t}` : t;
 };
 
