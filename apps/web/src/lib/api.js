@@ -10,7 +10,9 @@
 async function call(path, body) {
   let res;
   try {
-    res = await fetch(path, {
+    const baseUrl = import.meta.env.VITE_API_URL || '';
+    const url = baseUrl ? `${baseUrl.replace(/\/$/, '')}${path}` : path;
+    res = await fetch(url, {
       method: body ? 'POST' : 'GET',
       headers: body ? {'content-type': 'application/json'} : undefined,
       body: body ? JSON.stringify(body) : undefined,

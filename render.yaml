@@ -1,0 +1,33 @@
+services:
+  - type: web
+    name: kya-api
+    env: node
+    buildCommand: pnpm install --frozen-lockfile
+    startCommand: node apps/api/src/server.js
+    envVars:
+      - key: PORT
+        value: 5055
+      - key: CHAIN_ID
+        value: 16602
+      - key: RPC_URL
+        value: https://evmrpc-testnet.0g.ai
+      - key: ATTESTOR_PRIVATE_KEY
+        sync: false
+      - key: EXECUTOR_PRIVATE_KEY
+        sync: false
+      - key: OWNER_PRIVATE_KEY
+        sync: false
+      - key: PRIVATE_KEY
+        sync: false
+      - key: OG_STORAGE_PRIVATE_KEY
+        sync: false
+      - key: WORLD_APP_ID
+        sync: false
+      - key: WORLD_ACTION
+        value: kya-verify-owner
+      - key: OG_COMPUTE_API_KEY
+        sync: false
+      - key: OG_COMPUTE_MODEL
+        value: gpt-oss-120b
+      - key: OG_VERIFY_TEE
+        value: "true"

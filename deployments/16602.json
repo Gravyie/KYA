@@ -1,0 +1,13 @@
+{
+  "chainId": 16602,
+  "parentName": "kya.eth",
+  "deployer": "0xf524694EE073A75375e2e7D61661b980Ac8e8f09",
+  "attestorSigner": "0xf524694EE073A75375e2e7D61661b980Ac8e8f09",
+  "executor": "0xf524694EE073A75375e2e7D61661b980Ac8e8f09",
+  "contracts": {
+    "HumanhoodAttestor": "0x51AeAe72e4FC08DBCb563a4E9020e9C15805CB86",
+    "PassportRegistry": "0x040242f24b2048aCA2C42966683F3e22C4B1f7c0",
+    "AgentNameRegistrar": "0x9b5678800f4000E9692309993552853d014De502",
+    "Multicall3": "0x102a8C60D086Fd955022cb8F92B6aDbc4EaC2D09"
+  }
+}
