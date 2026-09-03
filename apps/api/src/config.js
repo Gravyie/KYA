@@ -75,7 +75,7 @@ export const config = {
     computeModel: process.env.OG_COMPUTE_MODEL || 'gpt-oss-120b',
     verifyTee: process.env.OG_VERIFY_TEE !== 'false',
     storageIndexerUrl: process.env.OG_STORAGE_INDEXER || 'https://indexer-storage-testnet-turbo.0g.ai',
-    storageKey: process.env.OG_STORAGE_PRIVATE_KEY || process.env.PRIVATE_KEY || null,
+    storageKey: normalizeKey(process.env.OG_STORAGE_PRIVATE_KEY || process.env.PRIVATE_KEY),
   },
 };
 
