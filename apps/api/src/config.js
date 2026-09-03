@@ -47,11 +47,19 @@ export const deployment = loadDeployment(CHAIN_ID);
  * rendered in the UI. Nothing in this codebase presents a local stand-in as a
  * live sponsor call — an unlabeled simulation is a bug, not a fallback.
  */
-const normalizeKey = (key) => {
+const normalizeKey = (key, label = 'Private Key') => {
   if (!key) return null;
   // Strip whitespace and any stray quotes from copy-pasting
-  const t = key.trim().replace(/^['"]|['"]$/g, '');
-  return !t.startsWith('0x') ? `0x${t}` : t;
+  let t = key.trim().replace(/^['"]|['"]$/g, '');
+  if (!t.startsWith('0x')) t = `0x${t}`;
+  
+  if (t.length !== 66) {
+    console.error(`\n🚨 CONFIG ERROR: ${label} is invalid!`);
+    console.error(`Expected exactly 66 characters (including 0x). Got ${t.length} characters.`);
+    console.error(`Please check your Render Environment Variables. You probably missed a character when copy-pasting.\n`);
+    // Return it anyway so viem throws and halts, but at least we printed a helpful log
+  }
+  return t;
 };
 
 export const config = {
@@ -61,9 +69,9 @@ export const config = {
   parentName: deployment.parentName,
   port: Number(process.env.PORT || 5055),
 
-  attestorKey: normalizeKey(process.env.ATTESTOR_PRIVATE_KEY),
-  executorKey: normalizeKey(process.env.EXECUTOR_PRIVATE_KEY || process.env.PRIVATE_KEY),
-  ownerKey: normalizeKey(process.env.OWNER_PRIVATE_KEY || process.env.PRIVATE_KEY),
+  attestorKey: normalizeKey(process.env.ATTESTOR_PRIVATE_KEY, 'ATTESTOR_PRIVATE_KEY'),
+  executorKey: normalizeKey(process.env.EXECUTOR_PRIVATE_KEY || process.env.PRIVATE_KEY, 'EXECUTOR_PRIVATE_KEY'),
+  ownerKey: normalizeKey(process.env.OWNER_PRIVATE_KEY || process.env.PRIVATE_KEY, 'OWNER_PRIVATE_KEY'),
 
   world: {
     appId: process.env.WORLD_APP_ID || null,
@@ -80,7 +88,7 @@ export const config = {
     computeModel: process.env.OG_COMPUTE_MODEL || 'gpt-oss-120b',
     verifyTee: process.env.OG_VERIFY_TEE !== 'false',
     storageIndexerUrl: process.env.OG_STORAGE_INDEXER || 'https://indexer-storage-testnet-turbo.0g.ai',
-    storageKey: normalizeKey(process.env.OG_STORAGE_PRIVATE_KEY || process.env.PRIVATE_KEY),
+    storageKey: normalizeKey(process.env.OG_STORAGE_PRIVATE_KEY || process.env.PRIVATE_KEY, '0G_STORAGE_PRIVATE_KEY'),
   },
 };
 
