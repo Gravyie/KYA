@@ -25,18 +25,36 @@ import { Button } from "./components/ui/button";
 import { Input } from "./components/ui/input";
 import ScraperAgentView from './views/ScraperAgentViews.jsx';
 
-const VIEWS = [
-  {id: 'compare', label: 'Compare', icon: IconScales, key: '1'},
-  {id: 'lookup', label: 'Passport', icon: IconPassport, key: '2'},
-  {id: 'relying', label: 'Relying app', icon: IconRoute, key: '3'},
-  {id: 'inventory', label: 'Agent Inventory', icon: IconSparkles, key: '4'},
-  {id: 'issue', label: 'Issue', icon: IconPlus, key: '5'},
-  {id: 'sponsors', label: 'Integrations', icon: IconLayers, key: '6'},
-  {id: 'agents', label: 'Agents', icon: IconRobot, key: '7'},
-  {id: 'scraper', label: 'Scraper', icon: IconRobot, key: '8'},
+const AGENT_VIEWS = [
+  {
+    id: 'inventory',
+    label: 'Social Agent',
+    ens: 'browser-agent.kya.eth',
+    badge: 'X Poster',
+    icon: IconSparkles,
+    key: '1',
+  },
+  {
+    id: 'scraper',
+    label: 'Research Agent',
+    ens: 'scout.kya.eth',
+    badge: 'Scout',
+    icon: IconRobot,
+    key: '2',
+  },
 ];
 
-const ALL = ['home', ...VIEWS.map((v) => v.id)];
+const PROTOCOL_VIEWS = [
+  {id: 'compare', label: 'Decision Engine', icon: IconScales, key: '3'},
+  {id: 'relying', label: 'Relying App', icon: IconRoute, key: '4'},
+  {id: 'lookup', label: 'Passport Explorer', icon: IconPassport, key: '5'},
+  {id: 'issue', label: 'Issue Passport', icon: IconPlus, key: '6'},
+  {id: 'sponsors', label: 'Integrations', icon: IconLayers, key: '7'},
+];
+
+const VIEWS = [...AGENT_VIEWS, ...PROTOCOL_VIEWS];
+
+const ALL = ['home', ...VIEWS.map((v) => v.id), 'agents'];
 
 function parseHash() {
   const raw = window.location.hash.replace(/^#\/?/, '');
@@ -136,7 +154,8 @@ export default function App() {
 
   useEffect(() => {
     const onKey = (e) => {
-      const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName);
+      const activeTag = document.activeElement?.tagName;
+      const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || /^(INPUT|TEXTAREA|SELECT)$/.test(activeTag) || document.activeElement?.isContentEditable;
       if (e.key === '/' && !typing) {
         e.preventDefault();
         if (isHome) go('lookup');
@@ -148,15 +167,18 @@ export default function App() {
         searchRef.current?.blur();
         return;
       }
-      if (!typing && !e.metaKey && !e.ctrlKey) {
+      if (!typing && !e.metaKey && !e.ctrlKey && !e.altKey) {
         if (e.key === '0') return go('home');
-        const hit = VIEWS.find((v) => v.key === e.key);
-        if (hit) go(hit.id, hit.id === 'lookup' ? query : '');
+        // Do not intercept numbers when user is on the issue form view
+        if (view !== 'issue') {
+          const hit = VIEWS.find((v) => v.key === e.key);
+          if (hit) go(hit.id, hit.id === 'lookup' ? query : '');
+        }
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [go, query, isHome]);
+  }, [go, query, isHome, view]);
 
   const submit = (e) => {
     e?.preventDefault();
@@ -227,20 +249,66 @@ export default function App() {
         </div>
 
         <div className="flex-1 flex flex-col min-h-0 relative z-10">
-          <nav className="p-3 flex flex-col gap-[2px]">
-          {VIEWS.map((v) => (
-            <button
-              key={v.id}
-              className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] text-left w-full transition-all duration-200 ${view === v.id ? 'bg-white/10 text-white font-medium' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
-              aria-current={view === v.id}
-              onClick={() => go(v.id, v.id === 'lookup' ? query : '')}
-            >
-              <v.icon size={13} className={view === v.id ? 'text-primary' : ''} />
-              {v.label}
-              <span className="ml-auto font-mono text-[9.5px] text-muted-foreground/60 border border-white/10 rounded-[3px] px-1 bg-white/5">{v.key}</span>
-            </button>
-          ))}
-        </nav>
+          <nav className="p-3 flex flex-col gap-1">
+            {/* Group 1: Prototype Agents */}
+            <div className="px-2 pt-1 pb-1 text-[9px] font-mono uppercase tracking-widest text-primary font-bold flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+              Prototype Agents
+            </div>
+
+            {AGENT_VIEWS.map((v) => (
+              <button
+                key={v.id}
+                className={`flex flex-col gap-0.5 px-3 py-2 rounded-md text-left w-full transition-all duration-200 ${
+                  view === v.id
+                    ? 'bg-primary/15 border border-primary/40 text-white font-medium shadow-sm'
+                    : 'text-white/80 hover:bg-white/10 hover:text-white border border-transparent'
+                }`}
+                aria-current={view === v.id}
+                onClick={() => go(v.id)}
+              >
+                <div className="flex items-center gap-2">
+                  <v.icon size={13} className={view === v.id ? 'text-primary' : 'text-white/60'} />
+                  <span className="text-[12.5px] font-medium">{v.label}</span>
+                  <span className="ml-auto font-mono text-[9px] text-muted-foreground/80 border border-white/10 rounded px-1 bg-white/5">
+                    {v.key}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between pl-5">
+                  <span className="font-mono text-[10px] text-cyan-300/80 truncate max-w-[130px]">
+                    {v.ens}
+                  </span>
+                  <span className="text-[9px] font-mono text-muted-foreground/60">
+                    {v.badge}
+                  </span>
+                </div>
+              </button>
+            ))}
+
+            {/* Group 2: KYA Protocol */}
+            <div className="px-2 pt-3 pb-1 text-[9px] font-mono uppercase tracking-widest text-white/40 font-bold border-t border-white/5 mt-1">
+              KYA Protocol
+            </div>
+
+            {PROTOCOL_VIEWS.map((v) => (
+              <button
+                key={v.id}
+                className={`flex items-center gap-2.5 px-3 py-1.5 rounded-md text-[12.5px] text-left w-full transition-all duration-200 ${
+                  view === v.id
+                    ? 'bg-white/15 text-white font-medium'
+                    : 'text-white/70 hover:bg-white/10 hover:text-white'
+                }`}
+                aria-current={view === v.id}
+                onClick={() => go(v.id, v.id === 'lookup' ? query : '')}
+              >
+                <v.icon size={13} className={view === v.id ? 'text-primary' : ''} />
+                <span>{v.label}</span>
+                <span className="ml-auto font-mono text-[9.5px] text-muted-foreground/60 border border-white/10 rounded-[3px] px-1 bg-white/5">
+                  {v.key}
+                </span>
+              </button>
+            ))}
+          </nav>
 
           <div className="px-5 pt-3 pb-2 border-t border-white/5 mt-1 flex justify-between items-center">
           <span className="font-mono text-[9.5px] uppercase tracking-[0.9px] text-white/60 font-medium">Registry · best first</span>
@@ -300,7 +368,7 @@ export default function App() {
         </div>
       </aside>
 
-      <main className="flex flex-col min-w-0 overflow-y-auto">
+      <main className="flex flex-col min-w-0 overflow-y-auto overflow-x-hidden">
         <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-md border-b border-white/5 px-6 py-3 flex items-center gap-4 shadow-sm">
           <form className="relative flex-1 max-w-[460px] group" onSubmit={submit} autoComplete="off">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors">
@@ -369,7 +437,7 @@ export default function App() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.2 }}
-            className="flex-1 h-full"
+            className="flex-1 h-full min-w-0"
           >
             {view === 'compare' && <Compare tasks={tasks} onPick={(q) => go('lookup', q)} />}
             {view === 'lookup' && <Lookup query={query} tasks={tasks} onPick={(q) => go('lookup', q)} />}
@@ -377,8 +445,8 @@ export default function App() {
             {view === 'inventory' && <Inventory onPick={(q) => go('lookup', q)} />}
             {view === 'issue' && <Issue onPick={(q) => go('lookup', q)} integrations={integrations} />}
             {view === 'sponsors' && <Sponsors />}
-            {view === 'agents' && <Agents />}
-            {view === 'scraper' && <ScraperAgentView/>}
+            {view === 'agents' && <Inventory onPick={(q) => go('lookup', q)} />}
+            {view === 'scraper' && <ScraperAgentView onPick={(q) => go('lookup', q)} />}
           </motion.div>
         </AnimatePresence>
       </main>

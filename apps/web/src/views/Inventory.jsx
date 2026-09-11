@@ -20,6 +20,7 @@ import {
   IconTerminal,
 } from '../components/icons.jsx';
 import {motion, AnimatePresence} from 'motion/react';
+import PillarsCard from '../components/PillarsCard.jsx';
 
 const PRESET_PROMPTS = [
   {
@@ -263,6 +264,12 @@ export default function Inventory({onPick}) {
       {/* TAB 1: EXECUTION CONSOLE */}
       {activeTab === 'console' && (
         <div className="space-y-6">
+          <PillarsCard
+            passport={agentPassport}
+            latestStorageDigest={result?.storage?.digest || result?.settlement?.evidence}
+            latestSettlementHash={result?.onChain?.txHash || result?.settlement?.hash || result?.settlement?.receipt?.txHash}
+          />
+
           {/* Active Preset Agent Hero Card */}
           <Card className="border-white/10 bg-black/40 backdrop-blur-md overflow-hidden">
             <CardHeader className="py-3.5 px-6 border-b border-white/5 flex flex-row items-center justify-between bg-white/[0.03]">
