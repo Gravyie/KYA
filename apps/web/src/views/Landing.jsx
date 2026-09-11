@@ -250,11 +250,11 @@ export default function Landing({onGo, integrations}) {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
                   <div className="pl-4 border-l-[3px] border-white/20">
-                    <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-white/40 mb-2 block">> TODAY</span>
+                    <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-white/40 mb-2 block">&gt; TODAY</span>
                     <p className="text-sm font-mono text-muted-foreground leading-relaxed">{g.now}</p>
                   </div>
                   <div className="pl-4 border-l-[3px] border-primary">
-                    <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-primary mb-2 block">> WITH KYA</span>
+                    <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-primary mb-2 block">&gt; WITH KYA</span>
                     <p className="text-sm font-mono text-white leading-relaxed">{g.kya}</p>
                   </div>
                 </div>

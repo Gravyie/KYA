@@ -63,6 +63,30 @@ export const TASKS = {
     }),
     value: () => 0n,
   },
+  'browser.action': {
+    capability: 'browser.action',
+    label: 'Autonomous Browser Task',
+    describe: (input) => `Execute autonomous browser task: ${input.task}`,
+    prompt: (input) => `Inspect web page state and execute browser task: ${input.task}`,
+    local: (input) => ({
+      task: input.task,
+      outcome: 'success',
+      judgment: 'Task executed and verified in browser runtime.',
+    }),
+    value: () => 1000000000000000n,
+  },
+  'social.post': {
+    capability: 'social.post',
+    label: 'Social Media Post',
+    describe: (input) => `Post to social media: ${input.text || input.task}`,
+    prompt: (input) => `Compose and publish verified post: ${input.text || input.task}`,
+    local: (input) => ({
+      text: input.text || input.task,
+      outcome: 'success',
+      judgment: 'Post published and verified on profile.',
+    }),
+    value: () => 1000000000000000n,
+  },
 };
 
 // ────────────────────────────────────────── 0G Compute

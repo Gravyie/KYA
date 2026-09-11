@@ -26,3 +26,20 @@ build/
 .DS_Store
 apps/api/data/
 deployments/*.local.json
+
+# locks
+package-lock.json
+contracts/foundry.lock
+
+# python cache
+__pycache__/
+*.pyc
+
+# browser agent runtime artifacts & secrets
+agents/runtime/browser-agent/.runs/
+agents/runtime/browser-agent/.storage/
+agents/runtime/browser-agent/*.png
+
+# documentation & development reports
+docs/
+

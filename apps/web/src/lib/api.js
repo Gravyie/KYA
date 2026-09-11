@@ -44,6 +44,13 @@ export const api = {
   record: (digest) => call(`/api/records/${digest}`),
   verifyHuman: (payload) => call('/api/verify-human', payload),
   createAgent: (payload) => call('/api/agents', payload),
+  runBrowserAgent: (payload) => call('/api/browser-agent/run', payload),
+  browserAgentHistory: () => call('/api/browser-agent/history'),
+  browserAgentScreenshotUrl: (runId, filename) => {
+    const baseUrl = import.meta.env.VITE_API_URL || '';
+    const cleanBase = baseUrl ? baseUrl.replace(/\/$/, '') : '';
+    return `${cleanBase}/api/browser-agent/screenshot/${runId}/${filename}`;
+  },
 };
 
 // ── formatting ─────────────────────────────────────────────────────────────

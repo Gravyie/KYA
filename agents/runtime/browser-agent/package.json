@@ -1,0 +1,14 @@
+{
+  "name": "@kya/browser-agent",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "description": "Headless browser agent operating via Playwright and 0G Compute TEE-verified vision inference.",
+  "scripts": {
+    "auth": "node auth-setup.js",
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "playwright": "^1.50.0"
+  }
+}

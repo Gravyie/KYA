@@ -1,4 +1,7 @@
 import {createServer} from 'node:http';
+import {existsSync, readFileSync, readdirSync} from 'node:fs';
+import {resolve, dirname} from 'node:path';
+import {fileURLToPath} from 'node:url';
 import {check, rank, VERDICT, DEFAULT_POLICY} from '@kya/sdk';
 import {config, modes, modeSummary} from './config.js';
 import {kyaClient} from './client.js';
@@ -7,6 +10,9 @@ import * as chain from './chain.js';
 import {verifyWithWorld, localHumanhoodStub} from './world.js';
 import {readRecord} from './og.js';
 import { runAgentWorkflow } from './scraper.js';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const ROOT = resolve(__dirname, '../../..');
 
 /**
  * Dependency-free HTTP layer. No framework: fewer moving parts is fewer things
@@ -316,6 +322,67 @@ route('POST', /^\/api\/route$/, async (_req, body) => {
   return {routed: winner.query, candidates, run};
 });
 
+// ───────────────────────────────────────── browser agent runtime & inventory
+
+/**
+ * Execute the autonomous browser agent under 0G Compute TEE verification and settle on 0G Storage.
+ * Body: { task: string, dryRun?: boolean }
+ */
+route('POST', /^\/api\/browser-agent\/run$/, async (_req, body) => {
+  const task = (body.task || '').trim() || 'Post about KYA on X';
+  const dryRun = body.dryRun !== undefined ? Boolean(body.dryRun) : true;
+  const {runBrowserAgent} = await import('../../../agents/runtime/browser-agent/index.js');
+  const result = await runBrowserAgent({task, dryRun});
+  return {ok: true, ...result};
+});
+
+/**
+ * Serves real-time PNG screenshots captured during browser agent execution.
+ */
+route('GET', /^\/api\/browser-agent\/screenshot\/([^/]+)\/([^/]+)$/, async (_req, _body, [runId, filename], _url, res) => {
+  const safeRunId = (runId || '').replace(/[^a-zA-Z0-9_-]/g, '');
+  const safeFile = (filename || '').replace(/[^a-zA-Z0-9_.-]/g, '');
+  const filePath = resolve(ROOT, 'agents/runtime/browser-agent/.runs', safeRunId, safeFile);
+  if (!existsSync(filePath)) {
+    const err = new Error('screenshot not found');
+    err.status = 404;
+    throw err;
+  }
+  const data = readFileSync(filePath);
+  res.writeHead(200, {
+    'content-type': 'image/png',
+    'access-control-allow-origin': '*',
+    'cache-control': 'public, max-age=3600',
+  });
+  res.end(data);
+});
+
+/**
+ * Returns past autonomous browser agent runs from local audit logs.
+ */
+route('GET', /^\/api\/browser-agent\/history$/, async () => {
+  const runsBase = resolve(ROOT, 'agents/runtime/browser-agent/.runs');
+  if (!existsSync(runsBase)) return {runs: []};
+  const entries = readdirSync(runsBase, {withFileTypes: true})
+    .filter((d) => d.isDirectory())
+    .map((d) => d.name)
+    .sort()
+    .reverse()
+    .slice(0, 15);
+
+  const runs = [];
+  for (const dir of entries) {
+    const sumFile = resolve(runsBase, dir, 'summary.json');
+    if (existsSync(sumFile)) {
+      try {
+        const sum = JSON.parse(readFileSync(sumFile, 'utf8'));
+        runs.push(sum);
+      } catch {}
+    }
+  }
+  return {runs};
+});
+
 // ───────────────────────────────────────── server
 
 const server = createServer(async (req, res) => {
@@ -337,7 +404,8 @@ const server = createServer(async (req, res) => {
 
   try {
     const body = req.method === 'POST' ? await readBody(req) : {};
-    const result = await match.r.handler(req, body, match.m.slice(1), url);
+    const result = await match.r.handler(req, body, match.m.slice(1), url, res);
+    if (res.writableEnded) return;
     return json(res, 200, result);
   } catch (err) {
     const revert = revertName(err);

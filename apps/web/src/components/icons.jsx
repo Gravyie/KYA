@@ -150,3 +150,31 @@ export const IconLock = (p) => (
     <path d="M5.6 7V5.2a2.4 2.4 0 0 1 4.8 0V7" />
   </S>
 );
+
+export const IconSparkles = (p) => (
+  <S {...p}>
+    <path d="M8 1.5l1.6 3.9 3.9 1.6-3.9 1.6L8 12.5l-1.6-3.9-3.9-1.6 3.9-1.6z" />
+    <path d="M12.5 10.5l.8 1.7 1.7.8-1.7.8-.8 1.7-.8-1.7-1.7-.8 1.7-.8z" />
+  </S>
+);
+
+export const IconEye = (p) => (
+  <S {...p}>
+    <path d="M1.5 8s2.5-4.5 6.5-4.5 6.5 4.5 6.5 4.5-2.5 4.5-6.5 4.5-6.5-4.5-6.5-4.5z" />
+    <circle cx="8" cy="8" r="2.2" />
+  </S>
+);
+
+export const IconPlay = (p) => (
+  <S {...p}>
+    <polygon points="4.5,2.5 13.5,8 4.5,13.5" fill="currentColor" stroke="none" />
+  </S>
+);
+
+export const IconTerminal = (p) => (
+  <S {...p}>
+    <polyline points="3 5 7 8 3 11" />
+    <line x1="9" y1="11" x2="13" y2="11" />
+  </S>
+);
+
