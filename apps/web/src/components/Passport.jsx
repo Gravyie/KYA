@@ -292,11 +292,21 @@ export function Passport({
       : 1;
 
   const TrustIcon = verdict === 'trust' ? IconCheck : verdict === 'limit' ? IconWarn : IconX;
-  const verdictColors = {
-    trust: 'text-primary bg-primary/10 border-primary/20',
-    limit: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
-    decline: 'text-destructive bg-destructive/10 border-destructive/20',
+  const verdictBannerStyles = {
+    trust: {
+      bg: 'bg-primary/5 border-primary/20',
+      text: 'text-primary',
+    },
+    limit: {
+      bg: 'bg-amber-500/10 border-amber-500/20',
+      text: 'text-amber-500',
+    },
+    decline: {
+      bg: 'bg-destructive/10 border-destructive/20',
+      text: 'text-destructive',
+    },
   };
+  const activeBanner = verdictBannerStyles[verdict] || verdictBannerStyles.decline;
 
   return (
     <div className={`rounded-xl border ${recommended ? 'border-primary shadow-[0_0_30px_rgba(34,197,94,0.15)]' : 'border-white/10'} bg-[#121314]/90 backdrop-blur-xl overflow-hidden flex flex-col shadow-xl transition-all min-w-0 w-full`}>
@@ -331,11 +341,11 @@ export function Passport({
       </div>
 
       {decision && (
-        <div className={`flex items-center gap-4 p-4 sm:p-5 md:p-6 border-b border-white/5 min-w-0 ${verdictColors[verdict].replace('text-', 'bg-').replace('/10', '/5')}`}>
-          <TrustIcon size={24} className={`shrink-0 ${verdictColors[verdict].split(' ')[0]}`} />
+        <div className={`flex items-center gap-4 p-4 sm:p-5 md:p-6 border-b min-w-0 ${activeBanner.bg}`}>
+          <TrustIcon size={24} className={`shrink-0 ${activeBanner.text}`} />
           <div className="flex-1 min-w-0">
-            <div className={`text-lg font-medium mb-1 truncate ${verdictColors[verdict].split(' ')[0]}`}>{decision.headline}</div>
-            <div className="text-sm text-foreground/80 leading-relaxed max-w-[70ch] break-words [overflow-wrap:anywhere]">{decision.summary}</div>
+            <div className={`text-lg font-medium mb-1 truncate ${activeBanner.text}`}>{decision.headline}</div>
+            <div className="text-sm text-foreground/85 leading-relaxed max-w-[70ch] break-words [overflow-wrap:anywhere]">{decision.summary}</div>
           </div>
           {showDial && (
             <div className="shrink-0 hidden sm:block">

@@ -16,7 +16,13 @@ import {Input} from '../components/ui/input';
 
 const ALL_CAPS = ['flight.quote', 'research', 'pay', 'browser.action', 'social.post', 'scrape.web'];
 const DEMO_OWNER = '0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65';
-const DEMO_OPERATOR = '0x70997970C51812dc3A010C7d01b50e0d17dc79C8';
+
+/** Generate a cryptographically random, fresh Ethereum operator address */
+function generateRandomAddress() {
+  const bytes = new Uint8Array(20);
+  crypto.getRandomValues(bytes);
+  return '0x' + Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+}
 
 /* ── Stable module-level Step component (prevents focus loss and scroll jumps) ── */
 function Step({n, title, children, state, description}) {
@@ -65,6 +71,10 @@ export default function Issue({onPick, integrations}) {
   const [busy, setBusy] = useState(null);
   const [error, setError] = useState(null);
 
+  // Check if operator address is already bound to another agent
+  const [operatorTaken, setOperatorTaken] = useState(null);
+  const [checkingOperator, setCheckingOperator] = useState(false);
+
   useEffect(() => {
     api.health().then(setHealth).catch(() => {});
   }, []);
@@ -104,6 +114,37 @@ export default function Issue({onPick, integrations}) {
       cancelled = true;
     };
   }, [owner]);
+
+  // Pre-flight check: is operator already bound on-chain?
+  useEffect(() => {
+    const trimmed = operator.trim();
+    if (!trimmed || !/^0x[0-9a-fA-F]{40}$/.test(trimmed)) {
+      setOperatorTaken(null);
+      return;
+    }
+    let cancelled = false;
+    setCheckingOperator(true);
+    api
+      .agent(trimmed)
+      .then((d) => {
+        if (!cancelled) {
+          if (d?.passport?.agentId) {
+            setOperatorTaken(d.passport);
+          } else {
+            setOperatorTaken(null);
+          }
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setOperatorTaken(null);
+      })
+      .finally(() => {
+        if (!cancelled) setCheckingOperator(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [operator]);
 
   const verify = useCallback(async (asDemo = true) => {
     const targetOwner = owner.trim() || DEMO_OWNER;
@@ -160,8 +201,11 @@ export default function Issue({onPick, integrations}) {
   const handleFillDemoAgent = useCallback(async () => {
     const randomSuffix = Math.floor(100 + Math.random() * 900);
     const demoLabel = `agent-${randomSuffix}`;
+    const freshOperator = generateRandomAddress();
+
     setOwner(DEMO_OWNER);
-    setOperator(DEMO_OPERATOR);
+    setOperator(freshOperator);
+    setOperatorTaken(null);
     setLabel(demoLabel);
     setDescription('Autonomous workflow agent powered by 0G Compute and verified KYA passport');
     setCaps(['flight.quote', 'research', 'pay', 'browser.action']);
@@ -206,6 +250,10 @@ export default function Issue({onPick, integrations}) {
       setError('A valid 0x Ethereum operator address is required.');
       return;
     }
+    if (operatorTaken) {
+      setError(`OperatorTaken: ${short(operator.trim(), 8, 6)} is already registered to ${operatorTaken.domain || `Passport #${operatorTaken.agentId}`}. Please click "Generate Fresh Key".`);
+      return;
+    }
     if (label.trim().length < 3) {
       setError('Label must be at least 3 characters long.');
       return;
@@ -232,14 +280,22 @@ export default function Issue({onPick, integrations}) {
       });
       setCreated(res);
     } catch (e) {
-      setError(e.message);
+      if (e.revert === 'OperatorTaken' || /OperatorTaken/i.test(e.message)) {
+        setError(`OperatorTaken: The address ${short(operator.trim(), 8, 6)} is already bound to an existing agent passport on-chain. Each agent must have its own unique operator key. Click "Generate Fresh Key" above.`);
+      } else if (e.revert === 'LabelTaken' || /LabelTaken/i.test(e.message)) {
+        setError(`LabelTaken: The subname "${label}.${health?.parentName || 'kya.eth'}" is already claimed on-chain. Please choose a different label.`);
+      } else if (e.revert === 'OwnerNotHumanVerified' || /OwnerNotHumanVerified/i.test(e.message)) {
+        setError(`OwnerNotHumanVerified: The contract refused registration because the owner wallet does not hold a valid World ID proof.`);
+      } else {
+        setError(e.message);
+      }
     } finally {
       setBusy(null);
     }
   }
 
   const isHumanVerified = human?.canRegisterAgent === true;
-  const isOperatorValid = /^0x[0-9a-fA-F]{40}$/.test(operator.trim());
+  const isOperatorValid = /^0x[0-9a-fA-F]{40}$/.test(operator.trim()) && !operatorTaken;
   const isLabelValid = label.trim().length >= 3;
   const isCapsValid = caps.length > 0;
   const canIssue = isHumanVerified && isOperatorValid && isLabelValid && isCapsValid;
@@ -404,7 +460,7 @@ export default function Issue({onPick, integrations}) {
                 n="2"
                 title="Declare the mandate"
                 description="Set the agent's operator key, ENS subname, daily spend ceiling, and approved action capabilities."
-                state={created ? 'done' : (operator && label ? 'active' : 'idle')}
+                state={created ? 'done' : (operator && label && !operatorTaken ? 'active' : 'idle')}
               >
                 <div className="flex flex-col gap-5 min-w-0">
                   <div className="flex flex-col gap-1.5 min-w-0">
@@ -412,18 +468,42 @@ export default function Issue({onPick, integrations}) {
                       <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Operator Address (Agent Key)</label>
                       <button
                         type="button"
-                        onClick={() => setOperator(DEMO_OPERATOR)}
-                        className="text-[11px] font-mono text-primary hover:underline"
+                        onClick={() => {
+                          setOperator(generateRandomAddress());
+                          setOperatorTaken(null);
+                        }}
+                        className="text-[11px] font-mono text-primary hover:underline flex items-center gap-1"
                       >
-                        Use Account #1 (0x7099…)
+                        <IconSparkles size={11} />
+                        Generate Fresh Key
                       </button>
                     </div>
                     <Input
                       value={operator}
                       onChange={(e) => setOperator(e.target.value)}
                       placeholder="0x…"
-                      className="font-mono bg-background/50 text-sm"
+                      className={`font-mono bg-background/50 text-sm ${operatorTaken ? 'border-destructive focus-visible:border-destructive' : ''}`}
                     />
+                    {operatorTaken && (
+                      <div className="text-xs text-destructive flex flex-col sm:flex-row sm:items-center justify-between gap-2 mt-1 bg-destructive/10 p-2.5 rounded border border-destructive/20 min-w-0">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <IconWarn size={14} className="shrink-0 text-destructive" />
+                          <span className="truncate">
+                            Address already bound to <strong>{operatorTaken.domain || `Passport #${operatorTaken.agentId}`}</strong>.
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setOperator(generateRandomAddress());
+                            setOperatorTaken(null);
+                          }}
+                          className="shrink-0 underline font-mono text-[11px] text-destructive hover:text-white"
+                        >
+                          Generate Fresh Key
+                        </button>
+                      </div>
+                    )}
                   </div>
                   
                   <div className="flex flex-col gap-1.5 min-w-0">
@@ -521,7 +601,7 @@ export default function Issue({onPick, integrations}) {
                         {isOperatorValid ? '✓' : '○'}
                       </span>
                       <span className={isOperatorValid ? 'text-foreground' : 'text-muted-foreground'}>
-                        Step 2: Valid Operator Key {isOperatorValid ? `(${short(operator, 6, 4)})` : '(required)'}
+                        Step 2: Unique Operator Key {isOperatorValid ? `(${short(operator, 6, 4)})` : operatorTaken ? '(already taken)' : '(required)'}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">

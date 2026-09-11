@@ -56,6 +56,43 @@ const VIEWS = [...AGENT_VIEWS, ...PROTOCOL_VIEWS];
 
 const ALL = ['home', ...VIEWS.map((v) => v.id), 'agents'];
 
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {hasError: false, error: null};
+  }
+  static getDerivedStateFromError(error) {
+    return {hasError: true, error};
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error('View ErrorBoundary caught:', error, errorInfo);
+  }
+  componentDidUpdate(prevProps) {
+    if (prevProps.view !== this.props.view && this.state.hasError) {
+      this.setState({hasError: false, error: null});
+    }
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-8 max-w-4xl mx-auto">
+          <div className="bg-destructive/10 border border-destructive/20 text-destructive p-6 rounded-lg font-mono">
+            <h2 className="text-lg font-bold mb-2">View render error</h2>
+            <p className="text-sm mb-4">{this.state.error?.message || 'An unexpected error occurred.'}</p>
+            <button
+              onClick={() => this.setState({hasError: false, error: null})}
+              className="px-4 py-1.5 bg-destructive text-destructive-foreground text-xs uppercase tracking-wider rounded font-mono hover:opacity-90 transition-opacity"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 function parseHash() {
   const raw = window.location.hash.replace(/^#\/?/, '');
   const [view, ...rest] = raw.split('/');
@@ -439,14 +476,16 @@ export default function App() {
             transition={{ duration: 0.2 }}
             className="flex-1 h-full min-w-0"
           >
-            {view === 'compare' && <Compare tasks={tasks} onPick={(q) => go('lookup', q)} />}
-            {view === 'lookup' && <Lookup query={query} tasks={tasks} onPick={(q) => go('lookup', q)} />}
-            {view === 'relying' && <Relying tasks={tasks} onPick={(q) => go('lookup', q)} />}
-            {view === 'inventory' && <Inventory onPick={(q) => go('lookup', q)} />}
-            {view === 'issue' && <Issue onPick={(q) => go('lookup', q)} integrations={integrations} />}
-            {view === 'sponsors' && <Sponsors />}
-            {view === 'agents' && <Inventory onPick={(q) => go('lookup', q)} />}
-            {view === 'scraper' && <ScraperAgentView onPick={(q) => go('lookup', q)} />}
+            <ErrorBoundary view={view}>
+              {view === 'compare' && <Compare tasks={tasks} onPick={(q) => go('lookup', q)} />}
+              {view === 'lookup' && <Lookup query={query} tasks={tasks} onPick={(q) => go('lookup', q)} />}
+              {view === 'relying' && <Relying tasks={tasks} onPick={(q) => go('lookup', q)} />}
+              {view === 'inventory' && <Inventory onPick={(q) => go('lookup', q)} />}
+              {view === 'issue' && <Issue onPick={(q) => go('lookup', q)} integrations={integrations} />}
+              {view === 'sponsors' && <Sponsors />}
+              {view === 'agents' && <Inventory onPick={(q) => go('lookup', q)} />}
+              {view === 'scraper' && <ScraperAgentView onPick={(q) => go('lookup', q)} />}
+            </ErrorBoundary>
           </motion.div>
         </AnimatePresence>
       </main>
