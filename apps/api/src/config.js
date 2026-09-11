@@ -85,7 +85,7 @@ export const config = {
   og: {
     computeApiKey: process.env.OG_COMPUTE_API_KEY || null,
     computeBaseUrl: process.env.OG_COMPUTE_BASE_URL || 'https://api.0g.ai/v1',
-    computeModel: process.env.OG_COMPUTE_MODEL || 'gpt-oss-120b',
+    computeModel: process.env.OG_COMPUTE_MODEL || 'qwen3.8-flash',
     verifyTee: process.env.OG_VERIFY_TEE !== 'false',
     storageIndexerUrl: process.env.OG_STORAGE_INDEXER || 'https://indexer-storage-testnet-turbo.0g.ai',
     storageKey: normalizeKey(process.env.OG_STORAGE_PRIVATE_KEY || process.env.PRIVATE_KEY, '0G_STORAGE_PRIVATE_KEY'),

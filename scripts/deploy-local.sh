@@ -57,7 +57,7 @@ WORLD_ACTION=kya-verify-owner
 
 # 0G Compute Router — set OG_COMPUTE_API_KEY to execute tasks on live 0G.
 # OG_COMPUTE_API_KEY=
-OG_COMPUTE_MODEL=gpt-oss-120b
+OG_COMPUTE_MODEL=qwen3.8-flash
 OG_VERIFY_TEE=true
 EOF
   echo

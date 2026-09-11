@@ -51,7 +51,7 @@ const PRESET_AGENTS = [
     score: 9800,
     acts: 12,
     description:
-      'Headless browser execution engine powered by 0G Compute (gpt-oss-120b) with TEE cryptographic attestation, 0G Storage persistence, and on-chain passport accountability.',
+      'Headless browser execution engine powered by 0G Compute (qwen3.8-flash) with TEE cryptographic attestation, 0G Storage persistence, and on-chain passport accountability.',
   },
   {
     domain: 'optimizer.kya.eth',
@@ -155,7 +155,7 @@ export default function Inventory({onPick}) {
     try {
       // Progression timers for user feedback
       const timer1 = setTimeout(() => {
-        setStatusMessage('Perceiving page via 0G Compute TEE model (gpt-oss-120b)...');
+        setStatusMessage('Perceiving page via 0G Compute TEE model (qwen3.8-flash)...');
       }, 3500);
 
       const timer2 = setTimeout(() => {
@@ -315,7 +315,7 @@ export default function Inventory({onPick}) {
                     social.post
                   </span>
                   <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-white/5 text-white/70 border border-white/10">
-                    gpt-oss-120b
+                    qwen3.8-flash
                   </span>
                 </div>
               </div>
