@@ -312,7 +312,7 @@ export default function App() {
                   </span>
                 </div>
                 <div className="flex items-center justify-between pl-5">
-                  <span className="font-mono text-[10px] text-cyan-300/80 truncate max-w-[130px]">
+                  <span className="font-mono text-[10px] text-muted-foreground/80 truncate max-w-[130px]">
                     {v.ens}
                   </span>
                   <span className="text-[9px] font-mono text-muted-foreground/60">

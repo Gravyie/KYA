@@ -274,17 +274,17 @@ export default function Inventory({onPick}) {
           <Card className="border-white/10 bg-black/40 backdrop-blur-md overflow-hidden">
             <CardHeader className="py-3.5 px-6 border-b border-white/5 flex flex-row items-center justify-between bg-white/[0.03]">
               <div className="flex items-center gap-2.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="w-2 h-2 rounded-full bg-primary animate-pulse-glow" />
                 <button
                   onClick={() => onPick && onPick('browser-agent.kya.eth')}
                   className="font-mono text-sm font-semibold text-white hover:text-primary transition-colors cursor-pointer"
                 >
                   browser-agent.kya.eth
                 </button>
-                <Badge variant="outline" className="text-[10px] font-mono text-emerald-400 border-emerald-500/30 bg-emerald-500/10">
+                <Badge variant="outline" className="text-[10px] font-mono text-primary border-primary/30 bg-primary/10">
                   Passport #4
                 </Badge>
-                <Badge variant="outline" className="text-[10px] font-mono text-cyan-400 border-cyan-500/30 bg-cyan-500/10">
+                <Badge variant="outline" className="text-[10px] font-mono text-muted-foreground border-white/10 bg-white/5">
                   0G Vision TEE
                 </Badge>
               </div>
@@ -321,9 +321,9 @@ export default function Inventory({onPick}) {
               </div>
 
               {/* Connected Account & Target Handle Bar */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-lg bg-white/[0.02] border border-white/10">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded bg-white/[0.02] border border-white/10">
                 <div className="flex items-center gap-2.5">
-                  <div className={`h-2.5 w-2.5 rounded-full ${sessionUser?.authenticated ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+                  <div className={`h-2 w-2 rounded-full ${sessionUser?.authenticated ? 'bg-primary animate-pulse-glow' : 'bg-amber-500'}`} />
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-mono font-medium text-white">
@@ -364,17 +364,14 @@ export default function Inventory({onPick}) {
               </div>
 
               {/* Verifiable Agent Identity Carrier Panel */}
-              <div className="p-3.5 rounded-lg bg-emerald-500/[0.03] border border-emerald-500/20 space-y-2.5">
+              <div className="p-3.5 rounded bg-white/[0.02] border border-white/10 space-y-2.5">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    <span className="flex h-2 w-2 relative">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                    </span>
-                    <span className="font-mono text-xs font-semibold text-emerald-400 uppercase tracking-wider">
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse-glow" />
+                    <span className="font-mono text-xs font-semibold text-foreground uppercase tracking-wider">
                       On-Chain Identity Carrier Injected
                     </span>
-                    <Badge variant="outline" className="text-[9px] font-mono text-emerald-400 border-emerald-500/30 bg-emerald-500/10">
+                    <Badge variant="outline" className="text-[9px] font-mono text-primary border-primary/30 bg-primary/10">
                       Passport #4
                     </Badge>
                   </div>
@@ -389,11 +386,11 @@ export default function Inventory({onPick}) {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] font-mono">
                   <div className="p-2 rounded bg-black/40 border border-white/5 flex flex-col gap-0.5">
                     <span className="text-[9px] uppercase tracking-wider text-muted-foreground">DOM / DevTools Object</span>
-                    <span className="text-emerald-400 font-medium">window.__KYA_AGENT__</span>
+                    <span className="text-primary font-medium">window.__KYA_AGENT__</span>
                   </div>
                   <div className="p-2 rounded bg-black/40 border border-white/5 flex flex-col gap-0.5">
                     <span className="text-[9px] uppercase tracking-wider text-muted-foreground">Outbound HTTP Headers</span>
-                    <span className="text-cyan-400 font-medium truncate" title="X-KYA-Passport: eip155:31337:0xe7f1.../4">
+                    <span className="text-foreground font-medium truncate" title="X-KYA-Passport: eip155:31337:0xe7f1.../4">
                       X-KYA-Passport (eip155:31337:…/4)
                     </span>
                   </div>
@@ -405,7 +402,7 @@ export default function Inventory({onPick}) {
                   </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1 border-t border-emerald-500/10 text-[11px] font-mono">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1 border-t border-white/10 text-[11px] font-mono">
                   <span className="text-muted-foreground">
                     💡 Open DevTools Console in Chrome to inspect the live KYA identity badge.
                   </span>
@@ -420,7 +417,7 @@ export default function Inventory({onPick}) {
                   >
                     {copiedVerify ? (
                       <>
-                        <IconCheck size={12} className="text-emerald-400" /> Copied Command!
+                        <IconCheck size={12} className="text-primary" /> Copied Command!
                       </>
                     ) : (
                       <>
@@ -506,7 +503,7 @@ export default function Inventory({onPick}) {
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-mono font-medium text-white">Dry-Run Simulation Mode</span>
                       {dryRun && (
-                        <Badge variant="outline" className="text-[9px] font-mono text-emerald-400 border-emerald-500/30 bg-emerald-500/10">
+                        <Badge variant="outline" className="text-[9px] font-mono text-primary border-primary/30 bg-primary/10">
                           Recommended for demo
                         </Badge>
                       )}
@@ -581,11 +578,11 @@ export default function Inventory({onPick}) {
                 <CardHeader className="py-3.5 px-6 border-b border-white/5 flex flex-row items-center justify-between bg-white/[0.03]">
                   <div className="flex items-center gap-2.5">
                     {result.outcome === 'success' ? (
-                      <span className="font-mono text-xs uppercase tracking-widest text-emerald-400 flex items-center gap-1.5 font-bold">
+                      <span className="font-mono text-xs uppercase tracking-widest text-primary flex items-center gap-1.5 font-bold">
                         <IconCheck size={14} /> {result.dryRun ? 'Draft Verified (Dry Run)' : 'Task Verified & Published on X'}
                       </span>
                     ) : (
-                      <span className="font-mono text-xs uppercase tracking-widest text-rose-400 flex items-center gap-1.5 font-bold">
+                      <span className="font-mono text-xs uppercase tracking-widest text-destructive flex items-center gap-1.5 font-bold">
                         <IconX size={14} /> Task Failed: Action Unverified
                       </span>
                     )}
@@ -593,7 +590,7 @@ export default function Inventory({onPick}) {
                       Run ID: {result.runId}
                     </Badge>
                     {result.dryRun && (
-                      <Badge variant="outline" className="font-mono text-[10px] text-amber-400 border-amber-500/30 bg-amber-500/10">
+                      <Badge variant="outline" className="font-mono text-[10px] text-amber-500 border-amber-500/30 bg-amber-500/10">
                         Dry Run
                       </Badge>
                     )}
@@ -606,13 +603,13 @@ export default function Inventory({onPick}) {
                 <CardContent className="p-6 space-y-6">
                   {/* High-visibility Verification Verdict Alert */}
                   {result.outcome === 'failure' && (
-                    <div className="p-4 rounded-md border border-rose-500/40 bg-rose-500/10 text-rose-200 font-mono text-xs space-y-2">
+                    <div className="p-4 rounded-md border border-destructive/30 bg-destructive/10 text-foreground font-mono text-xs space-y-2">
                       <div className="flex items-center justify-between">
-                        <span className="flex items-center gap-2 text-rose-400 font-bold text-sm">
+                        <span className="flex items-center gap-2 text-destructive font-bold text-sm">
                           <IconX size={18} />
                           TASK FAILED — GROUND TRUTH AUDITOR REJECTED SUBMISSION
                         </span>
-                        <Badge variant="outline" className="text-rose-400 border-rose-500/30 bg-rose-500/20 text-[10px]">
+                        <Badge variant="outline" className="text-destructive border-destructive/30 bg-destructive/20 text-[10px]">
                           On-Chain Penalty Applied
                         </Badge>
                       </div>
@@ -620,12 +617,12 @@ export default function Inventory({onPick}) {
                         {result.judgment}
                       </p>
                       {result.visualEvidence && (
-                        <p className="text-[11px] text-rose-300/80">
+                        <p className="text-[11px] text-muted-foreground">
                           Auditor Evidence: <span className="text-white/80">{result.visualEvidence}</span>
                         </p>
                       )}
                       {result.settlement?.onChain?.scoreDelta !== undefined && (
-                        <div className="pt-1 text-[11px] text-rose-400 border-t border-rose-500/20 flex items-center gap-2">
+                        <div className="pt-1 text-[11px] text-destructive border-t border-destructive/20 flex items-center gap-2">
                           <span>Blockchain Penalty:</span>
                           <span className="font-bold">
                             Score {result.settlement.onChain.scoreBefore} → {result.settlement.onChain.scoreAfter} ({(result.settlement.onChain.scoreDelta / 100).toFixed(1)}% drop on Passport #4)
@@ -636,9 +633,9 @@ export default function Inventory({onPick}) {
                   )}
 
                   {result.outcome === 'success' && !result.dryRun && (
-                    <div className="p-4 rounded-md border border-emerald-500/40 bg-emerald-500/10 text-emerald-200 font-mono text-xs space-y-2">
+                    <div className="p-4 rounded-md border border-primary/30 bg-primary/5 text-foreground font-mono text-xs space-y-2">
                       <div className="flex items-center justify-between">
-                        <span className="flex items-center gap-2 text-emerald-400 font-bold text-sm">
+                        <span className="flex items-center gap-2 text-primary font-bold text-sm">
                           <IconCheck size={18} />
                           TASK SUCCEEDED — POST PUBLISHED & VERIFIED ON X
                         </span>
@@ -646,7 +643,7 @@ export default function Inventory({onPick}) {
                           href={result.authenticatedUser?.handle ? `https://x.com/${result.authenticatedUser.handle}` : targetHandle ? `https://x.com/${targetHandle.replace(/^@/, '')}` : (sessionUser?.handle ? `https://x.com/${sessionUser.handle}` : "https://x.com")}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-emerald-400 hover:text-emerald-300 underline text-xs font-bold inline-flex items-center gap-1"
+                          className="text-primary hover:underline text-xs font-bold inline-flex items-center gap-1"
                         >
                           View Live on Profile @{result.authenticatedUser?.handle || targetHandle?.replace(/^@/, '') || sessionUser?.handle || 'User'} ↗
                         </a>
@@ -655,12 +652,12 @@ export default function Inventory({onPick}) {
                         {result.judgment}
                       </p>
                       {result.visualEvidence && (
-                        <p className="text-[11px] text-emerald-300/80">
+                        <p className="text-[11px] text-muted-foreground">
                           Auditor Evidence: <span className="text-white/80">{result.visualEvidence}</span>
                         </p>
                       )}
                       {result.settlement?.onChain?.scoreDelta !== undefined && (
-                        <div className="pt-1 text-[11px] text-emerald-400 border-t border-emerald-500/20 flex items-center gap-2">
+                        <div className="pt-1 text-[11px] text-primary border-t border-primary/20 flex items-center gap-2">
                           <span>Blockchain Reward:</span>
                           <span className="font-bold">
                             Score {result.settlement.onChain.scoreBefore} → {result.settlement.onChain.scoreAfter} (+{(result.settlement.onChain.scoreDelta / 100).toFixed(1)}% boost on Passport #4)
@@ -675,7 +672,7 @@ export default function Inventory({onPick}) {
                       <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider block">Outcome</span>
                       <span
                         className={`text-sm font-mono font-semibold uppercase flex items-center gap-1 mt-1 ${
-                          result.outcome === 'success' ? 'text-emerald-400' : 'text-rose-400'
+                          result.outcome === 'success' ? 'text-primary' : 'text-destructive'
                         }`}
                       >
                         {result.outcome === 'success' ? <IconCheck size={14} /> : <IconX size={14} />} {result.outcome}
@@ -691,8 +688,8 @@ export default function Inventory({onPick}) {
 
                     <div>
                       <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider block">TEE Attestation</span>
-                      <span className="text-xs font-mono text-cyan-400 mt-1 flex items-center gap-1">
-                        <IconShield size={12} /> {result.attestation?.verified ? 'Verified & Valid' : 'Unverified'}
+                      <span className="text-xs font-mono text-muted-foreground mt-1 flex items-center gap-1">
+                        <IconShield size={12} className={result.attestation?.verified ? 'text-primary' : 'text-muted-foreground'} /> {result.attestation?.verified ? 'Verified & Valid' : 'Unverified'}
                       </span>
                     </div>
 
@@ -706,13 +703,13 @@ export default function Inventory({onPick}) {
                         const delta = onChain.scoreDelta ?? 0;
                         if (delta > 0) {
                           return (
-                            <span className="text-xs font-mono text-emerald-400 mt-1 block font-bold">
+                            <span className="text-xs font-mono text-primary mt-1 block font-bold">
                               +{(delta / 100).toFixed(1)}% (Boost)
                             </span>
                           );
                         } else if (delta < 0) {
                           return (
-                            <span className="text-xs font-mono text-rose-400 mt-1 block font-bold">
+                            <span className="text-xs font-mono text-destructive mt-1 block font-bold">
                               {(delta / 100).toFixed(1)}% (Penalty)
                             </span>
                           );
@@ -772,7 +769,7 @@ export default function Inventory({onPick}) {
                                 )}
                                 {step.value && (
                                   <span className="text-muted-foreground text-[11px] truncate max-w-[280px]">
-                                    value: <span className="text-emerald-400">"{step.value}"</span>
+                                    value: <span className="text-white font-medium">"{step.value}"</span>
                                   </span>
                                 )}
                               </div>
@@ -786,7 +783,7 @@ export default function Inventory({onPick}) {
                             <span className="text-[10px] text-muted-foreground">
                               {step.latencyMs ? `${step.latencyMs}ms` : ''}
                             </span>
-                            <Badge variant="outline" className="text-[9px] text-cyan-400 border-cyan-500/20 bg-cyan-500/5">
+                            <Badge variant="outline" className="text-[9px] font-mono text-muted-foreground border-white/10 bg-white/5">
                               TEE Attested
                             </Badge>
                           </div>
@@ -842,7 +839,7 @@ export default function Inventory({onPick}) {
                           <IconLayers size={13} className="text-primary" />
                           0G Storage Persistence
                         </span>
-                        <Badge variant="outline" className="text-[9px] font-mono text-emerald-400 border-emerald-500/30 bg-emerald-500/10">
+                        <Badge variant="outline" className="text-[9px] font-mono text-primary border-primary/30 bg-primary/10">
                           Persisted
                         </Badge>
                       </div>
@@ -880,7 +877,7 @@ export default function Inventory({onPick}) {
                           <IconLock size={13} className="text-primary" />
                           On-Chain Settlement
                         </span>
-                        <Badge variant="outline" className="text-[9px] font-mono text-emerald-400 border-emerald-500/30 bg-emerald-500/10">
+                        <Badge variant="outline" className="text-[9px] font-mono text-primary border-primary/30 bg-primary/10">
                           PassportRegistry.sol
                         </Badge>
                       </div>
@@ -930,7 +927,7 @@ export default function Inventory({onPick}) {
                       variant="outline"
                       className={`text-[9.5px] font-mono ${
                         agent.tag === 'ACTIVE RUNTIME'
-                          ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10'
+                          ? 'text-primary border-primary/30 bg-primary/10'
                           : 'text-muted-foreground border-white/10 bg-white/5'
                       }`}
                     >
@@ -1009,14 +1006,14 @@ export default function Inventory({onPick}) {
                           variant="outline"
                           className={`text-[9px] font-mono uppercase ${
                             run.outcome === 'success'
-                              ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10'
+                              ? 'text-primary border-primary/30 bg-primary/10'
                               : 'text-destructive border-destructive/30 bg-destructive/10'
                           }`}
                         >
                           {run.outcome || 'executed'}
                         </Badge>
                         {run.dryRun && (
-                          <Badge variant="outline" className="text-[9px] font-mono text-amber-400 border-amber-500/30 bg-amber-500/10">
+                          <Badge variant="outline" className="text-[9px] font-mono text-amber-500 border-amber-500/30 bg-amber-500/10">
                             Dry Run
                           </Badge>
                         )}
