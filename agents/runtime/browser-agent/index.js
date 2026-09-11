@@ -18,7 +18,7 @@ const storagePath = resolve(__dirname, '.storage', 'x-session.json');
 
 import {readdirSync} from 'node:fs';
 
-export async function runBrowserAgent({task, dryRun = false}) {
+export async function runBrowserAgent({task, dryRun = false, targetHandle = null}) {
   if (!task) {
     throw new Error('Task description is required');
   }
@@ -49,6 +49,15 @@ export async function runBrowserAgent({task, dryRun = false}) {
   // Navigate to X home / timeline by default
   await controller.navigate('https://x.com/home');
 
+  // Dynamically detect authenticated user from DOM
+  let authenticatedUser = null;
+  try {
+    authenticatedUser = await controller.getAuthenticatedUser();
+    if (authenticatedUser?.handle) {
+      console.log(`👤 Active X Account: @${authenticatedUser.handle}${authenticatedUser.displayName ? ` (${authenticatedUser.displayName})` : ''}`);
+    }
+  } catch {}
+
   let loopResult;
   let verification;
 
@@ -62,12 +71,13 @@ export async function runBrowserAgent({task, dryRun = false}) {
       dryRun,
     });
 
-    // 2. Perform independent outcome verification
+    // 2. Perform independent outcome verification on user profile
     verification = await verifyOutcome({
       controller,
       task,
       runsDir,
       dryRun,
+      targetHandle: targetHandle || authenticatedUser?.handle,
     });
   } finally {
     await controller.close();
@@ -97,6 +107,7 @@ export async function runBrowserAgent({task, dryRun = false}) {
     judgment: verification.judgment,
     visualEvidence: verification.visualEvidence,
     attestation: verification.attestation,
+    authenticatedUser: verification.authenticatedUser || authenticatedUser,
     actionsLog: loopResult.actionsLog,
     screenshots,
     timestamp: new Date().toISOString(),
@@ -120,15 +131,25 @@ export async function runBrowserAgent({task, dryRun = false}) {
 async function main() {
   const args = process.argv.slice(2);
   const isDryRun = args.includes('--dry-run');
-  const task = args.filter((a) => a !== '--dry-run').join(' ').trim();
+
+  let handle = null;
+  const handleIdx = args.findIndex((a) => a === '--handle' || a === '-u');
+  if (handleIdx !== -1 && args[handleIdx + 1]) {
+    handle = args[handleIdx + 1];
+  }
+
+  const task = args
+    .filter((a, idx) => a !== '--dry-run' && a !== '--handle' && a !== '-u' && (handleIdx === -1 || idx !== handleIdx + 1))
+    .join(' ')
+    .trim();
 
   if (!task) {
-    console.log('Usage: node agents/runtime/browser-agent/index.js "<task description>" [--dry-run]');
+    console.log('Usage: node agents/runtime/browser-agent/index.js "<task description>" [--dry-run] [--handle <username>]');
     console.log('Example: node agents/runtime/browser-agent/index.js "Post \\"KYA agent test ping\\" on X" --dry-run\n');
     process.exit(1);
   }
 
-  const finalResult = await runBrowserAgent({task, dryRun: isDryRun});
+  const finalResult = await runBrowserAgent({task, dryRun: isDryRun, targetHandle: handle});
 
   console.log('========================================================');
   console.log('📋 FINAL STRUCTURED RESULT');

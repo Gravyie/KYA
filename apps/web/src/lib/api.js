@@ -43,14 +43,20 @@ export const api = {
   route: (payload) => call('/api/route', payload),
   record: (digest) => call(`/api/records/${digest}`),
   verifyHuman: (payload) => call('/api/verify-human', payload),
+  humanhood: (subject) => call(`/api/humanhood/${encodeURIComponent(subject)}`),
   createAgent: (payload) => call('/api/agents', payload),
   runBrowserAgent: (payload) => call('/api/browser-agent/run', payload),
   browserAgentHistory: () => call('/api/browser-agent/history'),
+  browserAgentSession: () => call('/api/browser-agent/session'),
+  browserAgentIdentity: () => call('/api/browser-agent/identity'),
+  browserAgentVerifyIdentity: (payload) => call('/api/browser-agent/verify-identity', payload),
   browserAgentScreenshotUrl: (runId, filename) => {
     const baseUrl = import.meta.env.VITE_API_URL || '';
     const cleanBase = baseUrl ? baseUrl.replace(/\/$/, '') : '';
     return `${cleanBase}/api/browser-agent/screenshot/${runId}/${filename}`;
   },
+  runScraperAgent: (payload) => call('/api/scrape', payload),
+  scraperAgentHistory: () => call('/api/scraper-agent/history'),
 };
 
 // ── formatting ─────────────────────────────────────────────────────────────

@@ -20,6 +20,7 @@ import {
   IconTerminal,
 } from '../components/icons.jsx';
 import {motion, AnimatePresence} from 'motion/react';
+import PillarsCard from '../components/PillarsCard.jsx';
 
 const PRESET_PROMPTS = [
   {
@@ -89,6 +90,10 @@ export default function Inventory({onPick}) {
   const [agentPassport, setAgentPassport] = useState(null);
   const [selectedScreenshot, setSelectedScreenshot] = useState(null);
   const [activeTab, setActiveTab] = useState('console'); // 'console' | 'history' | 'catalog'
+  const [sessionUser, setSessionUser] = useState(null);
+  const [targetHandle, setTargetHandle] = useState('');
+  const [agentIdentity, setAgentIdentity] = useState(null);
+  const [copiedVerify, setCopiedVerify] = useState(false);
   const resultRef = useRef(null);
 
   // Load execution history
@@ -111,9 +116,32 @@ export default function Inventory({onPick}) {
       .catch(() => {});
   };
 
+  // Load detected active session user
+  const loadSession = () => {
+    api
+      .browserAgentSession?.()
+      .then((data) => {
+        if (data?.user) setSessionUser(data.user);
+        else if (data?.envHandle) setSessionUser({handle: data.envHandle});
+      })
+      .catch(() => {});
+  };
+
+  // Load agent identity attestation
+  const loadIdentity = () => {
+    api
+      .browserAgentIdentity?.()
+      .then((data) => {
+        if (data?.ok) setAgentIdentity(data);
+      })
+      .catch(() => {});
+  };
+
   useEffect(() => {
     loadHistory();
     loadPassport();
+    loadSession();
+    loadIdentity();
   }, []);
 
   // Handle agent execution
@@ -145,11 +173,16 @@ export default function Inventory({onPick}) {
       const res = await api.runBrowserAgent({
         task: taskPrompt.trim(),
         dryRun,
+        targetHandle: targetHandle.trim() || undefined,
       });
 
       clearTimeout(timer1);
       clearTimeout(timer2);
       clearTimeout(timer3);
+
+      if (res?.authenticatedUser) {
+        setSessionUser(res.authenticatedUser);
+      }
 
       setResult(res);
       loadHistory();
@@ -231,6 +264,12 @@ export default function Inventory({onPick}) {
       {/* TAB 1: EXECUTION CONSOLE */}
       {activeTab === 'console' && (
         <div className="space-y-6">
+          <PillarsCard
+            passport={agentPassport}
+            latestStorageDigest={result?.storage?.digest || result?.settlement?.evidence}
+            latestSettlementHash={result?.onChain?.txHash || result?.settlement?.hash || result?.settlement?.receipt?.txHash}
+          />
+
           {/* Active Preset Agent Hero Card */}
           <Card className="border-white/10 bg-black/40 backdrop-blur-md overflow-hidden">
             <CardHeader className="py-3.5 px-6 border-b border-white/5 flex flex-row items-center justify-between bg-white/[0.03]">
@@ -278,6 +317,117 @@ export default function Inventory({onPick}) {
                   <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-white/5 text-white/70 border border-white/10">
                     gpt-oss-120b
                   </span>
+                </div>
+              </div>
+
+              {/* Connected Account & Target Handle Bar */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-lg bg-white/[0.02] border border-white/10">
+                <div className="flex items-center gap-2.5">
+                  <div className={`h-2.5 w-2.5 rounded-full ${sessionUser?.authenticated ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-mono font-medium text-white">
+                        Connected X Account:
+                      </span>
+                      {sessionUser?.handle ? (
+                        <span className="text-xs font-mono font-semibold text-primary">
+                          @{sessionUser.handle}
+                          {sessionUser.displayName && (
+                            <span className="text-muted-foreground font-normal ml-1">
+                              ({sessionUser.displayName})
+                            </span>
+                          )}
+                        </span>
+                      ) : (
+                        <span className="text-xs font-mono text-muted-foreground">
+                          Auto-detected from active browser session
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[11px] text-muted-foreground">
+                      Universal execution — posts to whoever is currently signed in on this machine.
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-[11px] font-mono text-muted-foreground">Override @handle:</span>
+                  <Input
+                    type="text"
+                    value={targetHandle}
+                    onChange={(e) => setTargetHandle(e.target.value)}
+                    disabled={running}
+                    placeholder={sessionUser?.handle ? `@${sessionUser.handle}` : "Auto-detect"}
+                    className="h-7 w-36 font-mono text-xs bg-black/50 border-white/15 px-2 py-0 text-white focus-visible:border-primary"
+                  />
+                </div>
+              </div>
+
+              {/* Verifiable Agent Identity Carrier Panel */}
+              <div className="p-3.5 rounded-lg bg-emerald-500/[0.03] border border-emerald-500/20 space-y-2.5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-2 w-2 relative">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </span>
+                    <span className="font-mono text-xs font-semibold text-emerald-400 uppercase tracking-wider">
+                      On-Chain Identity Carrier Injected
+                    </span>
+                    <Badge variant="outline" className="text-[9px] font-mono text-emerald-400 border-emerald-500/30 bg-emerald-500/10">
+                      Passport #4
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-mono text-muted-foreground">Operator:</span>
+                    <span className="text-[10px] font-mono text-white/90 bg-black/40 px-1.5 py-0.5 rounded border border-white/10 font-medium" title={agentIdentity?.operator}>
+                      {agentIdentity?.operator ? short(agentIdentity.operator, 10, 8) : '0xef045a...63e1'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] font-mono">
+                  <div className="p-2 rounded bg-black/40 border border-white/5 flex flex-col gap-0.5">
+                    <span className="text-[9px] uppercase tracking-wider text-muted-foreground">DOM / DevTools Object</span>
+                    <span className="text-emerald-400 font-medium">window.__KYA_AGENT__</span>
+                  </div>
+                  <div className="p-2 rounded bg-black/40 border border-white/5 flex flex-col gap-0.5">
+                    <span className="text-[9px] uppercase tracking-wider text-muted-foreground">Outbound HTTP Headers</span>
+                    <span className="text-cyan-400 font-medium truncate" title="X-KYA-Passport: eip155:31337:0xe7f1.../4">
+                      X-KYA-Passport (eip155:31337:…/4)
+                    </span>
+                  </div>
+                  <div className="p-2 rounded bg-black/40 border border-white/5 flex flex-col gap-0.5">
+                    <span className="text-[9px] uppercase tracking-wider text-muted-foreground">Cryptographic Attestation</span>
+                    <span className="text-white/80 font-medium truncate" title={agentIdentity?.signature}>
+                      {agentIdentity?.signature ? `${agentIdentity.signature.slice(0, 14)}...` : 'EIP-191 Signed'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1 border-t border-emerald-500/10 text-[11px] font-mono">
+                  <span className="text-muted-foreground">
+                    💡 Open DevTools Console in Chrome to inspect the live KYA identity badge.
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard?.writeText('await window.__KYA_AGENT__.verify()');
+                      setCopiedVerify(true);
+                      setTimeout(() => setCopiedVerify(false), 2000);
+                    }}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-white/5 hover:bg-white/10 text-primary border border-primary/30 transition-colors text-[10px]"
+                  >
+                    {copiedVerify ? (
+                      <>
+                        <IconCheck size={12} className="text-emerald-400" /> Copied Command!
+                      </>
+                    ) : (
+                      <>
+                        <span>Copy Console Verify Snippet</span>
+                      </>
+                    )}
+                  </button>
                 </div>
               </div>
 
@@ -364,7 +514,7 @@ export default function Inventory({onPick}) {
                     <p className="text-[11px] text-muted-foreground mt-0.5">
                       {dryRun
                         ? 'Navigates, composes draft text, captures screenshot, audits via 0G Compute, and skips final Post click.'
-                        : 'Live execution: Publishes real tweet to @Ayush_2005__ on X, audits profile, and settles on-chain.'}
+                        : `Live execution: Publishes real tweet to @${targetHandle?.replace(/^@/, '') || sessionUser?.handle || 'active X account'} on X, audits profile, and settles on-chain.`}
                     </p>
                   </div>
                 </div>
@@ -493,12 +643,12 @@ export default function Inventory({onPick}) {
                           TASK SUCCEEDED — POST PUBLISHED & VERIFIED ON X
                         </span>
                         <a
-                          href="https://x.com/Ayush_2005__"
+                          href={result.authenticatedUser?.handle ? `https://x.com/${result.authenticatedUser.handle}` : targetHandle ? `https://x.com/${targetHandle.replace(/^@/, '')}` : (sessionUser?.handle ? `https://x.com/${sessionUser.handle}` : "https://x.com")}
                           target="_blank"
                           rel="noreferrer"
                           className="text-emerald-400 hover:text-emerald-300 underline text-xs font-bold inline-flex items-center gap-1"
                         >
-                          View Live on Profile @Ayush_2005__ ↗
+                          View Live on Profile @{result.authenticatedUser?.handle || targetHandle?.replace(/^@/, '') || sessionUser?.handle || 'User'} ↗
                         </a>
                       </div>
                       <p className="text-sm font-sans text-white/90 font-medium">

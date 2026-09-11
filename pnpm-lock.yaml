@@ -122,9 +122,15 @@ importers:
 
   apps/api:
     dependencies:
+      '@google/genai':
+        specifier: ^2.21.0
+        version: 2.21.0
       '@kya/sdk':
         specifier: workspace:*
         version: link:../../packages/sdk
+      cheerio:
+        specifier: ^1.0.0
+        version: 1.2.0
       viem:
         specifier: 2.21.55
         version: 2.21.55(typescript@5.6.3)

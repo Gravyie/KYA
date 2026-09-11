@@ -95,6 +95,7 @@ export async function query0GVision({
   actionsLog = [],
   pageText = '',
   dryRun = false,
+  userHandle = null,
 }) {
   const modelToUse = overrideModel || config.model;
   const started = Date.now();
@@ -142,7 +143,7 @@ export async function query0GVision({
   // Fallback to local deterministic executor if no API key is configured (matches KYA architectural standard)
   if (!config.apiKey) {
     console.warn(`[0G Vision] Notice: No OG_COMPUTE_API_KEY configured in .env. Running in local:deterministic-executor mode.`);
-    const simulated = await generateDeterministicAction({promptText, accessibilityTree, currentUrl, actionsLog, pageText, dryRun});
+    const simulated = await generateDeterministicAction({promptText, accessibilityTree, currentUrl, actionsLog, pageText, dryRun, userHandle});
     return {
       responseText: JSON.stringify(simulated),
       attestation: {
@@ -328,11 +329,15 @@ export async function generateDynamicPostText(promptText, taskOnly = '') {
  * Deterministic local solver for testing when OG_COMPUTE_API_KEY is not configured.
  * Standard across KYA: ensures demo/testing executes deterministically and labels the provider.
  */
-async function generateDeterministicAction({promptText, accessibilityTree, currentUrl = '', actionsLog = [], pageText = '', dryRun = false}) {
+async function generateDeterministicAction({promptText, accessibilityTree, currentUrl = '', actionsLog = [], pageText = '', dryRun = false, userHandle = null}) {
   const lowerPrompt = (promptText || '').toLowerCase();
   const goalMatch = (promptText || '').match(/User (?:Goal \/ )?Task:\s*["']([^"']+)["']/i);
   const taskOnly = goalMatch ? goalMatch[1].toLowerCase() : lowerPrompt;
   const isPostTask = taskOnly.includes('post') || taskOnly.includes('tweet') || taskOnly.includes('say');
+
+  const detectedHandle = userHandle || process.env.X_USER_HANDLE || process.env.TWITTER_HANDLE || '';
+  const cleanHandle = detectedHandle.replace(/^@/, '').trim();
+  const userTag = cleanHandle ? `@${cleanHandle}` : 'active user';
 
   const history = actionsLog || [];
   const prevActionNames = history.map((h) => h.action);
@@ -348,7 +353,7 @@ async function generateDeterministicAction({promptText, accessibilityTree, curre
           : 'Authenticated X home feed and user session verified active.',
         visualEvidence: isPostTask
           ? 'Composer state captured with draft text ready to post.'
-          : 'Verified timeline entries and authenticated user profile @Ayush_2005__.',
+          : `Verified timeline entries and authenticated profile ${userTag}.`,
       };
     }
 
@@ -363,18 +368,18 @@ async function generateDeterministicAction({promptText, accessibilityTree, curre
     if (composerStillVisible) {
       return {
         outcome: 'failure',
-        judgment: `Post submission failed: tweet composer remained open and post was not published to @Ayush_2005__ profile.`,
+        judgment: `Post submission failed: tweet composer remained open and post was not published to ${userTag} profile.`,
         visualEvidence: 'Composer modal and tweetTextarea_0 still open on page.',
       };
     }
 
     // Check if profile or timeline is verified
-    const onProfile = currentUrl.includes('Ayush_2005__') || pageLower.includes('ayush srivastava') || pageLower.includes('@ayush_2005__');
+    const onProfile = (cleanHandle && currentUrl.includes(cleanHandle)) || currentUrl.includes('/status/') || pageLower.includes('profile');
     if (onProfile) {
       return {
         outcome: 'success',
-        judgment: `Action successfully verified: Post published and confirmed on @Ayush_2005__ profile timeline.`,
-        visualEvidence: 'Verified timeline entries and authenticated user profile @Ayush_2005__.',
+        judgment: `Action successfully verified: Post published and confirmed on ${userTag} profile timeline.`,
+        visualEvidence: `Verified timeline entries and authenticated profile ${userTag}.`,
       };
     }
 
@@ -465,7 +470,7 @@ async function generateDeterministicAction({promptText, accessibilityTree, curre
   // Agent loop: Check feed / timeline
   if (taskOnly.includes('feed') || taskOnly.includes('check') || taskOnly.includes('inspect') || taskOnly.includes('home') || taskOnly.includes('timeline')) {
     return {
-      reasoning: 'Visual inspection confirms the authenticated X home timeline is loaded and active for Ayush (@Ayush_2005__). Objective achieved.',
+      reasoning: `Visual inspection confirms the authenticated X home timeline is loaded and active for ${userTag}. Objective achieved.`,
       action: 'task_complete',
       target: null,
       value: null,

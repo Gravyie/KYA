@@ -46,9 +46,18 @@ function parseAuditorResponse(text) {
  * @param {string} params.runsDir
  * @returns {Promise<{outcome: "success"|"failure"|"uncertain", judgment: string, visualEvidence: string, attestation: object, finalScreenshotPath: string}>}
  */
-export async function verifyOutcome({controller, task, runsDir, dryRun = false}) {
+export async function verifyOutcome({controller, task, runsDir, dryRun = false, targetHandle = null}) {
   const finalScreenshotPath = resolve(runsDir, 'final-verification.png');
   console.log(`\n🔍 Performing Independent Outcome Verification...${dryRun ? ' [DRY RUN]' : ''}`);
+
+  // Dynamically resolve target user handle from params, env, or active browser session
+  let userHandle = targetHandle || process.env.X_USER_HANDLE || process.env.TWITTER_HANDLE;
+  if (!userHandle && controller?.getAuthenticatedUser) {
+    const user = await controller.getAuthenticatedUser();
+    if (user?.handle) userHandle = user.handle;
+  }
+  const cleanHandle = (userHandle || '').replace(/^@/, '').trim();
+  const profileUrl = cleanHandle ? `https://x.com/${cleanHandle}` : null;
 
   let composerWasStuck = false;
   let draftDialogTriggered = false;
@@ -79,11 +88,19 @@ export async function verifyOutcome({controller, task, runsDir, dryRun = false})
       }
     }
 
-    console.log(`Navigating to profile (https://x.com/Ayush_2005__) to inspect published posts...`);
-    try {
-      await controller.navigate('https://x.com/Ayush_2005__');
-      await controller.wait(4000);
-    } catch {}
+    if (profileUrl) {
+      console.log(`Navigating to profile (${profileUrl}) to inspect published posts...`);
+      try {
+        await controller.navigate(profileUrl);
+        await controller.wait(4000);
+      } catch {}
+    } else {
+      console.log(`Navigating to profile timeline via sidebar to inspect published posts...`);
+      try {
+        await controller.click('a[data-testid="AppTabBar_Profile_Link"]').catch(() => {});
+        await controller.wait(4000);
+      } catch {}
+    }
   } else if (dryRun) {
     console.log(`Dry Run: Verifying draft state in composer (skipping profile navigation)...`);
     await controller.wait(1000);
@@ -154,13 +171,15 @@ export async function verifyOutcome({controller, task, runsDir, dryRun = false})
 
     const topTweet = tweetDetails[0];
 
+    const handleLabel = cleanHandle ? `@${cleanHandle}` : 'user';
+
     if (recentTweet) {
       outcome = 'success';
-      judgment = `Independent Verification Succeeded: Ground-truth tweet verified on @Ayush_2005__ profile (published ${recentTweet.relativeTime || 'recently'}).`;
+      judgment = `Independent Verification Succeeded: Ground-truth tweet verified on ${handleLabel} profile (published ${recentTweet.relativeTime || 'recently'}).`;
       visualEvidence = `Verified live tweet on profile: "${recentTweet.text.slice(0, 90)}..."`;
     } else {
       outcome = 'failure';
-      judgment = 'Independent Verification Failed: Ground-truth audit on @Ayush_2005__ confirmed the tweet was NOT published to the timeline.';
+      judgment = `Independent Verification Failed: Ground-truth audit on ${handleLabel} confirmed the tweet was NOT published to the timeline.`;
       visualEvidence = topTweet
         ? `Latest tweet on profile is from ${topTweet.relativeTime || 'earlier'} ("${topTweet.text.slice(0, 60)}...") — target post was not published.`
         : 'No tweets found on user profile timeline.';
@@ -177,7 +196,8 @@ export async function verifyOutcome({controller, task, runsDir, dryRun = false})
     signingAddress: '0x0000000000000000000000000000000000000000',
     raw: {
       mode: 'ground-truth-auditor',
-      inspectedProfile: 'https://x.com/Ayush_2005__',
+      inspectedProfile: profileUrl || 'https://x.com/home',
+      targetHandle: cleanHandle || null,
       tweetsDetected: tweetDetails.length,
       topTweetTime: tweetDetails[0]?.relativeTime || null,
     },
@@ -189,5 +209,7 @@ export async function verifyOutcome({controller, task, runsDir, dryRun = false})
     visualEvidence,
     attestation,
     finalScreenshotPath,
+    authenticatedUser: cleanHandle ? {handle: cleanHandle} : null,
+    profileUrl,
   };
 }

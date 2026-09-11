@@ -35,10 +35,11 @@ contracts/foundry.lock
 __pycache__/
 *.pyc
 
-# browser agent runtime artifacts & secrets
+# browser & research agent runtime artifacts & secrets
 agents/runtime/browser-agent/.runs/
 agents/runtime/browser-agent/.storage/
 agents/runtime/browser-agent/*.png
+agents/runtime/research-agent/.runs/
 
 # documentation & development reports
 docs/

@@ -97,31 +97,31 @@ export default function Lookup({query, tasks, onPick}) {
   const decision = live?.decision || state.data.decision;
 
   return (
-    <div className="p-8 max-w-7xl mx-auto w-full">
-      <div className="mb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground flex items-center gap-3">
+    <div className="p-4 sm:p-6 md:p-8 max-w-7xl mx-auto w-full min-w-0 overflow-x-hidden">
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4 min-w-0">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground flex items-center gap-3 break-all min-w-0">
             {nameOf(passport)}
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-sm text-muted-foreground mt-1 break-words">
             Passport #{passport.agentId} on chain {passport.chainId}. Everything below is read from the registry. Nothing is cached or self-reported.
           </p>
         </div>
       </div>
 
-      <Card className="mb-8 overflow-visible border-white/10 bg-black/40 backdrop-blur-md">
-        <CardHeader className="py-3 px-5 border-b border-white/5 flex flex-row items-center gap-2 bg-white/5">
-          <IconBolt size={14} className="text-muted-foreground" />
-          <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">The ask · the verdict is relative to this, not absolute</span>
+      <Card className="mb-8 overflow-hidden border-white/10 bg-black/40 backdrop-blur-md">
+        <CardHeader className="py-3 px-5 border-b border-white/5 flex flex-row items-center gap-2 bg-white/5 min-w-0">
+          <IconBolt size={14} className="text-muted-foreground shrink-0" />
+          <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground truncate">The ask · the verdict is relative to this, not absolute</span>
         </CardHeader>
-        <CardContent className="p-5">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-[auto_120px_1fr] gap-4 items-end">
-            <div className="flex flex-col gap-1.5">
+        <CardContent className="p-5 min-w-0">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1fr_140px_auto] gap-4 items-end min-w-0">
+            <div className="flex flex-col gap-1.5 min-w-0">
               <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Capability requested</label>
               <select 
                 value={capability} 
                 onChange={(e) => setCapability(e.target.value)} 
-                className="flex h-10 w-full rounded-md border border-input bg-background/50 px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 appearance-none font-mono"
+                className="flex h-10 w-full rounded-md border border-input bg-background/50 px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 appearance-none font-mono truncate"
               >
                 {(tasks?.length ? tasks.map((t) => t.capability) : CAPS).map((c) => (
                   <option key={c} value={c}>{c}</option>
@@ -129,8 +129,8 @@ export default function Lookup({query, tasks, onPick}) {
                 <option value="pay">pay</option>
               </select>
             </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Value at risk ({SPEND_SYMBOL})</label>
+            <div className="flex flex-col gap-1.5 min-w-0">
+              <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground truncate">Value at risk ({SPEND_SYMBOL})</label>
               <Input
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
@@ -138,14 +138,14 @@ export default function Lookup({query, tasks, onPick}) {
                 className="font-mono bg-background/50"
               />
             </div>
-            <div className="flex items-center h-10 md:justify-end">
+            <div className="flex items-center h-10 lg:justify-end min-w-0">
               {live?.onchain ? (
-                <Badge variant={live.onchain.ok ? 'default' : 'destructive'} className="font-mono rounded-sm">
+                <Badge variant={live.onchain.ok ? 'default' : 'destructive'} className="font-mono rounded-sm truncate max-w-full">
                   registry says {live.onchain.ok ? 'OK' : live.onchain.reason}
                 </Badge>
               ) : (
                 <span className="flex items-center gap-2 text-muted-foreground text-xs font-mono">
-                  <IconSpinner size={12} className="animate-spin" />
+                  <IconSpinner size={12} className="animate-spin shrink-0" />
                   evaluating
                 </span>
               )}
@@ -156,22 +156,24 @@ export default function Lookup({query, tasks, onPick}) {
 
       <Passport passport={passport} decision={decision} integrity={integrity} requestedCapability={capability} />
 
-      <Card className="mt-8 border-white/10 bg-black/40 backdrop-blur-md">
-        <CardHeader className="py-3 px-5 border-b border-white/5 bg-white/5">
-          <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">ENS text records · read through the standard resolver profile</span>
+      <Card className="mt-8 border-white/10 bg-black/40 backdrop-blur-md overflow-hidden">
+        <CardHeader className="py-3 px-5 border-b border-white/5 bg-white/5 min-w-0">
+          <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground truncate block">ENS text records · read through the standard resolver profile</span>
         </CardHeader>
-        <CardContent className="p-5">
+        <CardContent className="p-5 min-w-0">
           {Object.keys(passport.textRecords || {}).length === 0 ? (
             <div className="text-muted-foreground text-sm">No text records set.</div>
           ) : (
-            <dl className="grid grid-cols-[140px_1fr] gap-x-4 gap-y-3 text-sm">
-                {Object.entries(passport.textRecords).map(([k, v]) => (
-                  <React.Fragment key={k}>
-                    <dt className="text-muted-foreground">{k}</dt>
-                    <dd className={k.startsWith('agent.') ? 'font-mono text-foreground' : 'text-foreground'}>{v}</dd>
-                  </React.Fragment>
-                ))}
-              </dl>
+            <dl className="grid grid-cols-1 sm:grid-cols-[160px_1fr] md:grid-cols-[200px_1fr] gap-x-4 gap-y-3 text-sm min-w-0">
+              {Object.entries(passport.textRecords).map(([k, v]) => (
+                <React.Fragment key={k}>
+                  <dt className="text-muted-foreground font-mono text-xs truncate" title={k}>{k}</dt>
+                  <dd className={`break-all min-w-0 text-xs sm:text-sm ${k.startsWith('agent.') ? 'font-mono text-foreground' : 'text-foreground'}`}>
+                    {v}
+                  </dd>
+                </React.Fragment>
+              ))}
+            </dl>
           )}
         </CardContent>
       </Card>

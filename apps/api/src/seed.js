@@ -42,6 +42,7 @@ const KEYS = {
   opOptimizer: '0x4bbbf85ce3377467afe5d46f804f221813b2bb87f24d81f60f1fcdbf7cbf4356',
   opScout: '0xdbda1821b80551c9d65939329250298aa3472ba22feea921c0cf5d620ea67b97',
   opDrifter: '0x2a871d0798f97d79848a013d4936a73bf4cc922c825d33c1cf7073dff6d409c6',
+  opBrowser: '0x1010101010101010101010101010101010101010101010101010101010101010',
 };
 
 const DAY = 86_400;
@@ -309,6 +310,30 @@ async function main() {
       seed: 'scout',
       startAt: realNow - 3 * DAY,
       endAt: realNow - 2 * 3600,
+    })),
+  );
+  console.log('');
+
+  // ── the autonomous browser agent ─────────────────────────
+  console.log('browser-agent.kya.eth — autonomous social agent powered by 0G Compute');
+  const browserAgent = await createAgent({
+    ownerKey: KEYS.ownerA,
+    operatorKey: KEYS.opBrowser,
+    label: 'browser-agent',
+    description: 'Autonomous Social & Headless Browser Agent powered by 0G Compute TEE',
+    capabilities: ['browser.action', 'social.post'],
+    spendLimit: 1,
+    maxActions: 50,
+  });
+  timeline.push(
+    ...(await planHistory({
+      agentId: browserAgent.agentId,
+      capability: 'browser.action',
+      count: 6,
+      failureRate: 0.15,
+      seed: 'browser-agent',
+      startAt: realNow - 2 * DAY,
+      endAt: realNow - 3600,
     })),
   );
   console.log('');

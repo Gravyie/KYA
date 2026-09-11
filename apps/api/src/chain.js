@@ -1,5 +1,6 @@
 import {createWalletClient, createPublicClient, http, getAddress, keccak256, toHex} from 'viem';
 import {privateKeyToAccount} from 'viem/accounts';
+export {privateKeyToAccount};
 import {PassportRegistryABI, HumanhoodAttestorABI, AgentNameRegistrarABI, chainById, Outcome} from '@kya/sdk';
 import {config} from './config.js';
 

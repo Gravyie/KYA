@@ -67,7 +67,7 @@ export default function Compare({tasks, onPick}) {
   };
 
   return (
-    <div className="p-8 max-w-7xl mx-auto w-full">
+    <div className="p-4 sm:p-6 md:p-8 max-w-7xl mx-auto w-full min-w-0 overflow-x-hidden">
       <div className="mb-8">
         <h1 className="text-3xl font-semibold tracking-tight text-foreground">Compare before you delegate</h1>
         <p className="text-muted-foreground mt-2 text-sm max-w-[74ch]">
@@ -194,10 +194,9 @@ export default function Compare({tasks, onPick}) {
       </AnimatePresence>
 
       <div 
-        className="grid gap-6 items-start"
-        style={{
-          gridTemplateColumns: `repeat(${Math.min(data?.results?.length || 2, 3)}, minmax(0, 1fr))`,
-        }}
+        className={`grid gap-6 items-start min-w-0 ${
+          (data?.results?.length || 2) >= 3 ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1 md:grid-cols-2'
+        }`}
       >
         {loading && !data && (
           <>
@@ -206,10 +205,10 @@ export default function Compare({tasks, onPick}) {
           </>
         )}
         {data?.results.map((r, i) => (
-          <div key={r.query} className="flex flex-col gap-4">
-            <div className="flex items-center gap-3 h-[26px]">
+          <div key={r.query} className="flex flex-col gap-4 min-w-0">
+            <div className="flex items-center gap-3 h-[26px] min-w-0">
               <span className="inline-flex items-center justify-center w-[15px] h-[15px] rounded-[3px] border border-white/20 text-[9px] font-mono text-muted-foreground shrink-0">{i + 1}</span>
-              <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground overflow-hidden text-ellipsis whitespace-nowrap">
+              <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground overflow-hidden text-ellipsis whitespace-nowrap truncate min-w-0 flex-1">
                 {r.query}
               </span>
               {data.recommended === r.query && (
