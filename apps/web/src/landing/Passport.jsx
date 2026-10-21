@@ -9,20 +9,20 @@ const FILE = `{
   "name": "research-bot",
   "description": "research-bot: an AI agent operated by Acme Inc. …",
   "services": [
-    { "name": "sigilant-card",   "endpoint": "https://reg.acme.co/api/agents/8f3a…/card" },
-    { "name": "sigilant-status", "endpoint": "https://reg.acme.co/api/agents/8f3a…/status" }
+    { "name": "shuin-card",   "endpoint": "https://reg.acme.co/api/agents/8f3a…/card" },
+    { "name": "shuin-status", "endpoint": "https://reg.acme.co/api/agents/8f3a…/status" }
   ],
   "x402Support": false,
   "active": true,
   "registrations": [
     { "agentId": 10353, "agentRegistry": "eip155:84532:0x8004A818…BD9e" }
   ],
-  "sigilant": { "agentId": "8f3a…", "operator": "Acme Inc.", "actions": ["read_file", "web.search"] }
+  "shuin": { "agentId": "8f3a…", "operator": "Acme Inc.", "actions": ["read_file", "web.search"] }
 }`;
 
 const ASSERTION = `// POST /api/assertion  { "audience": "https://api.partner.com" }
 {
-  "iss": "sigilant:91c277de0b4e1a3c",
+  "iss": "shuin:91c277de0b4e1a3c",
   "sub": "8f3a…",                       // the agent
   "name": "research-bot",
   "operator": "Acme Inc.",              // the accountable human
@@ -77,7 +77,7 @@ function Lookup() {
               <dt>Owner</dt><dd className="mono">{short(d.owner)}</dd>
               <dt>File</dt><dd>{d.uriKind === 'data' ? 'Embedded in the token (data: URI)' : `${d.uriKind.toUpperCase()} URI`}</dd>
               {d.registration?.services?.length > 0 && <><dt>Services</dt><dd>{d.registration.services.map(s => s.name).join(', ')}</dd></>}
-              <dt>Sigilant</dt><dd>{d.registration?.sigilant ? 'Issued by a Sigilant registry' : 'Not a Sigilant agent'}</dd>
+              <dt>Shuin</dt><dd>{d.registration?.shuin ? 'Issued by a Shuin registry' : 'Not a Shuin agent'}</dd>
             </dl>
             <a className="ext" href={`${d.chain.explorer}/token/${d.chain.registry}?a=${d.agentId}`} target="_blank" rel="noreferrer">Open on the explorer <ExternalLink size={13} /></a>
           </article>

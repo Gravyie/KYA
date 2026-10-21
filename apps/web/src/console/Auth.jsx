@@ -30,7 +30,7 @@ export function Setup({onDone}) {
       <Shell>
         <KeyRound size={22} strokeWidth={1.6} />
         <h1>Save your owner key</h1>
-        <p className="muted">This key controls every agent in this registry. It is shown once. Sigilant stores only its hash.</p>
+        <p className="muted">This key controls every agent in this registry. It is shown once. Shuin stores only its hash.</p>
         <div className="secret"><code>{issued.key}</code><CopyButton text={issued.key} /></div>
         <label className="check"><input type="checkbox" checked={saved} onChange={e => setSaved(e.target.checked)} /> I stored it in a password manager</label>
         <p className="hint">Lost it later? Run <code className="inline-code">npm run owner:recover</code> on the host machine.</p>
@@ -72,12 +72,12 @@ export function Unlock({status, onDone, reason}) {
       <p className="muted">{status?.agentCount ?? 0} agents · {status?.eventCount ?? 0} audit events</p>
       <form onSubmit={submit} className="stack">
         <label className="field"><span>Owner key</span>
-          <input className="input mono" value={key} onChange={e => setKey(e.target.value)} placeholder="sgo_…" autoFocus autoComplete="off" spellCheck="false" required />
+          <input className="input mono" value={key} onChange={e => setKey(e.target.value)} placeholder="so_…" autoFocus autoComplete="off" spellCheck="false" required />
         </label>
         {error && <p className="error" role="alert">{error}</p>}
         <button className="btn" disabled={busy || !key.trim()}>Unlock</button>
       </form>
-      <p className="hint">Lost it? On the machine running Sigilant, run <code className="inline-code">npm run owner:recover</code> to rotate to a new key. Agents and audit history are kept.</p>
+      <p className="hint">Lost it? On the machine running Shuin, run <code className="inline-code">npm run owner:recover</code> to rotate to a new key. Agents and audit history are kept.</p>
     </Shell>
   );
 }

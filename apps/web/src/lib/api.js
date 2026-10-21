@@ -1,4 +1,4 @@
-const STORE = 'sigilant.owner';
+const STORE = 'shuin.owner';
 export const ownerKey = {
   get() { try { return localStorage.getItem(STORE) || ''; } catch { return ''; } },
   set(k) { try { localStorage.setItem(STORE, k); } catch { /* private mode */ } },
@@ -18,7 +18,7 @@ async function call(path, {method = 'GET', key, body} = {}) {
       body: body ? JSON.stringify(body) : undefined,
     });
   } catch {
-    throw new ApiError('Cannot reach the Sigilant server. Is it running?', 0);
+    throw new ApiError('Cannot reach the Shuin server. Is it running?', 0);
   }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new ApiError(data.error || `Request failed (${res.status})`, res.status);

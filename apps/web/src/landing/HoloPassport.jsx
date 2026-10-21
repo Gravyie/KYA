@@ -23,7 +23,7 @@ export default function HoloPassport() {
           {Array.from({length: 26}, (_, i) => <path key={i} d={`M0 ${150 + i * 2} C 90 ${60 + i * 5}, 190 ${230 - i * 3}, 400 ${110 + i * 3}`} />)}
         </svg>
         <div className="holo-foil" aria-hidden="true" />
-        <header><span className="mono">SIGILANT · AGENT PASSPORT</span><svg width="26" height="26" viewBox="0 0 32 32"><circle cx="16" cy="16" r="11" fill="none" stroke="currentColor" strokeWidth="3.2" /><circle cx="16" cy="16" r="3.4" fill="var(--allow-glow)" /></svg></header>
+        <header><span className="mono">SHUIN · AGENT PASSPORT</span><svg width="26" height="26" viewBox="0 0 32 32"><circle cx="16" cy="16" r="11" fill="none" stroke="currentColor" strokeWidth="3.2" /><circle cx="16" cy="16" r="3.4" fill="var(--allow-glow)" /></svg></header>
         <h4>research-bot</h4>
         <dl>
           <dt>Operator</dt><dd>Acme Inc.</dd>

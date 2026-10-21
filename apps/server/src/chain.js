@@ -2,7 +2,7 @@ import {CHAINS, encodeOwnerOf, encodeTokenURI, decodeAddress, decodeString, from
 
 export const chainList = () => Object.values(CHAINS).map(({rpc: _rpc, ...c}) => c);
 export const getChain = id => CHAINS[Number(id)] ?? null;
-const rpcUrl = chain => process.env[`SIGILANT_RPC_${chain.id}`] || chain.rpc;
+const rpcUrl = chain => process.env[`SHUIN_RPC_${chain.id}`] || chain.rpc;
 
 async function ethCall(chain, data) {
   const res = await fetch(rpcUrl(chain), {

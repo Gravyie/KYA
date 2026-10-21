@@ -12,7 +12,7 @@ export default function KeyReveal({agent, secret, onClose, rotated}) {
         <p className="muted">This key lets the agent ask for permission as <b>{agent.name}</b>. It is shown once and stored only as a hash.</p>
         <div className="secret"><code>{secret}</code><CopyButton text={secret} /></div>
         <p className="label">Fastest way to use it: wrap any MCP server</p>
-        <Code title="shell" plain>{`SIGILANT_AGENT_KEY=${secret} SIGILANT_URL=${url} \\
+        <Code title="shell" plain>{`SHUIN_AGENT_KEY=${secret} SHUIN_URL=${url} \\
   node ${mcp} -- npx @modelcontextprotocol/server-filesystem ~/project`}</Code>
         <div className="modal-foot"><button className="btn" onClick={onClose}>I saved the key</button></div>
       </div>

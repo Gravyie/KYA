@@ -17,7 +17,7 @@ export function useReveal(dep) {
   useEffect(() => {
     if (!dep) return undefined;
     const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), {threshold: 0.2, rootMargin: '0px 0px -6% 0px'});
-    document.querySelectorAll('.rise, .words, .draw').forEach(el => io.observe(el));
+    document.querySelectorAll('.rise, .words, .draw, .chapter').forEach(el => io.observe(el));
     return () => io.disconnect();
   }, [dep]);
 }

@@ -5,7 +5,7 @@ import {mkdtemp, rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join, resolve} from 'node:path';
 import {createInterface} from 'node:readline';
-import {createSigilant, SigilantDeniedError, verifyAssertion, verifyAuditExport} from '../../../packages/sdk/src/index.js';
+import {createShuin, ShuinDeniedError, verifyAssertion, verifyAuditExport} from '../../../packages/sdk/src/index.js';
 import {decide} from '../src/policy.js';
 import {createServer} from 'node:http';
 import {encodeRegister, encodeSetAgentURI, decodeString, fromDataUri, parseRegisteredLog, REGISTERED_TOPIC, registrationFile} from '../../../packages/sdk/src/erc8004.js';
@@ -24,7 +24,7 @@ async function api(path, {method = 'GET', key = '', body} = {}) {
 const makeAgent = async (name, scopes, extra = {}) => (await api('/api/agents', {method: 'POST', key: owner, body: {name, scopes, ...extra}})).data;
 
 before(async () => {
-  dir = await mkdtemp(join(tmpdir(), 'sigilant-'));
+  dir = await mkdtemp(join(tmpdir(), 'shuin-'));
   base = 'http://127.0.0.1:' + port;
   const word = n => BigInt(n).toString(16).padStart(64, '0');
   rpc = createServer((req, res) => {
@@ -39,7 +39,7 @@ before(async () => {
     });
   }).listen(0, '127.0.0.1');
   await new Promise(r => rpc.once('listening', r));
-  server = spawn(process.execPath, [resolve('apps/server/src/index.js')], {env: {...process.env, SIGILANT_DATA_DIR: dir, PORT: String(port), SIGILANT_RPC_84532: `http://127.0.0.1:${rpc.address().port}`}, stdio: 'ignore'});
+  server = spawn(process.execPath, [resolve('apps/server/src/index.js')], {env: {...process.env, SHUIN_DATA_DIR: dir, PORT: String(port), SHUIN_RPC_84532: `http://127.0.0.1:${rpc.address().port}`}, stdio: 'ignore'});
   for (let i = 0; i < 60; i++) { try { await api('/health'); break; } catch { await new Promise(r => setTimeout(r, 50)); } }
   owner = (await api('/api/setup', {method: 'POST', body: {name: 'Test owner'}})).data.key;
 });
@@ -64,11 +64,11 @@ test('policy: deny beats allow, default deny, amount caps, wildcards', () => {
 test('lifecycle: registry, policy, receipts, rotation, revocation, audit integrity', async () => {
   assert.equal((await api('/api/dashboard')).status, 401);
   const {agent, key} = await makeAgent('Reader', [{action: 'files.read', resources: ['workspace/*']}]);
-  const sdk = createSigilant({agentKey: key, baseUrl: base});
+  const sdk = createShuin({agentKey: key, baseUrl: base});
   let calls = 0;
   assert.equal(await sdk.run({action: 'files.read', resource: 'workspace/r.md'}, () => (calls++, 'ok')), 'ok');
-  await assert.rejects(() => sdk.run({action: 'files.write', resource: 'workspace/r.md'}, () => calls++), SigilantDeniedError);
-  const offline = createSigilant({agentKey: key, fetchImpl: async () => { throw Error('offline'); }});
+  await assert.rejects(() => sdk.run({action: 'files.write', resource: 'workspace/r.md'}, () => calls++), ShuinDeniedError);
+  const offline = createShuin({agentKey: key, fetchImpl: async () => { throw Error('offline'); }});
   await assert.rejects(() => offline.run({action: 'files.read', resource: 'workspace/r.md'}, () => calls++), {code: 'UNREACHABLE'});
   assert.equal(calls, 1);
 
@@ -86,7 +86,7 @@ test('lifecycle: registry, policy, receipts, rotation, revocation, audit integri
 
 test('human approval: pending until the owner decides', async () => {
   const {key} = await makeAgent('Mailer', [{action: 'email.send', resources: ['*'], mode: 'ask'}]);
-  const sdk = createSigilant({agentKey: key, baseUrl: base, pollMs: 50});
+  const sdk = createShuin({agentKey: key, baseUrl: base, pollMs: 50});
   let ran = 0;
   const pending = sdk.run({action: 'email.send', resource: 'cfo@acme.com', note: 'Send Q3 numbers'}, () => (ran++, 'sent'));
   await new Promise(r => setTimeout(r, 200));
@@ -101,7 +101,7 @@ test('human approval: pending until the owner decides', async () => {
   await new Promise(r => setTimeout(r, 200));
   const ap2 = (await api('/api/dashboard', {key: owner})).data.approvals.find(a => a.status === 'pending');
   await api(`/api/approvals/${ap2.id}/resolve`, {method: 'POST', key: owner, body: {approve: false}});
-  await assert.rejects(denied, SigilantDeniedError);
+  await assert.rejects(denied, ShuinDeniedError);
   assert.equal(ran, 1);
 });
 
@@ -118,7 +118,7 @@ test('budget and rate limits are enforced from the audit trail', async () => {
 
 test('assertions verify offline, bind to an audience, and die on revocation', async () => {
   const {agent, key} = await makeAgent('Caller', [{action: 'api.call', resources: ['*']}]);
-  const sdk = createSigilant({agentKey: key, baseUrl: base});
+  const sdk = createShuin({agentKey: key, baseUrl: base});
   const {token} = await sdk.assertion('https://partner.example');
   const reg = (await api('/api/registry')).data;
   assert.equal(verifyAssertion(token, {publicKey: reg.publicKey, audience: 'https://partner.example'}).valid, true);
@@ -147,8 +147,8 @@ test('MCP guard: allows, blocks, filters tools, and logs receipts', async () => 
     {action: 'read_file', resources: [resolve('.') + '/*']},
     {action: 'send_payment', resources: ['*'], maxAmount: 25},
   ]);
-  const proxy = spawn(process.execPath, [resolve('packages/mcp/bin/sigilant-mcp.js'), '--', process.execPath, resolve('examples/demo-mcp-server.mjs')],
-    {env: {...process.env, SIGILANT_AGENT_KEY: key, SIGILANT_URL: base}, stdio: ['pipe', 'pipe', 'ignore']});
+  const proxy = spawn(process.execPath, [resolve('packages/mcp/bin/shuin-mcp.js'), '--', process.execPath, resolve('examples/demo-mcp-server.mjs')],
+    {env: {...process.env, SHUIN_AGENT_KEY: key, SHUIN_URL: base}, stdio: ['pipe', 'pipe', 'ignore']});
   const pending = new Map();
   createInterface({input: proxy.stdout}).on('line', l => { const m = JSON.parse(l); pending.get(m.id)?.(m); });
   let id = 0;
@@ -158,9 +158,9 @@ test('MCP guard: allows, blocks, filters tools, and logs receipts', async () => 
     const list = await rpc('tools/list', {});
     assert.deepEqual(list.result.tools.map(t => t.name).sort(), ['read_file', 'send_payment']);
     const good = await rpc('tools/call', {name: 'read_file', arguments: {path: 'package.json'}});
-    assert.ok(!good.result.isError); assert.match(good.result.content[0].text, /sigilant/);
+    assert.ok(!good.result.isError); assert.match(good.result.content[0].text, /shuin/);
     const esc = await rpc('tools/call', {name: 'read_file', arguments: {path: '/etc/hosts'}});
-    assert.equal(esc.result.isError, true); assert.match(esc.result.content[0].text, /Blocked by Sigilant/);
+    assert.equal(esc.result.isError, true); assert.match(esc.result.content[0].text, /Blocked by Shuin/);
     const hidden = await rpc('tools/call', {name: 'write_file', arguments: {path: 'x', content: 'y'}});
     assert.equal(hidden.result.isError, true);
     const big = await rpc('tools/call', {name: 'send_payment', arguments: {to: 'acme', amount: 500}});
@@ -179,16 +179,16 @@ test('ERC-8004: calldata matches the real registry ABI, registration file is spe
   assert.equal(decodeString('0x' + '20'.padStart(64, '0') + '3'.padStart(64, '0') + Buffer.from('abc').toString('hex').padEnd(64, '0')), 'abc');
   const receipt = {logs: [{address: '0x8004A818BFB912233c491871b3d84c89A494BD9e', topics: [REGISTERED_TOPIC, '0x' + (10353).toString(16).padStart(64, '0')]}]};
   assert.equal(parseRegisteredLog(receipt, '0x8004a818bfb912233c491871b3d84c89a494bd9e'), '10353');
-  const file = registrationFile({agent: {id: 'a-1', name: 'Bot', description: '', status: 'active', scopes: [{action: 'read_file', mode: 'allow'}, {action: 'rm', mode: 'deny'}]}, operator: 'Acme', origin: 'https://reg.example', issuer: 'sigilant:abc', fingerprint: 'ff', onchain: null});
+  const file = registrationFile({agent: {id: 'a-1', name: 'Bot', description: '', status: 'active', scopes: [{action: 'read_file', mode: 'allow'}, {action: 'rm', mode: 'deny'}]}, operator: 'Acme', origin: 'https://reg.example', issuer: 'shuin:abc', fingerprint: 'ff', onchain: null});
   assert.equal(file.type, 'https://eips.ethereum.org/EIPS/eip-8004#registration-v1');
-  assert.deepEqual(file.sigilant.actions, ['read_file']);
+  assert.deepEqual(file.shuin.actions, ['read_file']);
   assert.equal(file.services[0].endpoint, 'https://reg.example/api/agents/a-1/card');
 });
 
 test('ERC-8004: link a registered agent on-chain; assertions and verification carry it', async () => {
   const {agent, key} = await makeAgent('Onchain bot', [{action: 'api.call', resources: ['*']}]);
   const info = (await api(`/api/agents/${agent.id}/erc8004`, {key: owner})).data;
-  assert.equal(info.file.sigilant.agentId, agent.id);
+  assert.equal(info.file.shuin.agentId, agent.id);
   assert.ok(info.agentURI.startsWith('data:application/json;base64,'));
   assert.equal((await api(`/api/agents/${agent.id}/registration.json`)).data.name, 'Onchain bot');
 
@@ -200,14 +200,14 @@ test('ERC-8004: link a registered agent on-chain; assertions and verification ca
   assert.equal((await api(`/api/agents/${agent.id}/onchain`, {method: 'POST', key: owner, body: {chainId: 84532, agentId: 7, owner: '0x' + '1'.repeat(40)}})).status, 409);
   const linked = await api(`/api/agents/${agent.id}/onchain`, {method: 'POST', key: owner, body: {chainId: 84532, agentId: 7, owner: wallet}});
   assert.equal(linked.status, 200); assert.equal(linked.data.agent.onchain.uriBound, true);
-  assert.equal(fromDataUri(info.agentURI).sigilant.agentId, agent.id);
+  assert.equal(fromDataUri(info.agentURI).shuin.agentId, agent.id);
 
   const card = (await api(`/api/agents/${agent.id}/card`)).data.card;
   assert.equal(card.erc8004.agentId, '7');
   assert.equal(card.erc8004.agentRegistry, 'eip155:84532:0x8004A818BFB912233c491871b3d84c89A494BD9e');
   assert.equal((await api(`/api/agents/${agent.id}/registration.json`)).data.registrations[0].agentId, 7);
 
-  const sdk = createSigilant({agentKey: key, baseUrl: base});
+  const sdk = createShuin({agentKey: key, baseUrl: base});
   const {token, claims} = await sdk.assertion('https://partner.example');
   assert.equal(claims.erc8004.agentId, '7');
   const verified = (await api('/api/verify', {method: 'POST', body: {token}})).data;
@@ -224,9 +224,9 @@ test('ERC-8004: link a registered agent on-chain; assertions and verification ca
 });
 
 test('owner key recovery from the host terminal', async () => {
-  const r = spawnSync(process.execPath, [resolve('scripts/recover-owner.mjs')], {env: {...process.env, SIGILANT_DATA_DIR: dir, SIGILANT_URL: base}, encoding: 'utf8'});
+  const r = spawnSync(process.execPath, [resolve('scripts/recover-owner.mjs')], {env: {...process.env, SHUIN_DATA_DIR: dir, SHUIN_URL: base}, encoding: 'utf8'});
   assert.equal(r.status, 0, r.stderr);
-  const fresh = r.stdout.match(/sgo_[A-Za-z0-9_-]+/)[0];
+  const fresh = r.stdout.match(/so_[A-Za-z0-9_-]+/)[0];
   assert.equal((await api('/api/dashboard', {key: owner})).status, 401);
   assert.equal((await api('/api/dashboard', {key: fresh})).status, 200);
   assert.equal((await api('/api/audit/verify', {key: fresh})).data.valid, true);

@@ -1,11 +1,11 @@
-// A third-party API that only serves agents carrying a valid, unrevoked Sigilant
+// A third-party API that only serves agents carrying a valid, unrevoked Shuin
 // assertion. This is the "Know Your Agent" check from the receiving side.
 //   PINNED=<registry fingerprint> node examples/relying-party.mjs
 import {createServer} from 'node:http';
 import {createHash} from 'node:crypto';
 import {verifyAssertion, checkStatus} from '../packages/sdk/src/index.js';
 
-const registry = process.env.SIGILANT_URL || 'http://127.0.0.1:5055';
+const registry = process.env.SHUIN_URL || 'http://127.0.0.1:5055';
 const port = Number(process.env.PORT || 5099);
 const audience = `http://127.0.0.1:${port}`;
 const reg = await (await fetch(new URL('/api/registry', registry))).json();
@@ -16,7 +16,7 @@ if (pinned && createHash('sha256').update(reg.publicKey).digest('hex') !== pinne
 createServer(async (req, res) => {
   const send = (status, body) => { res.writeHead(status, {'content-type': 'application/json'}); res.end(JSON.stringify(body)); };
   const token = /^Bearer (.+)$/i.exec(req.headers.authorization || '')?.[1];
-  if (!token) return send(401, {error: 'Agents must present a Sigilant assertion'});
+  if (!token) return send(401, {error: 'Agents must present a Shuin assertion'});
   const result = verifyAssertion(token, {publicKey: reg.publicKey, audience});
   if (!result.valid) return send(403, {error: result.reason});
   const status = await checkStatus(registry, result.claims.sub);

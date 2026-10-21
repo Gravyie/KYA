@@ -51,7 +51,7 @@ function Identity({agent}) {
         <dt>Accountable operator</dt><dd>{data.owner}</dd>
         <dt>Registered</dt><dd>{dateTime(agent.createdAt)}</dd>
         <dt>Credential expires</dt><dd>{agent.expiresAt ? dateTime(agent.expiresAt) : 'never'}</dd>
-        <dt>Key</dt><dd className="mono">sga_…{agent.keyHint}</dd>
+        <dt>Key</dt><dd className="mono">sa_…{agent.keyHint}</dd>
         <dt>Registry fingerprint</dt><dd className="mono wrap-all">{data.registry.fingerprint}</dd>
         <dt>Signed card</dt><dd className="mono wrap-all"><a href={url} target="_blank" rel="noreferrer">{url}</a> <CopyButton text={url} /></dd>
       </dl>

@@ -28,7 +28,7 @@ export default function Audit() {
   async function exportLog() {
     try {
       const file = await api.exportAudit();
-      download(`sigilant-audit-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(file, null, 2));
+      download(`shuin-audit-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(file, null, 2));
       notify('Exported. Verify it anywhere with verifyAuditExport().');
     } catch (e) { notify(e.message); }
   }

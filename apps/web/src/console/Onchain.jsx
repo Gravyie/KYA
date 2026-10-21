@@ -59,7 +59,7 @@ export default function Onchain({agent}) {
             <dt>Agent ID</dt><dd className="mono">#{linked.agentId}</dd>
             <dt>Registry</dt><dd className="mono wrap-all">{agentRegistryId(linked.chainId, linked.registry)} <CopyButton text={agentRegistryId(linked.chainId, linked.registry)} /></dd>
             <dt>Owner wallet</dt><dd className="mono">{linked.owner}</dd>
-            <dt>Binding</dt><dd>{linked.uriBound ? 'On-chain file names this Sigilant agent ✓' : 'Linked by ID; the on-chain URI is not a Sigilant file'}</dd>
+            <dt>Binding</dt><dd>{linked.uriBound ? 'On-chain file names this Shuin agent ✓' : 'Linked by ID; the on-chain URI is not a Shuin file'}</dd>
             {linked.txHash && <><dt>Transaction</dt><dd className="mono wrap-all"><a href={`${linkedChain.explorer}/tx/${linked.txHash}`} target="_blank" rel="noreferrer">{short(linked.txHash)} <ExternalLink size={12} /></a></dd></>}
           </dl>
           <div className="actions mt">

@@ -1,6 +1,6 @@
 import {useEffect, useState, useCallback} from 'react';
 
-const EVENT = 'sigilant:navigate';
+const EVENT = 'shuin:navigate';
 
 export function navigate(to, {replace = false} = {}) {
   if (to === location.pathname + location.search + location.hash) return;

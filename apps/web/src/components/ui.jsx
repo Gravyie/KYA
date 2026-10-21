@@ -1,14 +1,27 @@
 import {useState} from 'react';
 import {Link} from '../lib/router.jsx';
 
-export function Logo({size = 22, withWord = true}) {
+/** The Shuin mark: a vermilion seal (hanko) carrying a gate, 門, with an aperture where a visitor is seen. */
+export function Mark({size = 24, className = ''}) {
   return (
-    <Link to="/" className="logo" aria-label="Sigilant home">
-      <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true">
-        <circle cx="16" cy="16" r="11" fill="none" stroke="currentColor" strokeWidth="3.2" />
-        <circle cx="16" cy="16" r="3.4" fill="var(--allow-glow)" />
-      </svg>
-      {withWord && <span>Sigilant</span>}
+    <svg className={`mark ${className}`} width={size} height={size} viewBox="0 0 64 64" aria-hidden="true">
+      <rect x="3" y="3" width="58" height="58" rx="9" fill="var(--shu, #e8321e)" />
+      <rect x="8.5" y="8.5" width="47" height="47" rx="5" fill="none" stroke="var(--seal-ink, #f4ece0)" strokeWidth="1.6" />
+      <path d="M13 18.5 Q32 14.6 51 18.5 L51 23 Q32 19.6 13 23 Z" fill="var(--seal-ink, #f4ece0)" />
+      <rect x="18" y="27" width="28" height="3" fill="var(--seal-ink, #f4ece0)" />
+      <rect x="20.2" y="21" width="4.6" height="30" fill="var(--seal-ink, #f4ece0)" />
+      <rect x="39.2" y="21" width="4.6" height="30" fill="var(--seal-ink, #f4ece0)" />
+      <circle cx="32" cy="40.5" r="5.2" fill="none" stroke="var(--seal-ink, #f4ece0)" strokeWidth="2.4" />
+      <circle cx="32" cy="40.5" r="1.7" fill="var(--seal-ink, #f4ece0)" />
+    </svg>
+  );
+}
+
+export function Logo({size = 24, withWord = true}) {
+  return (
+    <Link to="/" className="logo" aria-label="Shuin home">
+      <Mark size={size} />
+      {withWord && <span className="logo-word">SHUIN<small lang="ja">朱印</small></span>}
     </Link>
   );
 }

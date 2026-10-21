@@ -26,7 +26,7 @@ export default function Console({path}) {
   const [toast, setToast] = useState('');
   const toastTimer = useRef();
 
-  useEffect(() => { document.title = 'Console — Sigilant'; }, []);
+  useEffect(() => { document.title = 'Console — Shuin'; }, []);
   useEffect(() => { api.status().then(setStatus).catch(e => setError(e.message)); }, [authed]);
 
   const refresh = useCallback(async () => {
@@ -46,7 +46,7 @@ export default function Console({path}) {
   }, []);
   const ctx = useMemo(() => ({data, refresh, notify}), [data, refresh, notify]);
 
-  if (error) return <main className="auth"><div className="auth-card"><h1>Can’t reach Sigilant</h1><p className="muted">{error}</p><p className="hint">Start it with <code className="inline-code">npm start</code> (or <code className="inline-code">npm run dev</code>).</p></div></main>;
+  if (error) return <main className="auth"><div className="auth-card"><h1>Can’t reach Shuin</h1><p className="muted">{error}</p><p className="hint">Start it with <code className="inline-code">npm start</code> (or <code className="inline-code">npm run dev</code>).</p></div></main>;
   if (!status) return <div className="boot"><Spinner /></div>;
   if (!status.configured) return <Setup onDone={() => { setAuthed(true); api.status().then(setStatus); }} />;
   if (!authed) return <Unlock status={status} onDone={() => setAuthed(true)} />;

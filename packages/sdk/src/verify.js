@@ -4,16 +4,16 @@ const GENESIS = '0'.repeat(64);
 const fromB64 = s => Buffer.from(s, 'base64url');
 
 /**
- * Verify a Sigilant agent assertion offline against a pinned registry key.
+ * Verify a Shuin agent assertion offline against a pinned registry key.
  * Revocation is not knowable offline: also call `checkStatus` for anything
  * that matters, or use the registry's `/api/verify` endpoint.
  */
 export function verifyAssertion(token, {publicKey, audience, now = Date.now()} = {}) {
   const parts = String(token).split('.');
-  if (parts.length !== 3) return {valid: false, reason: 'Not a Sigilant assertion'};
+  if (parts.length !== 3) return {valid: false, reason: 'Not a Shuin assertion'};
   try {
     const header = JSON.parse(fromB64(parts[0]));
-    if (header.alg !== 'EdDSA' || header.typ !== 'sigilant+jwt') return {valid: false, reason: 'Unsupported token type'};
+    if (header.alg !== 'EdDSA' || header.typ !== 'shuin+jwt') return {valid: false, reason: 'Unsupported token type'};
     if (!edVerify(null, Buffer.from(`${parts[0]}.${parts[1]}`), publicKey, fromB64(parts[2]))) {
       return {valid: false, reason: 'Signature does not match the pinned registry key'};
     }

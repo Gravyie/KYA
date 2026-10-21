@@ -1,11 +1,11 @@
 // A tiny but real MCP server (stdio, newline-delimited JSON-RPC) with tools that
-// have real side effects inside ./.sigilant-demo/. Put Sigilant in front of it:
-//   sigilant-mcp -- node examples/demo-mcp-server.mjs
+// have real side effects inside ./.shuin-demo/. Put Shuin in front of it:
+//   shuin-mcp -- node examples/demo-mcp-server.mjs
 import {readFile, writeFile, appendFile, mkdir} from 'node:fs/promises';
 import {resolve, dirname} from 'node:path';
 import {createInterface} from 'node:readline';
 
-const sandbox = resolve('.sigilant-demo');
+const sandbox = resolve('.shuin-demo');
 await mkdir(sandbox, {recursive: true});
 
 const tools = [
@@ -25,7 +25,7 @@ const impl = {
 const reply = (id, result) => process.stdout.write(JSON.stringify({jsonrpc: '2.0', id, result}) + '\n');
 createInterface({input: process.stdin}).on('line', async line => {
   const msg = JSON.parse(line);
-  if (msg.method === 'initialize') return reply(msg.id, {protocolVersion: '2025-03-26', capabilities: {tools: {}}, serverInfo: {name: 'sigilant-demo-server', version: '1.0.0'}});
+  if (msg.method === 'initialize') return reply(msg.id, {protocolVersion: '2025-03-26', capabilities: {tools: {}}, serverInfo: {name: 'shuin-demo-server', version: '1.0.0'}});
   if (msg.method === 'tools/list') return reply(msg.id, {tools});
   if (msg.method === 'tools/call') {
     try { reply(msg.id, {content: [{type: 'text', text: await impl[msg.params.name](msg.params.arguments ?? {})}]}); }
