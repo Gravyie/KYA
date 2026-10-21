@@ -12,6 +12,8 @@ import ProductWindow from './ProductWindow.jsx';
 import Cases from './Cases.jsx';
 import Passport from './Passport.jsx';
 import Stack from './Stack.jsx';
+import HoloPassport from './HoloPassport.jsx';
+import Terminal from './Terminal.jsx';
 import '../styles/landing.css';
 
 const Playground = lazy(() => import('./Playground.jsx'));
@@ -29,10 +31,10 @@ function useGate(canvasRef, frameApi, zoneApi, handlers) {
     let gate, lenis, cancelled = false, raf = 0, rafLenis = 0;
     const zoneFor = () => (innerWidth < 960 ? {cx: 0.5, cy: 0.27, w: 0.9, h: 0.34} : innerWidth < 1200 ? {cx: 0.72, cy: 0.54, w: 0.46, h: 0.7} : {cx: 0.7, cy: 0.54, w: 0.44, h: 0.74});
 
-    import('./gate.js').then(({createGate}) => {
+    import('./world.js').then(({createWorld}) => {
       if (cancelled || !canvasRef.current) return;
       try {
-        gate = createGate(canvasRef.current, {reduced, small: innerWidth < 760, onDecision: k => cb.current.onDecision?.(k), onFrame: (a, info) => { frameApi.current?.(a, info); cb.current.onFrame?.(info); }});
+        gate = createWorld(canvasRef.current, {reduced, small: innerWidth < 760, onDecision: k => cb.current.onDecision?.(k), onFrame: (a, info) => { frameApi.current?.(a, info); cb.current.onFrame?.(info); }});
       } catch { setMode('static'); return; }
       gateRef.current = gate;
       if (location.search.includes('debug')) window.__gate = gate;
@@ -60,7 +62,7 @@ function useGate(canvasRef, frameApi, zoneApi, handlers) {
         lenis = new Lenis({lerp: 0.1, wheelMultiplier: 0.95});
         const loop = t => { lenis.raf(t); rafLenis = requestAnimationFrame(loop); };
         rafLenis = requestAnimationFrame(loop);
-        lenis.on('scroll', queue);
+        lenis.on('scroll', e => { gate.setVelocity(Math.abs(e.velocity) / 45); queue(); });
         window.__lenis = lenis;
       }
       addEventListener('scroll', queue, {passive: true}); addEventListener('resize', onResize);
@@ -147,6 +149,18 @@ function useTilt(rootRef) {
   }, [rootRef]);
 }
 
+/** A hairline at the top that fills as you read. */
+function useScrollBar(rootRef) {
+  useEffect(() => {
+    const bar = rootRef.current?.querySelector('.scrollbar i'); if (!bar) return undefined;
+    let raf = 0;
+    const on = () => { raf = 0; const max = document.documentElement.scrollHeight - innerHeight; bar.style.transform = `scaleX(${max > 0 ? Math.min(1, scrollY / max) : 0})`; };
+    const q = () => { if (!raf) raf = requestAnimationFrame(on); };
+    addEventListener('scroll', q, {passive: true}); on();
+    return () => removeEventListener('scroll', q);
+  }, [rootRef]);
+}
+
 const BEAT_COPY = [
   null,
   {n: '01', title: 'Identify', lead: 'Every agent carries a passport.', body: 'Its own key, a signed identity card, and the name of the person accountable for it. Publish it to the ERC-8004 registry and any service can check it. No more ten agents behind one shared API key.'},
@@ -165,7 +179,7 @@ export default function Landing() {
   const nightRef = useRef(false);
 
   const handlers = useRef({
-    onStage: f => { setBeat(prev => { const b = Math.min(4, Math.round(f)); return prev === b ? prev : b; }); setInStory(f < 4.75); },
+    onStage: f => { setBeat(prev => { const b = f > 6 ? 5 : Math.min(4, Math.round(f)); return prev === b ? prev : b; }); setInStory(f < 4.75 || f > 6.3); },
     onFrame: info => {
       const root = rootRef.current; if (!root) return;
       root.style.setProperty('--dark', info.dark.toFixed(3));
@@ -180,17 +194,22 @@ export default function Landing() {
   useEffect(() => { if (beat !== 4) { setRevoked(false); gateRef.current?.setIris(null); } }, [beat, gateRef]);
   useMagnetic(rootRef);
   useTilt(rootRef);
+  useEffect(() => { if (booted && mode === 'ready') { const t = setTimeout(() => gateRef.current?.intro(), 80); return () => clearTimeout(t); } return undefined; }, [booted, mode, gateRef]);
+  useScrollBar(rootRef);
 
   const jump = i => { const el = document.querySelector(`[data-stage="${i}"]`); if (el) window.__lenis ? window.__lenis.scrollTo(el, {offset: -(innerHeight - el.offsetHeight) / 2}) : el.scrollIntoView({behavior: 'smooth', block: 'center'}); };
   const toggleIris = () => { const next = !revoked; setRevoked(next); gateRef.current?.setIris(next ? 'closed' : 'open'); };
   const snip = SNIPPETS[tab];
 
   return (
-    <div className={`landing gate-${mode} ${booted ? 'booted' : ''}`} ref={rootRef} data-dark="0">
+    <div className={`landing gate-${mode} ${booted ? 'booted' : ''}`} ref={rootRef} data-dark="0" data-story={inStory ? '1' : '0'}>
       {!booted && <Preloader ready={mode !== 'loading'} onDone={done} />}
       {mode === 'static' ? <div className="world on"><div className="aurora" aria-hidden="true"><i /><i /><i /></div><div className="stage-fallback" aria-hidden="true"><i /></div></div>
         : <Stage canvasRef={canvasRef} beat={beat} visible={inStory} frameApi={frameApi} zoneApi={zoneApi} onJump={jump} />}
-      <div className="grain" aria-hidden="true" />
+      {mode !== 'ready' && <div className="grain" aria-hidden="true" />}
+      <a className="skip" href="#product">Skip to content</a>
+      <div className="scrollbar" aria-hidden="true"><i /></div>
+      <div className="guides" aria-hidden="true"><div className="wrap">{Array.from({length: 13}, (_, i) => <i key={i} />)}</div></div>
       <Nav />
 
       <section id="story" className="story">
@@ -246,7 +265,7 @@ export default function Landing() {
               <li className="rise"><b>02</b><div><h3>Publish</h3><p>One wallet signature registers it on Base. The file travels inside the transaction, so there is nothing to host and testnet gas is free.</p></div></li>
               <li className="rise"><b>03</b><div><h3>Verify</h3><p>A partner reads the registry, checks the signature, and asks your server whether the agent is still active. Revoke, and every check fails.</p></div></li>
             </ol>
-            <div className="rise"><Passport /></div>
+            <div className="rise p-right"><HoloPassport /><Passport /></div>
           </div>
         </div>
       </section>
@@ -266,7 +285,7 @@ export default function Landing() {
               {Object.entries(SNIPPETS).map(([k, s]) => <button key={k} role="tab" aria-selected={tab === k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{s.label}</button>)}
               <p className="int-note">{snip.note}</p>
             </div>
-            <Code title={snip.title}>{snip.code}</Code>
+            <div className="int-right"><Code title={snip.title}>{snip.code}</Code><Terminal /></div>
           </div>
         </div>
       </section>
@@ -305,14 +324,20 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="sec cta">
-        <div className="wrap cta-in">
-          <h2 className="huge"><Words>Know your agent.</Words></h2>
-          <p className="sub rise">One process, one folder, a minute to run.</p>
-          <div className="cta-code rise"><Code title="terminal" plain>{`git clone https://github.com/sigilant/sigilant && cd sigilant
+      <div className="precta" data-stage="6" aria-hidden="true" />
+      <section className="cta" id="start">
+        <div className="wrap">
+          <div className="story-copy">
+            <div className="beat cta-beat" data-stage="7">
+              <p className="eyebrow rise"><span className="dot" /> Start in a minute</p>
+              <h2 className="huge"><Words>Know your</Words> <em><Words>agent.</Words></em></h2>
+              <p className="sub rise">One process, one folder. No account, no database, no paid service.</p>
+              <div className="cta-code rise"><Code title="terminal" plain>{`git clone https://github.com/sigilant/sigilant && cd sigilant
 npm --prefix apps/web install && npm run build
 npm start      # → http://127.0.0.1:5055`}</Code></div>
-          <div className="hero-cta rise center"><Link to="/app" className="btn pill-btn">Open the console <ArrowRight size={16} /></Link><Link to="/verify" className="btn ghost pill-btn">Verify an agent</Link></div>
+              <div className="hero-cta rise"><Link to="/app" className="btn pill-btn magnetic">Open the console <ArrowRight size={16} /></Link><Link to="/verify" className="btn ghost pill-btn magnetic">Verify an agent</Link></div>
+            </div>
+          </div>
         </div>
       </section>
 

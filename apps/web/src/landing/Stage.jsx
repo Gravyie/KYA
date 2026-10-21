@@ -15,10 +15,11 @@ const CALLOUTS = {
   2: [{id: 'gate', n: '02', title: 'Verdict', text: 'Allow, ask a human, or deny', dx: 20, dy: -235}],
   3: [{id: 'ledger', n: '03', title: 'Chain', text: 'Each block seals the last', dx: -20, dy: -130}],
   4: [{id: 'gate', n: '04', title: 'Closed', text: 'Every call is denied', dx: 20, dy: -235}],
+  5: [],
 };
 
 /**
- * Everything that lives behind the copy: aurora light, ghost type, the 3D canvas, and the
+ * Everything that lives behind the copy: the WebGL canvas (aurora, instrument, ghost type) and the
  * annotations pinned to it. It is full-bleed and fixed; the copy sits above it. Tier rules:
  * ambient layers (aurora, ghost word, hairlines, dust) may sit under anything; the subject
  * is composed inside its own zone, and callouts are clamped to that zone.
@@ -54,8 +55,6 @@ export default function Stage({canvasRef, beat, visible, frameApi, zoneApi, onJu
 
   return (
     <div className={`world ${visible ? 'on' : ''}`}>
-      <div className="aurora" aria-hidden="true"><i /><i /><i /></div>
-      <div className="ghosts" aria-hidden="true">{BEATS.map((b, i) => <span key={b.key} className={i === beat ? 'on' : ''}>{b.ghost}</span>)}</div>
       <canvas ref={canvasRef} className="stage" aria-hidden="true" />
       <svg className="leaders" aria-hidden="true">
         {callouts.map(c => <line key={c.id + beat} ref={el => { els.current[c.id] = {...els.current[c.id], line: el}; }} x1="0" y1="0" x2="0" y2="0" />)}
@@ -66,7 +65,7 @@ export default function Stage({canvasRef, beat, visible, frameApi, zoneApi, onJu
           <b>{c.n}</b><strong>{c.title}</strong><span>{c.text}</span>
         </div>
       ))}
-      <ol className="rail" aria-label="Story progress">
+      <ol className="rail" aria-label="Story progress" hidden={beat > 4}>
         {BEATS.map((x, i) => (
           <li key={x.key}><button type="button" className={i === beat ? 'on' : ''} onClick={() => onJump(i)} aria-label={x.label} aria-current={i === beat}><span>{x.label}</span></button></li>
         ))}
