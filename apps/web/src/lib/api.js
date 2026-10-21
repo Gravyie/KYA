@@ -42,5 +42,9 @@ export const api = {
   verifyChain: () => owned('/api/audit/verify'),
   exportAudit: () => owned('/api/audit/export'),
   card: id => call(`/api/agents/${id}/card`),
+  erc8004: id => owned(`/api/agents/${id}/erc8004`),
+  linkOnchain: (id, body) => owned(`/api/agents/${id}/onchain`, {method: 'POST', body}),
+  chains: () => call('/api/chains'),
+  lookup: (chainId, agentId) => call(`/api/chain/lookup?chainId=${chainId}&agentId=${encodeURIComponent(agentId)}`),
   verifyToken: (token, audience) => call('/api/verify', {method: 'POST', body: {token, audience}}),
 };

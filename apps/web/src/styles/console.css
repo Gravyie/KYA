@@ -156,3 +156,9 @@ details { margin-top: 18px; } summary { cursor: pointer; font-size: 14px; color:
 .check input { width: 16px; height: 16px; accent-color: var(--ink); }
 .toast { position: fixed; bottom: 24px; left: 50%; transform: translate(-50%, 20px); background: var(--ink); color: var(--paper); padding: 11px 18px; border-radius: 999px; font-size: 14px; opacity: 0; pointer-events: none; transition: opacity 0.25s, transform 0.35s var(--ease); z-index: 200; }
 .toast.on { opacity: 1; transform: translate(-50%, 0); }
+
+.oc-row { display: grid; grid-template-columns: minmax(220px, 320px) auto; gap: 14px; align-items: end; margin-bottom: 10px; }
+.oc-nowallet { align-self: center; max-width: 40ch; }
+.oc-link { margin-top: 20px; padding-top: 18px; border-top: 1px dashed var(--line-strong); max-width: 520px; }
+.mt { margin-top: 16px; }
+@media (max-width: 700px) { .oc-row { grid-template-columns: 1fr; } }

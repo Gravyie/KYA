@@ -17,6 +17,7 @@ export function describeEvent(e, agents) {
     case 'agent.policy.updated': return {label: 'Policy', tone: '', who, text: 'policy updated', note: `${d.scopes?.length ?? 0} rules`};
     case 'agent.key.rotated': return {label: 'Key rotated', tone: '', who, text: 'previous key invalidated'};
     case 'agent.revoked': return {label: 'Revoked', tone: 'deny', who, text: 'agent revoked'};
+    case 'agent.onchain.linked': return {label: 'On-chain', tone: 'allow', who, text: `registered as #${d.agentId} on ${d.chain}`, note: d.owner ? `${d.owner.slice(0, 6)}…${d.owner.slice(-4)}` : ''};
     case 'assertion.issued': return {label: 'Assertion', tone: '', who, text: `identity proof for ${d.aud}`, note: `expires ${new Date(d.exp * 1000).toLocaleTimeString()}`};
     case 'owner.created': return {label: 'Owner', tone: '', who: 'Owner', text: `${d.name} set up this registry`};
     case 'owner.key.recovered': return {label: 'Recovery', tone: 'ask', who: 'Owner', text: 'owner key rotated from the host terminal'};

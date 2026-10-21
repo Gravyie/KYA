@@ -9,6 +9,7 @@ import RuleEditor from './RuleEditor.jsx';
 import KeyReveal from './KeyReveal.jsx';
 import {EventRow} from './Overview.jsx';
 import {fromAgent, toPayload} from './templates.js';
+import Onchain from './Onchain.jsx';
 
 const statusTone = s => (s === 'active' ? 'allow' : s === 'expired' ? 'ask' : 'deny');
 
@@ -131,7 +132,7 @@ export default function AgentDetail({id}) {
         </section>
       )}
 
-      {tab === 'identity' && <Identity agent={agent} />}
+      {tab === 'identity' && <><Identity agent={agent} /><Onchain agent={agent} /></>}
 
       {secret && <KeyReveal agent={agent} secret={secret} rotated onClose={() => setSecret(null)} />}
       {confirm && (
