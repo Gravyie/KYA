@@ -35,6 +35,8 @@ await guard.run({action: 'payments.send', resource: 'acme', amount: 240}, () => 
 
 **Any language:** `POST /api/authorize`, poll if the answer is `ask`, then `POST /api/receipt`. See `/docs` in the running app or `apps/web/public/llms.txt`.
 
+**Publish the agent’s identity on-chain (ERC-8004):** every agent has a passport, an ERC-8004 registration file at `/api/agents/:id/registration.json`. In the console, *Agents → Identity → Register with wallet* publishes it to the public Identity Registry on Base Sepolia (free testnet gas), Ethereum Sepolia or Base. The file rides inside the transaction as a `data:` URI, so nothing needs hosting. Sigilant verifies ownership on-chain before linking, and assertions then carry the `erc8004` claim.
+
 **Prove identity to a partner:** an agent mints a short-lived signed assertion for one audience. The partner verifies it offline and checks live revocation (`examples/relying-party.mjs`, or paste a token at `/verify`).
 
 ## What is in the box
@@ -58,7 +60,7 @@ A rule is `{action, resources[], mode: allow | ask | deny, maxAmount?}`. A patte
 npm test                  # policy, lifecycle, approvals, limits, assertions, audit tamper test, MCP proxy, recovery
 ```
 
-Eight tests run the real server, the real SDK and the real MCP proxy against a real demo MCP server. The same flows were also driven through the console in a browser.
+Ten tests run the real server, the real SDK and the real MCP proxy against a real demo MCP server. The same flows were also driven through the console in a browser.
 
 ## Honest limits
 
@@ -66,6 +68,7 @@ Eight tests run the real server, the real SDK and the real MCP proxy against a r
 - Outcome receipts are reported by the agent. They are claims, not proof.
 - The audit log is tamper-evident against a known head, not a distributed ledger. Keep periodic exports elsewhere.
 - Single owner per registry, JSON-file storage, one process per data directory. Fine for a team; not yet multi-tenant.
+- ERC-8004 identity says an agent exists and who owns it, not that it is safe. The Reputation and Validation registries are not wired in yet.
 - Packages are not published to npm yet; install from the folders.
 
 Lost your owner key? On the host: `npm run owner:recover` (needs `.data/sigilant/recovery.key`, loopback only, audited). Set `SIGILANT_HOST` to expose the server and put TLS in front.

@@ -68,6 +68,22 @@ if (!active) return deny('agent revoked');
   },
 };
 
+SNIPPETS.chain = {
+  label: 'Publish on-chain',
+  title: 'ERC-8004 · free on testnet',
+  note: 'Registers the agent in the public ERC-8004 Identity Registry. The registration file rides inside the transaction, so there is nothing to host. The console does this with your wallet in one click.',
+  code: `# 1. get the passport as a self-contained agentURI
+curl -s $SIGILANT_URL/api/agents/$AGENT_ID/erc8004 -H "authorization: Bearer $OWNER_KEY" | jq -r .agentURI
+
+# 2. register it (Base Sepolia identity registry, free testnet gas)
+cast send 0x8004A818BFB912233c491871b3d84c89A494BD9e "register(string)" "$AGENT_URI" \\
+  --rpc-url https://sepolia.base.org --private-key $PRIVATE_KEY
+
+# 3. link the minted agentId back to Sigilant (it verifies ownership on-chain)
+curl -s $SIGILANT_URL/api/agents/$AGENT_ID/onchain -H "authorization: Bearer $OWNER_KEY" \\
+  -d '{"chainId":84532,"agentId":10353}'`,
+};
+
 export const DECISIONS = {
   allow: ['read_file  workspace/q3-report.md', 'web.search  “seed round benchmarks”', 'git.commit  feat/billing-webhooks', 'calendar.read  team@acme.co', 'db.query  analytics.events'],
   ask: ['send_email  cfo@acme.co', 'payments.send  $4,200 → vendor', 'git.push  origin/main', 'files.write  contracts/msa.pdf'],

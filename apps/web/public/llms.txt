@@ -9,6 +9,10 @@
 - REST: `POST /api/authorize` with `Authorization: Bearer sga_…` and `{action, resource, amount, note}`. Response `decision.outcome` is `allow`, `ask` or `deny`. For `ask`, poll `GET /api/authorize/:eventId` until `status` is not `pending`. Then `POST /api/receipt`.
 - Prove identity to a third party: `POST /api/assertion` `{audience}` returns a short-lived Ed25519 JWT. Verify offline with the registry public key from `GET /api/registry`, then check `GET /api/agents/:id/status` for revocation.
 
+## On-chain identity (ERC-8004)
+
+Each agent has an ERC-8004 registration file: `GET /api/agents/:id/registration.json`. The owner can publish it to the Identity Registry (Base Sepolia/Ethereum Sepolia `0x8004A818BFB912233c491871b3d84c89A494BD9e`, Base `0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`) with `register(string agentURI)`; the file travels as a `data:` URI. `GET /api/agents/:id/erc8004` (owner) returns the file and agentURI. `POST /api/agents/:id/onchain` `{chainId, agentId}` verifies ownership on-chain and links it. Assertions then include an `erc8004` claim. `GET /api/chain/lookup?chainId=&agentId=` reads any ERC-8004 agent.
+
 ## Policy model
 
 Rules are `{action, resources[], mode: allow|ask|deny, maxAmount}`. `*` or a trailing `*` matches a prefix. Deny rules win; otherwise the first allow/ask rule that matches; no match means deny. Per-agent limits: `budget {amount, windowHours}`, `rate {count, windowMinutes}`, and credential expiry.

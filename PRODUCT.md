@@ -62,3 +62,15 @@ Checked 22 Oct 2026 against the npm registry and github.com. Every `.com` in the
 - **Refactoring UI, Laws of UX, Practical Typography, Typewolf, Utopia:** spacing, contrast, line length, fluid `clamp()` type.
 - **Radix / shadcn conventions:** accessible primitives behaviour (roles, labelled controls, focus rings), implemented by hand rather than imported.
 - Not used: Aceternity / Magic UI-style animated component kits. They would have made it look like every other AI landing page.
+
+## 6. Iteration log
+
+**v4: the figure and the passport.** Two changes of substance.
+
+*Design.* v3 let the 3D object roam behind the text, which produced overlaps and cropped objects. v4 removes the cause: the scene lives in a sticky **figure frame** (header bar, canvas, footer bar) in the right column, copy scrolls on the left, and callouts sit in fixed margin slots joined to 3D anchors by leader lines. Each scene stage frames a bounding radius around its subject, so nothing is cut by the frame, and distant objects fade into the plate with fog. Every other section uses one header pattern (`§0N — label`, headline, sentence), the same radii (12/20/28), one grid and one type scale, and has no 3D at all. The only dark surface is the figure during the revoke beat.
+
+*Product.* ERC-8004 ("Trustless Agents") is now a real feature rather than a logo: each agent's passport is a spec-shaped registration file; the console can publish it to the public Identity Registry (verified live on Base Sepolia, Ethereum Sepolia and Base) with `register(agentURI)`; the file travels as a `data:` URI so nothing is hosted; linking reads `ownerOf`/`tokenURI` back from the chain and refuses mismatches; assertions carry the `erc8004` claim and the verifier re-reads the chain. Tested against a fork of the real Base Sepolia registry and with calldata checked against Foundry's `cast`.
+
+**Positioning against adjacent products** (from their own descriptions; no affiliation implied). Auth0 for AI Agents, Okta, WorkOS and Composio answer *which apps may this agent sign in to* and broker credentials. ERC-8004 answers *who is this agent and who owns it*, publicly. World-style proof-of-human answers *is a person behind it*. None of them is positioned as the per-call policy gate with human approval and verifiable evidence, which is Sigilant's core. The landing page frames this as layers (identity, access, action, evidence, humanhood) that you use together, and the integration path is to put Sigilant in front of the tools those providers expose.
+
+**Not done, deliberately:** ERC-8004 Reputation and Validation registries (the Reputation `getSummary` needs a client list, and writing feedback needs product decisions about who may rate), x402 payment support, and humanhood attestations.

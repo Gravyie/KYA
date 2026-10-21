@@ -18,20 +18,17 @@ const COLORS = {
 const LEDGER = {neutral: new THREE.Color(0x56635d), allow: new THREE.Color(0x2fc58a), deny: new THREE.Color(0xe9553a)};
 
 const HIDDEN = {p: [-3.6, 0.2, -3.2], tilt: 0.4, rx: 0, s: 0.7, o: 0};
-// Camera orbit (az/el/dist), screen shift (sx/sy), iris (closed), passport pose (card), canvas opacity, page darkness (dark).
+// Each stage frames a bounding radius `r` around `look`, so the subject always fits the figure frame.
+// az/el orbit it, `closed` is the iris, `dark` night-tints the plate, `card` is the passport pose.
 const STAGES = [
-  /* 0 hero      */ {az: PI + 0.9, el: 0.14, dist: 8.6, sx: 0.2, sy: 0.0, closed: 0, opacity: 1, dark: 0, mix: [0.6, 0.2, 0.2], card: {p: [-1.45, -0.75, -1.25], tilt: 0.22, rx: -0.05, s: 0.72, o: 1}},
-  /* 1 window    */ {az: PI + 0.9, el: 0.2, dist: 13, sx: 0.3, sy: 0.3, closed: 0, opacity: 0.0, dark: 0, mix: [0.6, 0.2, 0.2], card: {...HIDDEN}},
-  /* 2 identify  */ {az: PI + 0.35, el: 0.05, dist: 5.4, sx: -0.2, sy: 0.0, closed: 0, opacity: 1, dark: 0, mix: [0.5, 0.2, 0.3], card: {p: [0.1, 0.35, -1.4], tilt: -0.28, rx: 0.08, s: 1.05, o: 1}},
-  /* 3 decide    */ {az: PI + 0.12, el: 0.04, dist: 6.6, sx: 0.2, sy: 0.0, closed: 0, opacity: 1, dark: 0, mix: [0.45, 0.25, 0.3], card: {...HIDDEN}},
-  /* 4 prove     */ {az: PI + 1.35, el: 0.22, dist: 6.2, sx: -0.12, sy: 0.04, closed: 0, opacity: 1, dark: 0, mix: [0.75, 0.05, 0.2], card: {...HIDDEN}},
-  /* 5 try       */ {az: PI + 0.6, el: 0.3, dist: 14, sx: 0.32, sy: 0.22, closed: 0, opacity: 0.0, dark: 0, mix: [0.6, 0.2, 0.2], card: {...HIDDEN}},
-  /* 6 integrate */ {az: PI + 0.9, el: 0.25, dist: 14, sx: -0.4, sy: 0.2, closed: 0, opacity: 0.0, dark: 0, mix: [0.7, 0.15, 0.15], card: {...HIDDEN}},
-  /* 7 cases     */ {az: PI + 0.5, el: 0.2, dist: 14, sx: 0.0, sy: 0.3, closed: 0, opacity: 0.0, dark: 0, mix: [0.7, 0.15, 0.15], card: {...HIDDEN}},
-  /* 8 revoke    */ {az: PI + 0.18, el: 0.04, dist: 8.2, sx: 0.24, sy: 0.0, closed: 1, opacity: 1, dark: 1, mix: [0, 0, 1], card: {p: [-1.9, -0.4, -2.2], tilt: 0.25, rx: 0, s: 0.75, o: 0}},
-  /* 9 cta       */ {az: PI + 0.55, el: 0.1, dist: 9.5, sx: 0, sy: -0.25, closed: 0, opacity: 0.9, dark: 0, mix: [0.92, 0.04, 0.04], card: {p: [0, 0, 0.6], tilt: 0, rx: 0, s: 0.7, o: 1}},
+  /* 0 hero     */ {az: PI + 0.75, el: 0.16, r: 3.35, lx: -0.1, ly: -0.05, lz: 0.5, closed: 0, dark: 0, mix: [0.6, 0.2, 0.2], card: {p: [-1.4, -0.7, -1.2], tilt: 0.22, rx: -0.05, s: 0.72, o: 1}},
+  /* 1 identify */ {az: PI + 0.32, el: 0.06, r: 1.95, lx: 0.05, ly: 0.28, lz: -1.3, closed: 0, dark: 0, mix: [0.5, 0.2, 0.3], card: {p: [0.1, 0.35, -1.4], tilt: -0.28, rx: 0.08, s: 1.05, o: 1}},
+  /* 2 decide   */ {az: PI + 0.1, el: 0.04, r: 2.25, lx: 0, ly: 0, lz: 0, closed: 0, dark: 0, mix: [0.45, 0.25, 0.3], card: {...HIDDEN}},
+  /* 3 prove    */ {az: PI + 1.05, el: 0.2, r: 4.5, lx: 0, ly: -0.1, lz: 2.4, closed: 0, dark: 0, mix: [0.75, 0.05, 0.2], card: {...HIDDEN}},
+  /* 4 contain  */ {az: PI + 0.12, el: 0.04, r: 2.25, lx: 0, ly: 0, lz: 0, closed: 1, dark: 1, mix: [0, 0, 1], card: {...HIDDEN}},
 ];
-const NUM = ['az', 'el', 'dist', 'sx', 'sy', 'closed', 'opacity', 'dark'];
+const NUM = ['az', 'el', 'r', 'lx', 'ly', 'lz', 'closed', 'dark'];
+const LIGHT_PLATE = new THREE.Color(0xdce6dc), NIGHT_PLATE = new THREE.Color(0x0b1411);
 
 const smooth = t => t * t * (3 - 2 * t);
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -136,6 +133,7 @@ export function createGate(canvas, {onDecision, onFrame, reduced = false, small 
   const envTexture = makeEnvironment(renderer);
   scene.environment = envTexture;
   const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 90);
+  scene.fog = new THREE.Fog(LIGHT_PLATE.clone(), 8, 20);
   const world = new THREE.Group();
   scene.add(world);
 
@@ -151,19 +149,20 @@ export function createGate(canvas, {onDecision, onFrame, reduced = false, small 
   const core = new THREE.Mesh(new THREE.TorusGeometry(R, 0.028, 16, 220), new THREE.MeshBasicMaterial({color: COLORS.allow}));
   world.add(core);
 
-  const bladeMat = new THREE.MeshStandardMaterial({color: 0x161b19, metalness: 0.85, roughness: 0.32, side: THREE.DoubleSide});
+  const bladeMat = new THREE.MeshStandardMaterial({color: 0x1d2924, metalness: 0.7, roughness: 0.4, side: THREE.DoubleSide});
   const BLADES = 10;
   const blades = [];
-  const half = R * Math.sin(PI / BLADES) * 1.05;
-  const bladeGeo = new THREE.ShapeGeometry(new THREE.Shape([new THREE.Vector2(-half, 0), new THREE.Vector2(half, 0), new THREE.Vector2(half * 0.18, -1), new THREE.Vector2(-half * 0.55, -1)]));
+  const RB = R - 0.17;
+  const half = RB * Math.sin(PI / BLADES) * 1.22;
+  const bladeGeo = new THREE.ShapeGeometry(new THREE.Shape([new THREE.Vector2(-half, 0), new THREE.Vector2(half, 0), new THREE.Vector2(0, -1)]));
   for (let i = 0; i < BLADES; i++) {
     const a = (i / BLADES) * PI * 2;
     const g = new THREE.Group();
-    g.position.set(Math.cos(a) * (R - 0.17), Math.sin(a) * (R - 0.17), -0.012 + i * 0.0016);
+    g.position.set(Math.cos(a) * RB, Math.sin(a) * RB, -0.012 + i * 0.0016);
     g.add(new THREE.Mesh(bladeGeo, bladeMat)); g.userData.a = a;
     world.add(g); blades.push(g);
   }
-  const irisBack = new THREE.Mesh(new THREE.CircleGeometry(R - 0.12, 64), new THREE.MeshBasicMaterial({color: 0x0a100d, transparent: true, opacity: 0, depthWrite: false}));
+  const irisBack = new THREE.Mesh(new THREE.CircleGeometry(R - 0.12, 64), new THREE.MeshBasicMaterial({color: 0x060b09, transparent: true, opacity: 0, depthWrite: false}));
   irisBack.position.z = -0.02;
   world.add(irisBack);
   const membraneMat = new THREE.MeshBasicMaterial({color: COLORS.deny, transparent: true, opacity: 0, depthWrite: false});
@@ -235,7 +234,7 @@ export function createGate(canvas, {onDecision, onFrame, reduced = false, small 
   parts.forEach(p => spawn(p));
 
   // Ledger
-  const CHAIN = 16;
+  const CHAIN = 14;
   const blocks = new THREE.InstancedMesh(new THREE.BoxGeometry(0.3, 0.3, 0.3), new THREE.MeshPhysicalMaterial({color: 0xffffff, roughness: 0.18, metalness: 0.25, clearcoat: 1, envMapIntensity: 1.3}), CHAIN);
   blocks.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(CHAIN * 3), 3);
   const slots = Array.from({length: CHAIN}, (_, i) => new THREE.Vector3(Math.sin(i * 0.5) * 0.12, -0.04 * i, 2.35 + i * 0.62));
@@ -271,12 +270,16 @@ export function createGate(canvas, {onDecision, onFrame, reduced = false, small 
     width = w; height = h; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
   }
 
-  const sph = new THREE.Spherical(), cp = new THREE.Vector3(), tmp = new THREE.Vector3();
+  const sph = new THREE.Spherical(), cp = new THREE.Vector3(), tmp = new THREE.Vector3(), look = new THREE.Vector3();
+  const HALF = THREE.MathUtils.degToRad(camera.fov / 2);
+  let dist = 8;
   function placeCamera() {
-    const portrait = width / height < 0.85;
-    sph.set(cur.dist * (portrait ? 1.9 : 1), PI / 2 - cur.el - pointer.sy * 0.05, cur.az + pointer.sx * 0.1);
-    cp.setFromSpherical(sph); camera.position.copy(cp); camera.lookAt(0, 0, 0);
-    camera.setViewOffset(width, height, -(portrait ? 0 : cur.sx) * width, (portrait ? cur.sy - 0.3 : cur.sy) * height, width, height);
+    const aspect = width / height;
+    const half = Math.min(HALF, Math.atan(Math.tan(HALF) * aspect)); // fit the limiting axis
+    dist = cur.r / Math.sin(half);
+    look.set(cur.lx, cur.ly, cur.lz);
+    sph.set(dist, PI / 2 - cur.el - pointer.sy * 0.04, cur.az + pointer.sx * 0.08);
+    cp.setFromSpherical(sph).add(look); camera.position.copy(cp); camera.lookAt(look);
   }
 
   const anchors = {};
@@ -315,8 +318,8 @@ export function createGate(canvas, {onDecision, onFrame, reduced = false, small 
 
     irisBack.material.opacity = smooth(Math.max(0, (closed - 0.5) / 0.5));
     blades.forEach(g => {
-      g.children[0].scale.y = Math.max(0.0001, closed * (R + 0.05));
-      g.rotation.z = g.userData.a - PI / 2 + closed * 0.42;
+      g.children[0].scale.y = Math.max(0.0001, closed * (RB + 0.04));
+      g.rotation.z = g.userData.a - PI / 2 + closed * 0.5;
       g.visible = closed > 0.01;
     });
 
@@ -368,14 +371,15 @@ export function createGate(canvas, {onDecision, onFrame, reduced = false, small 
     cardGroup.scale.setScalar(c.s); cardGroup.visible = c.o > 0.02;
     cardMat.opacity = c.o; backMat.opacity = c.o;
 
-    canvas.style.opacity = String(Math.min(1, Math.max(0, cur.opacity)));
+    scene.fog.color.copy(LIGHT_PLATE).lerp(NIGHT_PLATE, Math.min(1, cur.dark));
+    scene.fog.near = dist + 0.2; scene.fog.far = dist + 6.5;
   }
 
   function draw() {
     placeCamera(); renderer.render(scene, camera);
     camera.updateMatrixWorld();
     project('card', cardGroup.position); project('gate', gateAnchor); project('ledger', slots[3]);
-    onFrame?.(anchors, {stage, dark: cur.dark, closed: cur.closed, opacity: cur.opacity});
+    onFrame?.(anchors, {stage, dark: cur.dark, closed: cur.closed});
   }
   // Adaptive quality: if frames are slow, drop the transmission pass and pixel ratio so the page stays smooth.
   let ema = 0.016, quality = 'high', frames = 0;

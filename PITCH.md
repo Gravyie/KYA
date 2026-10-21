@@ -11,6 +11,9 @@ Agents are being given real access (code, data, email, money) behind one shared 
 - **Verifiable identity:** signed agent cards and short-lived assertions a partner can check offline and against live revocation.
 - **Tamper-evident audit:** hash-linked, exportable, verifiable without trusting our server.
 
+## Standards-aligned
+Identity is built on ERC-8004 (the emerging Ethereum standard for agent identity registries) and MCP (the default tool protocol), not a proprietary format. Agents get a public, checkable passport; the control plane stays self-hosted. Complements Auth0/Okta/WorkOS/Composio (access) rather than replacing them.
+
 ## Why now
 MCP became the default way models call tools, which creates a single, honest interception point for the first time. Agent incidents (deleted databases, leaked keys, runaway spend) are becoming common enough that "who allowed that?" is a procurement question.
 
