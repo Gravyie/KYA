@@ -25,6 +25,7 @@ build/
 .logs/
 .DS_Store
 apps/api/data/
+.data/
 deployments/*.local.json
 
 # locks
