@@ -33,15 +33,21 @@ const Z = (cx, cy, w, h) => ({cx, cy, w, h});
 const S = o => ({az: 0, el: 0.08, r: 4, lx: 0, ly: 0, lz: 0, closed: 0, alert: 0, dim: 0, ledger: 0, zone: Z(0.66, 0.52, 0.5, 0.8), mix: [0.6, 0.2, 0.2], card: {...HIDDEN}, ...o});
 
 // Each stage frames a bounding radius `r` around `look`, fitted into a screen `zone`. The page owns the other side.
+const FULL = Z(0.5, 0.5, 1, 1);
+const fly = (lz, az, dim = 0.55, extra = {}) => S({az, el: 0.08, r: 3.6, lx: az * 4, ly: 1.1, lz, zone: FULL, dim, ledger: 1, mix: [0.8, 0.1, 0.1], ...extra});
 const STAGES = [
-  /* 0 hero     */ S({az: -0.18, el: 0.05, r: 4.3, lx: 0, ly: 1.0, lz: -1, zone: Z(0.68, 0.47, 0.56, 0.84), ledger: 1}),
-  /* 1 identify */ S({az: -0.5, el: 0.06, r: 2.0, lx: 0.1, ly: 0.25, lz: 1.9, zone: Z(0.7, 0.5, 0.48, 0.74), mix: [0.5, 0.2, 0.3], card: {p: [0.15, 0.3, 2.0], tilt: -0.35, rx: 0.05, s: 1.0, o: 1}}),
-  /* 2 decide   */ S({az: 0.0, el: 0.22, r: 4.6, lx: 0, ly: 0.9, lz: 0, zone: Z(0.5, 0.5, 1, 1), dim: 0.55, mix: [0.45, 0.25, 0.3]}),
-  /* 3 prove    */ S({az: 0.32, el: 0.26, r: 4.4, lx: 0, ly: -0.2, lz: -5, zone: Z(0.68, 0.52, 0.56, 0.8), ledger: 1, mix: [0.75, 0.05, 0.2]}),
-  /* 4 contain  */ S({az: 0.16, el: 0.04, r: 3.4, lx: 0, ly: 0.8, lz: 0, closed: 1, alert: 1, ledger: 0.6, zone: Z(0.68, 0.5, 0.52, 0.8), mix: [0, 0, 1]}),
-  /* 5 lower    */ S({az: 0.18, el: 0.12, r: 7.5, lx: 0, ly: 1.6, lz: -9, zone: Z(0.5, 0.42, 1, 1), dim: 0.7, mix: [0.8, 0.1, 0.1]}),
-  /* 6 finale   */ S({az: 0.0, el: 0.03, r: 5.2, lx: 0, ly: 1.4, lz: -1, zone: Z(0.5, 0.36, 1, 0.66), dim: 0.5, ledger: 0.8, mix: [0.9, 0.05, 0.05]}),
-  /* 7 hold     */ S({az: 0.0, el: 0.03, r: 5.2, lx: 0, ly: 1.4, lz: -1, zone: Z(0.5, 0.36, 1, 0.66), dim: 0.5, ledger: 0.8, mix: [0.9, 0.05, 0.05]}),
+  /* 0 hero      */ S({az: -0.18, el: 0.05, r: 4.3, lx: 0, ly: 1.0, lz: -1, zone: Z(0.68, 0.47, 0.56, 0.84), ledger: 1}),
+  /* 1 identify  */ S({az: -0.5, el: 0.06, r: 2.0, lx: 0.1, ly: 0.25, lz: 1.9, zone: Z(0.7, 0.5, 0.48, 0.74), mix: [0.5, 0.2, 0.3], card: {p: [0.15, 0.3, 2.0], tilt: -0.35, rx: 0.05, s: 1.0, o: 1}}),
+  /* 2 decide    */ S({az: 0.0, el: 0.16, r: 4.6, lx: 0, ly: 0.9, lz: 0, zone: FULL, dim: 0.55, mix: [0.45, 0.25, 0.3]}),
+  /* 3 prove     */ S({az: 0.06, el: 0.14, r: 3.2, lx: 0.6, ly: 0.2, lz: -16, zone: Z(0.7, 0.55, 0.56, 0.8), ledger: 1, mix: [0.75, 0.05, 0.2]}),
+  /* 4 contain   */ S({az: -0.05, el: 0.06, r: 3.0, lx: 0, ly: 1.4, lz: -30, zone: Z(0.68, 0.5, 0.56, 0.8), closed: 1, alert: 1, ledger: 1, mix: [0, 0, 1]}),
+  /* 5 console   */ fly(-42, 0.1),
+  /* 6 passport  */ fly(-54, -0.1),
+  /* 7 integrate */ fly(-66, 0.1),
+  /* 8 cases     */ fly(-78, -0.1),
+  /* 9 stack     */ fly(-90, 0.08),
+  /* 10 finale   */ S({az: 0.0, el: 0.02, r: 6.5, lx: 0, ly: 2.2, lz: -128, zone: Z(0.5, 0.36, 1, 0.66), dim: 0.35, ledger: 1, mix: [0.9, 0.05, 0.05]}),
+  /* 11 hold     */ S({az: 0.0, el: 0.02, r: 6.5, lx: 0, ly: 2.2, lz: -128, zone: Z(0.5, 0.36, 1, 0.66), dim: 0.35, ledger: 1, mix: [0.9, 0.05, 0.05]}),
 ];
 const NUM = ['az', 'el', 'r', 'lx', 'ly', 'lz', 'closed', 'alert', 'dim', 'ledger'];
 const ZONE = ['cx', 'cy', 'w', 'h'];
@@ -379,7 +385,7 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
   world.add(rain);
 
   /* The city: towers lining the plaza, neon kanji signs, and air traffic between them. */
-  const towerCount = small ? 60 : 110;
+  const towerCount = small ? 80 : 150;
   const towerGeo = new THREE.BoxGeometry(1, 1, 1);
   const dims = new Float32Array(towerCount * 3), seeds = new Float32Array(towerCount);
   const towerMat = new THREE.ShaderMaterial({vertexShader: TOWER_VERT, fragmentShader: TOWER_FRAG, uniforms: {uTime: {value: 0}, uAlert: {value: 0}, uFogFar: {value: 52}, uFog: {value: new THREE.Color(0x14062a)}, uMirror: {value: 0}}});
@@ -387,10 +393,10 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
   const signSpots = [];
   for (let i = 0; i < towerCount; i++) {
     const side = i % 2 ? 1 : -1, w = rand(2, 4.2), dd = rand(2, 4.2), h = rand(4, 11) * (i > towerCount * 0.5 ? rand(1.3, 2.6) : 1);
-    const z = 10 - (i / towerCount) * 90 + rand(-2, 2), x = side * (rand(7.5, 10.5) + (i % 4 === 0 ? rand(2, 8) : 0));
+    const z = 10 - (i / towerCount) * 128 + rand(-2, 2), x = side * (rand(7.5, 10.5) + (i % 4 === 0 ? rand(2, 8) : 0));
     dm.rotation.set(0, 0, 0); dm.position.set(x, FLOOR_Y + h / 2, z); dm.scale.set(w, h, dd); dm.updateMatrix(); towers.setMatrixAt(i, dm.matrix);
     dims[i * 3] = w; dims[i * 3 + 1] = h; dims[i * 3 + 2] = dd; seeds[i] = Math.random();
-    if (i % 3 === 0 && signSpots.length < 14 && h > 5) signSpots.push({x: x - side * (w / 2 + 0.06), y: FLOOR_Y + rand(2.4, Math.min(h - 1.2, 7)), z, side});
+    if (i % 3 === 0 && signSpots.length < 22 && h > 5) signSpots.push({x: x - side * (w / 2 + 0.06), y: FLOOR_Y + rand(2.4, Math.min(h - 1.2, 7)), z, side});
   }
   towerGeo.setAttribute('aDim', new THREE.InstancedBufferAttribute(dims, 3));
   towerGeo.setAttribute('aSeed', new THREE.InstancedBufferAttribute(seeds, 1));
@@ -425,6 +431,31 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
   const flights = Array.from({length: AIR}, (_, i) => ({x: rand(-14, 14), y: FLOOR_Y + rand(4.5, 9), z: rand(-80, 12), v: rand(5, 14) * (i % 2 ? 1 : -1), len: rand(1, 3), c: [COL.cyan, COL.mag, COL.amber][i % 3]}));
   world.add(air);
 
+  /* The corridor beyond the gate: checkpoint rings receding toward the sun, each with an iris that
+     seals on lockdown; runway lights chasing toward the vanishing point; low traffic in four lanes. */
+  const ECHO = 10, echoes = [];
+  const echoRingMat = [COL.cyan, COL.mag].map(c => new THREE.MeshBasicMaterial({color: c.clone().multiplyScalar(1.6)}));
+  const echoIrisMat = new THREE.MeshBasicMaterial({color: COL.shu.clone().multiplyScalar(0.9), transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide});
+  for (let i = 0; i < ECHO; i++) {
+    const g = new THREE.Group(); g.position.set(0, FLOOR_Y + 4.0, -12 - i * 12.5);
+    g.add(new THREE.Mesh(new THREE.TorusGeometry(4.3, 0.06, 8, 160), echoRingMat[i % 2]));
+    const ticks2 = new THREE.Mesh(new THREE.TorusGeometry(4.65, 0.012, 4, 160), echoRingMat[(i + 1) % 2]); g.add(ticks2);
+    const iris = new THREE.Mesh(new THREE.RingGeometry(0.001, 4.3, 64), echoIrisMat); g.add(iris);
+    g.userData = {iris, spin: (i % 2 ? 1 : -1) * (0.1 + i * 0.01)};
+    real.add(g); echoes.push(g);
+  }
+  const RUN = small ? 50 : 80;
+  const runGeo = new THREE.BoxGeometry(0.08, 0.035, 0.8);
+  const runL = new THREE.InstancedMesh(runGeo, new THREE.MeshBasicMaterial({}), RUN), runR = new THREE.InstancedMesh(runGeo, new THREE.MeshBasicMaterial({}), RUN);
+  for (let i = 0; i < RUN; i++) { dm.rotation.set(0, 0, 0); dm.scale.setScalar(1); dm.position.set(-4.6, FLOOR_Y + 0.03, 6 - i * 1.7); dm.updateMatrix(); runL.setMatrixAt(i, dm.matrix); dm.position.x = 4.6; dm.updateMatrix(); runR.setMatrixAt(i, dm.matrix); }
+  runL.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(RUN * 3), 3); runR.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(RUN * 3), 3);
+  real.add(runL, runR);
+  const LANES = small ? 40 : 80;
+  const lanes = new THREE.InstancedMesh(new THREE.BoxGeometry(0.035, 0.035, 1), new THREE.MeshBasicMaterial({}), LANES);
+  lanes.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(LANES * 3), 3);
+  const cars = Array.from({length: LANES}, (_, i) => ({x: (i % 2 ? 1 : -1) * rand(5.3, 6.6), y: FLOOR_Y + rand(0.25, 2.6), z: rand(-135, 8), v: rand(8, 22) * (i % 4 < 2 ? 1 : -1), len: rand(1, 3.4), c: [COL.cyan, COL.mag, COL.amber, COL.bone][i % 4]}));
+  world.add(lanes);
+
   /* Passport */
   const cardGroup = new THREE.Group();
   const CW = 1.7, CH = CW / 1.588;
@@ -456,11 +487,11 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
   parts.forEach(p => spawn(p));
 
   /* Ledger: stamped blocks running away behind the gate */
-  const CHAIN = 18;
+  const CHAIN = small ? 40 : 64;
   const blocks = new THREE.InstancedMesh(new THREE.BoxGeometry(0.42, 0.42, 0.42), new THREE.MeshStandardMaterial({color: 0x110e0d, metalness: 0.5, roughness: 0.4}), CHAIN);
   const faces = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.3, 0.3), new THREE.MeshBasicMaterial({toneMapped: false}), CHAIN);
   faces.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(CHAIN * 3), 3);
-  const slots = Array.from({length: CHAIN}, (_, i) => new THREE.Vector3(0, FLOOR_Y + 0.21, -2.2 - i * 1.15));
+  const slots = Array.from({length: CHAIN}, (_, i) => new THREE.Vector3(0, FLOOR_Y + 0.21, -2.2 - i * 1.7));
   const chainLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints(slots.map(s => s.clone().setY(FLOOR_Y + 0.02))), new THREE.LineBasicMaterial({color: COL.shu.clone().multiplyScalar(1.4), transparent: true, opacity: 0.7}));
   real.add(blocks, faces, chainLine);
   const ledger = Array.from({length: CHAIN}, () => 'neutral');
@@ -557,7 +588,8 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
     // palette
     const tone = COL.cyan.clone().lerp(COL.shu, smooth(Math.min(closed * 1.2, 1)));
     ringMat.color.copy(tone).multiplyScalar(1.6 + flash * 1.4);
-    haloMat.uniforms.uColor.value.copy(tone); haloMat.uniforms.uAmount.value = (0.45 + flash * 0.5 + closed * 0.4) * intro;
+    haloMat.uniforms.uColor.value.copy(tone); const near = smooth(Math.min(1, Math.max(0, (Math.abs(camera.position.z) - 1.5) / 4)));
+    haloMat.uniforms.uAmount.value = (0.45 + flash * 0.5 + closed * 0.4) * intro * near;
     sealLight.color.copy(tone); sealLight.intensity = (14 + flash * 18) * intro;
     inlayMat.color.copy(COL.mag).lerp(COL.shu, alert).multiplyScalar(1.6 + alert * 1.2 + Math.sin(time * 8) * alert * 0.6);
     cyanMat.color.copy(COL.cyan).lerp(COL.shu, alert).multiplyScalar(1.7 + (Math.sin(time * 37) > 0.97 ? -1 : 0));
@@ -587,12 +619,35 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
     // keep the reflection in sync with animated parts
     gateMirror.traverse(o => { const src = o.userData.src; if (src) { o.rotation.copy(src.rotation); o.visible = src.visible; o.scale.copy(src.scale); } });
 
+    // corridor
+    const cz = camera.position.z;
+    echoes.forEach((g, i) => {
+      g.rotation.z = time * g.userData.spin * (1 + velocity * 6);
+      const shut = smooth(Math.min(1, Math.max(0, closed * 1.6 - i * 0.06)));
+      g.userData.iris.scale.setScalar(1); g.userData.iris.material.opacity = shut * 0.55;
+      g.userData.iris.visible = shut > 0.01;
+    });
+    echoRingMat[0].color.copy(COL.cyan).lerp(COL.shu, alert).multiplyScalar(1.6 + flash * 0.4);
+    echoRingMat[1].color.copy(COL.mag).lerp(COL.shu, alert).multiplyScalar(1.6);
+    for (let i = 0; i < RUN; i++) {
+      const wave = 0.2 + 0.8 * Math.pow(0.5 + 0.5 * Math.sin(i * 0.45 + time * 7), 4);
+      tc.copy(COL.cyan).lerp(COL.shu, alert).multiplyScalar(0.35 + wave * 2.4); runL.setColorAt(i, tc);
+      tc.copy(COL.mag).lerp(COL.shu, alert).multiplyScalar(0.35 + wave * 2.4); runR.setColorAt(i, tc);
+    }
+    runL.instanceColor.needsUpdate = true; runR.instanceColor.needsUpdate = true;
+    for (let i = 0; i < LANES; i++) {
+      const c = cars[i]; c.z += c.v * dt * (1 + velocity * 4);
+      if (c.z > 10) c.z = -135; if (c.z < -135) c.z = 10;
+      dm.position.set(c.x, c.y, c.z); dm.rotation.set(0, 0, 0); dm.scale.set(1, 1, c.len * (1 + velocity * 5)); dm.updateMatrix(); lanes.setMatrixAt(i, dm.matrix);
+      tc.copy(c.c).lerp(COL.shu, alert * 0.9).multiplyScalar(2); lanes.setColorAt(i, tc);
+    }
+    lanes.instanceMatrix.needsUpdate = true; lanes.instanceColor.needsUpdate = true;
     // rain
     const wind = 0.08 + Math.min(1, velocity) * 0.3;
     for (let i = 0; i < RAIN; i++) {
       const d = drops[i];
       d.y -= d.v * dt * (1 + velocity * 0.5); d.x -= wind * dt * 4;
-      if (d.y < FLOOR_Y) { d.y = 9; d.x = rand(-12, 12); d.z = rand(-14, 12); }
+      if (d.y < FLOOR_Y || Math.abs(d.z - cz + 6) > 16) { d.y = d.y < FLOOR_Y ? 9 : rand(FLOOR_Y, 9); d.x = rand(-12, 12); d.z = cz - 6 + rand(-14, 12); }
       dm.position.set(d.x, d.y, d.z); dm.rotation.set(0, 0, wind * 0.6); dm.scale.set(1, 1 + velocity * 2, 1); dm.updateMatrix(); rain.setMatrixAt(i, dm.matrix);
     }
     rain.instanceMatrix.needsUpdate = true;
@@ -654,7 +709,7 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
     bloom.strength = 0.7 + flash * 0.15 + alert * 0.3;
     finalPass.uniforms.uTime.value = time; finalPass.uniforms.uGlitch.value = glitch * (0.3 + alert * 0.7);
     finalPass.uniforms.uAb.value = 0.0004 + Math.min(1, velocity) * 0.003 + glitch * 0.003;
-    camera.fov = 32 + Math.min(1, velocity) * 4; camera.updateProjectionMatrix();
+    camera.fov = 32 + Math.min(1, velocity) * 9; camera.updateProjectionMatrix();
   }
 
   function draw() {

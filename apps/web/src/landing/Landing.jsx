@@ -263,17 +263,16 @@ export default function Landing() {
         </div></div>
       </section>
 
-      <div className="drift" data-stage="5" aria-hidden="true" />
 
       <div className="lower">
-        <section id="console" className="sec">
+        <section id="console" className="sec" data-stage="5">
           <div className="wrap">
             <SectionHead n="05" label="控室 · Console" title="See every call. Approve the risky ones." sub="The console is where a human stays in the loop: live activity, one-click approvals, the audit log, and the switch that revokes." />
             <div className="rise"><ProductWindow /></div>
           </div>
         </section>
 
-        <section id="passport" className="sec">
+        <section id="passport" className="sec" data-stage="6">
           <div className="wrap">
             <SectionHead n="06" label="通行証 · Passport" title="An identity that travels." sub="Each agent’s pass is an ERC-8004 registration file signed by your registry. One wallet signature publishes it to the public Identity Registry on Base, with nothing to host." />
             <div className="passport-grid">
@@ -290,7 +289,7 @@ export default function Landing() {
           </div>
         </section>
 
-        <section id="integrate" className="sec">
+        <section id="integrate" className="sec" data-stage="7">
           <div className="wrap">
             <SectionHead n="07" label="接続 · Integrate" title="Drop it in front of the tools you already use." sub="One config line for any MCP client. An SDK for your own code. Plain REST for everything else." />
             <div className="int-grid rise">
@@ -303,14 +302,14 @@ export default function Landing() {
           </div>
         </section>
 
-        <section className="sec">
+        <section className="sec" data-stage="8">
           <div className="wrap">
             <SectionHead n="08" label="用途 · Use cases" title="Three jobs it does on day one." />
             <Cases />
           </div>
         </section>
 
-        <section id="stack" className="sec">
+        <section id="stack" className="sec" data-stage="9">
           <div className="wrap">
             <SectionHead n="09" label="構成 · Your stack" title="It fits next to what you already run." sub="Identity providers answer who an agent is and which apps it may open. Shuin answers whether it may do this particular thing right now, and proves what happened." />
             <Stack />
@@ -332,7 +331,7 @@ export default function Landing() {
         </section>
       </div>
 
-      <section className="finale" data-stage="6">
+      <section className="finale" data-stage="10">
         <div className="wrap fin-in">
           <div className="fin-seal rise"><Mark size={96} /></div>
           <h2 className="fin-title" aria-label="Know your agent."><span><Words>KNOW YOUR</Words></span><span><Words>AGENT.</Words></span></h2>
@@ -343,7 +342,7 @@ npm start      # → http://127.0.0.1:5055`}</Code></div>
           <div className="hero-cta rise"><Link to="/app" className="btn magnetic">Open the console <ArrowRight size={16} /></Link><Link to="/verify" className="btn ghost magnetic">Verify an agent</Link></div>
         </div>
       </section>
-      <div className="drift drift-end" data-stage="7" aria-hidden="true" />
+      <div className="drift drift-end" data-stage="11" aria-hidden="true" />
 
       <footer className="foot">
         <div className="wrap foot-in">

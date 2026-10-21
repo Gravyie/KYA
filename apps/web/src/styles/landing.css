@@ -461,3 +461,18 @@
 .op-type span { font-family: var(--hud); text-transform: uppercase; } .op-type .op-a { font-family: 'Noto Serif JP Variable', serif; color: var(--mag); }
 .op-type .op-c { color: var(--cyan); text-shadow: 0 0 40px var(--cyan); }
 .opening { background: #03040a; }
+
+/* ════ v10 The Corridor: the world stays visible; cards and sections are things you fly past ════ */
+.chapter { background: radial-gradient(120% 70% at 20% 50%, rgba(3, 4, 10, 0.78), rgba(3, 4, 10, 0.35) 60%, transparent 85%); min-height: 100vh; }
+.chapter.red { background: radial-gradient(120% 70% at 20% 50%, rgba(50, 0, 16, 0.8), rgba(50, 0, 16, 0.3) 60%, transparent 85%); }
+.ch-line { text-shadow: 0 2px 20px rgba(0, 0, 0, 0.9); }
+.lower::before { background: linear-gradient(90deg, rgba(3, 4, 10, 0.86) 0%, rgba(3, 4, 10, 0.62) 55%, rgba(3, 4, 10, 0.4) 100%); }
+.shead .big, .shead .sub, .shead .eyebrow { text-shadow: 0 2px 24px rgba(0, 0, 0, 0.95); }
+.trio p, .p-steps li, .facts li { text-shadow: 0 1px 14px rgba(0, 0, 0, 0.9); }
+.bento, .stack-table, .numbers { background: rgba(4, 7, 16, 0.72); backdrop-filter: blur(12px); }
+.p-steps, .facts, .int-tabs { background: rgba(4, 7, 16, 0.55); backdrop-filter: blur(10px); padding: 4px 16px; }
+.sec { padding-block: clamp(100px, 18vh, 190px); }
+.hero { position: relative; }
+.hero::before { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; background: linear-gradient(90deg, rgba(3, 4, 10, 0.88) 0%, rgba(3, 4, 10, 0.62) 38%, transparent 62%); }
+.hero .lede { color: #c9d8e6; }
+@media (max-width: 960px) { .hero::before { background: linear-gradient(to top, rgba(3, 4, 10, 0.92) 0%, rgba(3, 4, 10, 0.6) 55%, transparent 75%); } }

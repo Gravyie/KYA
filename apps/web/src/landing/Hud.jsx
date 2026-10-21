@@ -6,7 +6,7 @@ export const BEATS = [
   {key: 'decide', label: 'Decide', jp: '審判'},
   {key: 'prove', label: 'Prove', jp: '記録'},
   {key: 'contain', label: 'Contain', jp: '封鎖'},
-  {key: 'city', label: 'City', jp: '街'},
+  {key: 'city', label: 'Corridor', jp: '回廊'},
 ];
 
 // Tags hang off their 3D anchor at (dx, dy) and are clamped to the scene's side of the screen.
@@ -14,7 +14,7 @@ const TAGS = {
   0: [{id: 'plaque', n: '門', title: 'THE GATE', text: 'Every tool call passes here', dx: 70, dy: -40}, {id: 'seal', n: '印', title: 'THE SEAL', text: 'One verdict per call', dx: 110, dy: 40}],
   1: [{id: 'card', n: '01', title: 'PASS', text: 'Key · operator · scopes', dx: 40, dy: 170}],
   3: [{id: 'ledger', n: '03', title: 'LEDGER', text: 'Each block seals the last', dx: -40, dy: -150}],
-  4: [{id: 'seal', n: '04', title: '封鎖 · SEALED', text: 'Every call is refused', dx: 60, dy: -190}],
+  4: [],
 };
 
 /** The fixed layer: canvas, viewfinder corners, readouts, the chapter rail, and tags pinned to 3D anchors. */
