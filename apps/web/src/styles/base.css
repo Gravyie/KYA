@@ -1,43 +1,38 @@
 @import '@fontsource-variable/geist';
 @import '@fontsource-variable/geist-mono';
-@import '@fontsource/instrument-serif/400.css';
-@import '@fontsource/instrument-serif/400-italic.css';
+@import '@fontsource-variable/noto-serif-jp';
 
-@property --ink { syntax: '<color>'; inherits: true; initial-value: #0a0f0d; }
-@property --ink-2 { syntax: '<color>'; inherits: true; initial-value: #34423b; }
-@property --ink-3 { syntax: '<color>'; inherits: true; initial-value: #64746b; }
-@property --line { syntax: '<color>'; inherits: true; initial-value: rgba(10, 15, 13, 0.1); }
-@property --line-strong { syntax: '<color>'; inherits: true; initial-value: rgba(10, 15, 13, 0.2); }
-@property --surface { syntax: '<color>'; inherits: true; initial-value: #f5f9f4; }
 
 :root {
-  --paper: #e6ede6;
-  --paper-2: #d6dfd5;
-  --surface: #f5f9f4;
-  --ink: #0a0f0d;
-  --ink-2: #34423b;
-  --ink-3: #64746b;
-  --line: rgba(10, 15, 13, 0.1);
-  --line-strong: rgba(10, 15, 13, 0.2);
-  --night: #0a100d;
-  --night-2: #141b17;
-  --night-line: rgba(242, 240, 233, 0.12);
-  --night-ink: #ecebe4;
-  --night-ink-2: #a3a399;
-  --allow: #0d8a5a;
-  --allow-bg: #dcf1e5;
-  --allow-glow: #1fcf8e;
-  --deny: #d2402a;
-  --deny-bg: #fbe2dc;
-  --ask: #a9700a;
-  --ask-bg: #f7e9c4;
+  --paper: #0b0908;
+  --paper-2: #1d1917;
+  --surface: #141110;
+  --ink: #f1e9dc;
+  --ink-2: #bcb1a3;
+  --ink-3: #7d7369;
+  --line: rgba(241, 233, 220, 0.1);
+  --line-strong: rgba(241, 233, 220, 0.22);
+  --night: #070605;
+  --night-2: #100d0c;
+  --night-line: rgba(241, 233, 220, 0.14);
+  --night-ink: #f1e9dc;
+  --night-ink-2: #8f857a;
+  --allow: #3ee08a;
+  --allow-bg: rgba(62, 224, 138, 0.12);
+  --allow-glow: #3ee08a;
+  --deny: #ff5a3a;
+  --deny-bg: rgba(232, 50, 30, 0.15);
+  --ask: #ffb020;
+  --ask-bg: rgba(255, 176, 32, 0.13);
 
   --sans: 'Geist Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
   --mono: 'Geist Mono Variable', ui-monospace, 'SF Mono', Menlo, monospace;
-  --serif: 'Instrument Serif', 'Times New Roman', serif;
+  --serif: 'Noto Serif JP Variable', 'Hiragino Mincho ProN', serif;
+  --jp: 'Noto Serif JP Variable', 'Hiragino Mincho ProN', serif;
+  --shu: #e8321e; --shu-2: #ff5a3a; --bone: #f1e9dc; --seal-ink: #f4ece0;
 
-  --radius: 10px;
-  --radius-lg: 18px;
+  --radius: 2px;
+  --radius-lg: 2px;
   --gutter: clamp(20px, 4vw, 56px);
   --max: 1240px;
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
@@ -55,8 +50,8 @@ a { color: inherit; text-decoration: none; }
 button, input, select, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; }
 img, svg, canvas { display: block; max-width: 100%; }
-::selection { background: var(--ink); color: var(--paper); }
-:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; border-radius: 4px; }
+::selection { background: var(--shu); color: var(--seal-ink); }
+:focus-visible { outline: 2px solid var(--shu); outline-offset: 2px; border-radius: 4px; }
 code, pre, kbd { font-family: var(--mono); font-feature-settings: normal; }
 
 .serif { font-family: var(--serif); font-style: italic; font-weight: 400; letter-spacing: -0.01em; }
@@ -132,3 +127,13 @@ textarea.input { height: auto; padding: 10px 12px; resize: vertical; }
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
 }
+
+/* Shuin app chrome: sharp, ink on sumi, one vermilion */
+.btn { border-radius: 0; background: var(--shu); color: var(--seal-ink); letter-spacing: 0.06em; }
+.btn:hover { background: var(--shu-2); }
+.btn.ghost { background: transparent; color: var(--ink); border-color: var(--line-strong); }
+.btn.ghost:hover { background: rgba(241, 233, 220, 0.06); }
+.btn.light { background: var(--bone); color: #0b0908; }
+.input { color: var(--ink); } select.input option { background: #141110; }
+.badge { border-radius: 0; }
+h1, h2 { font-family: var(--jp); }

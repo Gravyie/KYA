@@ -36,12 +36,12 @@ const S = o => ({az: 0, el: 0.08, r: 4, lx: 0, ly: 0, lz: 0, closed: 0, alert: 0
 const STAGES = [
   /* 0 hero     */ S({az: -0.18, el: 0.05, r: 4.3, lx: 0, ly: 1.0, lz: -1, zone: Z(0.68, 0.47, 0.56, 0.84), ledger: 1}),
   /* 1 identify */ S({az: -0.5, el: 0.06, r: 2.0, lx: 0.1, ly: 0.25, lz: 1.9, zone: Z(0.7, 0.5, 0.48, 0.74), mix: [0.5, 0.2, 0.3], card: {p: [0.15, 0.3, 2.0], tilt: -0.35, rx: 0.05, s: 1.0, o: 1}}),
-  /* 2 decide   */ S({az: 0.0, el: 0.04, r: 4.6, lx: 0, ly: 0.9, lz: 0, zone: Z(0.5, 0.5, 1, 1), dim: 0.55, mix: [0.45, 0.25, 0.3]}),
+  /* 2 decide   */ S({az: 0.0, el: 0.22, r: 4.6, lx: 0, ly: 0.9, lz: 0, zone: Z(0.5, 0.5, 1, 1), dim: 0.55, mix: [0.45, 0.25, 0.3]}),
   /* 3 prove    */ S({az: 0.72, el: 0.16, r: 4.6, lx: 0, ly: -0.2, lz: -5, zone: Z(0.68, 0.52, 0.56, 0.8), ledger: 1, mix: [0.75, 0.05, 0.2]}),
   /* 4 contain  */ S({az: 0.16, el: 0.04, r: 3.4, lx: 0, ly: 0.8, lz: 0, closed: 1, alert: 1, ledger: 0.6, zone: Z(0.68, 0.5, 0.52, 0.8), mix: [0, 0, 1]}),
   /* 5 lower    */ S({az: 0.18, el: 0.12, r: 7.5, lx: 0, ly: 1.6, lz: -9, zone: Z(0.5, 0.42, 1, 1), dim: 0.7, mix: [0.8, 0.1, 0.1]}),
-  /* 6 finale   */ S({az: 0.0, el: 0.03, r: 5.2, lx: 0, ly: 1.4, lz: -1, zone: Z(0.5, 0.36, 1, 0.66), dim: 0.3, ledger: 0.8, mix: [0.9, 0.05, 0.05]}),
-  /* 7 hold     */ S({az: 0.0, el: 0.03, r: 5.2, lx: 0, ly: 1.4, lz: -1, zone: Z(0.5, 0.36, 1, 0.66), dim: 0.3, ledger: 0.8, mix: [0.9, 0.05, 0.05]}),
+  /* 6 finale   */ S({az: 0.0, el: 0.03, r: 5.2, lx: 0, ly: 1.4, lz: -1, zone: Z(0.5, 0.36, 1, 0.66), dim: 0.5, ledger: 0.8, mix: [0.9, 0.05, 0.05]}),
+  /* 7 hold     */ S({az: 0.0, el: 0.03, r: 5.2, lx: 0, ly: 1.4, lz: -1, zone: Z(0.5, 0.36, 1, 0.66), dim: 0.5, ledger: 0.8, mix: [0.9, 0.05, 0.05]}),
 ];
 const NUM = ['az', 'el', 'r', 'lx', 'ly', 'lz', 'closed', 'alert', 'dim', 'ledger'];
 const ZONE = ['cx', 'cy', 'w', 'h'];
@@ -72,13 +72,16 @@ vec3 sky(vec3 d, float wet){
   float cl = fbm(vec2(d.x / (e + 0.25) * 2.2 + uTime * 0.01, e * 9.0));
   col += vec3(0.25, 0.03, 0.02) * smoothstep(0.5, 0.95, cl) * smoothstep(0.35, 0.02, e);
   // the sun: a vermilion disc low over the city, sliced by horizontal bands near its base
-  vec2 sp = d.xy / max(-d.z, 0.05) - vec2(0.0, 0.17);
+  vec3 sd = normalize(vec3(0.2, 0.17, -1.0));
+  vec3 sr = normalize(cross(vec3(0.0, 1.0, 0.0), sd)), su = cross(sd, sr);
+  vec2 sp = vec2(dot(d, sr), dot(d, su));
+  float facing = step(0.0, dot(d, sd));
   float r = length(sp);
-  float disc = smoothstep(0.215, 0.209, r) * step(d.z, 0.0);
-  float slit = 1.0 - step(0.5, fract((sp.y + 0.04) * 34.0)) * smoothstep(0.0, -0.17, sp.y) * step(sp.y, 0.0);
-  vec3 sunCol = mix(vec3(1.0, 0.36, 0.14), vec3(0.92, 0.12, 0.07), smoothstep(0.2, -0.2, sp.y));
-  col = mix(col, sunCol * 1.35, disc * slit);
-  col += vec3(0.9, 0.12, 0.05) * exp(-r * r * 16.0) * 0.4 * step(d.z, 0.0);
+  float disc = smoothstep(0.125, 0.121, r) * facing;
+  float slit = 1.0 - step(0.55, fract((sp.y + 0.02) * 48.0)) * smoothstep(0.0, -0.11, sp.y) * step(sp.y, 0.0);
+  vec3 sunCol = mix(vec3(1.0, 0.42, 0.16), vec3(0.9, 0.1, 0.06), smoothstep(0.12, -0.12, sp.y));
+  col = mix(col, sunCol * 1.3, disc * slit);
+  col += vec3(0.9, 0.12, 0.05) * exp(-r * r * 40.0) * 0.4 * facing;
   // skyline in front of the sun: two layers of towers with sparse lit windows
   float az = atan(d.x, -d.z);
   float h1 = 0.012 + 0.07 * pow(hash(vec2(floor(az * 22.0), 1.0)), 2.0) + 0.025 * hash(vec2(floor(az * 61.0), 4.0));

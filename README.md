@@ -1,4 +1,6 @@
-# Shuin
+# Shuin 朱印
+
+*The red seal for AI agents.* A shuin was the vermilion seal stamped on permits that authorised the bearer to act.
 
 **Know your agent.** Shuin is an open-source identity, permission and audit layer for AI agents. Every agent gets its own key and a signed identity card. Every tool call is checked against a policy (allow, ask a human, or deny). Spend and rate limits cap the damage when a rule is too generous. Every decision lands in a hash-linked log that anyone can verify offline.
 
