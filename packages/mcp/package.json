@@ -1,0 +1,11 @@
+{
+  "name": "@sigilant/mcp",
+  "version": "0.2.0",
+  "type": "module",
+  "description": "A policy firewall for any MCP server. Wrap a server, every tool call is checked, approved or blocked, and logged.",
+  "license": "MIT",
+  "bin": {"sigilant-mcp": "./bin/sigilant-mcp.js"},
+  "exports": "./src/proxy.js",
+  "dependencies": {"@sigilant/sdk": "workspace:*"},
+  "engines": {"node": ">=20"}
+}

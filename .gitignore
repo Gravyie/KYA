@@ -2,12 +2,15 @@
 node_modules/
 .pnpm-store/
 
-# foundry
-contracts/out/
-contracts/cache/
-contracts/broadcast/
-contracts/lib/
-contracts/deployments/
+# legacy foundry
+legacy/hackathon/contracts/out/
+legacy/hackathon/contracts/cache/
+legacy/hackathon/contracts/broadcast/
+legacy/hackathon/contracts/lib/
+legacy/hackathon/contracts/deployments/
+legacy/hackathon/agents/runtime/*/.runs/
+legacy/hackathon/agents/runtime/*/.storage/
+.sigilant-demo/
 
 # env & secrets
 .env
@@ -24,7 +27,7 @@ build/
 *.log
 .logs/
 .DS_Store
-apps/api/data/
+apps/server/data/
 .data/
 deployments/*.local.json
 

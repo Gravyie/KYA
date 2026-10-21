@@ -1,19 +1,17 @@
 import {defineConfig} from 'vite';
 import react from '@vitejs/plugin-react';
-import tailwindcss from '@tailwindcss/vite';
+
+const api = process.env.VITE_API_URL || 'http://127.0.0.1:5055';
 
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [react()],
   server: {
-    host: '127.0.0.1',
-    port: 5173,
-    strictPort: true,
-    // The API is proxied so the browser makes same-origin calls. One less thing
-    // to misconfigure on a conference network, and no CORS surprises on stage.
-    proxy: {
-      '/api': {target: process.env.VITE_API_URL || 'http://127.0.0.1:5055', changeOrigin: true},
-      '/health': {target: process.env.VITE_API_URL || 'http://127.0.0.1:5055', changeOrigin: true},
-    },
+    host: '127.0.0.1', port: 5173, strictPort: true,
+    fs: {allow: ['../..']}, // the playground imports the server's pure policy module
+    proxy: {'/api': {target: api, changeOrigin: true}, '/health': {target: api, changeOrigin: true}},
   },
-  build: {outDir: 'dist', sourcemap: false},
+  build: {
+    outDir: 'dist', sourcemap: false,
+    rollupOptions: {output: {manualChunks: id => (id.includes('node_modules/three') ? 'three' : undefined)}},
+  },
 });

@@ -3,8 +3,8 @@ import {resolve, dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
 
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
-const dataDir=process.env.AUCTENT_DATA_DIR || resolve(root,'.data/auctent');
-const url=process.env.AUCTENT_URL || `http://127.0.0.1:${process.env.PORT || 5055}`;
+const dataDir=process.env.SIGILANT_DATA_DIR || resolve(root,'.data/sigilant');
+const url=process.env.SIGILANT_URL || `http://127.0.0.1:${process.env.PORT || 5055}`;
 
 try {
   const credential=readFileSync(resolve(dataDir,'recovery.key'),'utf8').trim();
@@ -19,6 +19,6 @@ try {
   console.log(result.key);
 } catch (error) {
   console.error(`Owner recovery failed: ${error.message}`);
-  console.error('Run the Auctent API on this machine and use its data directory. Set AUCTENT_DATA_DIR and AUCTENT_URL if you use custom values.');
+  console.error('Run the Sigilant API on this machine and use its data directory. Set SIGILANT_DATA_DIR and SIGILANT_URL if you use custom values.');
   process.exitCode=1;
 }

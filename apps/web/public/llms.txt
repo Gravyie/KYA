@@ -1,0 +1,22 @@
+# Sigilant
+
+> Sigilant is an open-source identity, permissions and audit layer for AI agents. Each agent gets its own key and a signed identity card. Every tool call is checked against a policy (allow, ask a human, or deny), spend and rate limits apply, and each decision is written to a hash-linked audit log that can be verified offline. Free and self-hosted. Know your agent.
+
+## Integrate
+
+- MCP firewall: `SIGILANT_AGENT_KEY=sga_… node packages/mcp/bin/sigilant-mcp.js -- <your MCP server command>` (packages are not on npm yet; install the SDK with `npm install ./packages/sdk`). Blocked calls never reach the server; tools/list is trimmed to what the agent may use.
+- Node SDK: `import {createSigilant} from '@sigilant/sdk'`; `guard.run({action, resource, amount}, tool)` fails closed.
+- REST: `POST /api/authorize` with `Authorization: Bearer sga_…` and `{action, resource, amount, note}`. Response `decision.outcome` is `allow`, `ask` or `deny`. For `ask`, poll `GET /api/authorize/:eventId` until `status` is not `pending`. Then `POST /api/receipt`.
+- Prove identity to a third party: `POST /api/assertion` `{audience}` returns a short-lived Ed25519 JWT. Verify offline with the registry public key from `GET /api/registry`, then check `GET /api/agents/:id/status` for revocation.
+
+## Policy model
+
+Rules are `{action, resources[], mode: allow|ask|deny, maxAmount}`. `*` or a trailing `*` matches a prefix. Deny rules win; otherwise the first allow/ask rule that matches; no match means deny. Per-agent limits: `budget {amount, windowHours}`, `rate {count, windowMinutes}`, and credential expiry.
+
+## Limits
+
+Sigilant decides and records; it cannot stop a tool call that bypasses the check. Outcome receipts are agent-reported. The audit log is tamper-evident relative to a known head, not a distributed ledger.
+
+## Docs
+
+/docs (quickstart, policy reference, API, MCP, assertions, security model), /verify (public assertion verifier).

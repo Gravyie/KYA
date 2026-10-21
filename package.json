@@ -1,31 +1,17 @@
 {
-  "name": "auctent",
+  "name": "sigilant",
   "private": true,
-  "version": "0.1.0",
-  "description": "Auctent — Know Your Agent. Local-first identity and permissions for AI agents.",
-  "packageManager": "pnpm@12.3.4",
+  "version": "0.2.0",
+  "description": "Sigilant: identity, permissions and audit for AI agents. Know your agent.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {"node": ">=20.12"},
   "scripts": {
-    "chain": "anvil --host 127.0.0.1 --port 8545 --chain-id 31337 --silent",
-    "contracts:build": "forge build --root contracts",
-    "contracts:test": "forge test --root contracts",
-    "deploy:local": "bash scripts/deploy-local.sh",
-    "abi": "node scripts/sync-abi.mjs",
-    "legacy:seed": "pnpm --filter @auctent/api seed",
-    "api": "node apps/api/src/guard-server.js",
-    "web": "npm run dev --prefix apps/web",
-    "start": "node apps/api/src/guard-server.js",
-    "test:product": "node --test apps/api/test/guard.test.mjs",
+    "dev": "node scripts/dev.mjs",
+    "build": "npm run build --prefix apps/web",
+    "start": "node apps/server/src/index.js",
+    "test": "node --test --test-timeout=20000 apps/server/test/api.test.mjs",
     "owner:recover": "node scripts/recover-owner.mjs",
-    "verify": "node scripts/verify-e2e.mjs",
-    "up": "node scripts/start-product.mjs",
-    "legacy:up": "bash scripts/up.sh",
-    "legacy:down": "bash scripts/down.sh"
-  },
-  "devDependencies": {
-    "typescript": "5.6.3"
-  },
-  "dependencies": {
-    "@google/genai": "^2.21.0",
-    "api": "^7.0.2"
+    "demo:mcp": "node packages/mcp/bin/sigilant-mcp.js -- node examples/demo-mcp-server.mjs"
   }
 }

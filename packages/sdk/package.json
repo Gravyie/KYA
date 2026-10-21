@@ -1,14 +1,9 @@
 {
-  "name": "@kya/sdk",
-  "version": "0.1.0",
-  "private": true,
+  "name": "@sigilant/sdk",
+  "version": "0.2.0",
   "type": "module",
-  "main": "./src/index.js",
-  "exports": {
-    ".": "./src/index.js",
-    "./abi": "./src/abi.js"
-  },
-  "dependencies": {
-    "viem": "2.21.55"
-  }
+  "description": "Identity, scoped permissions and audit for AI agents. Fail-closed tool authorization.",
+  "license": "MIT",
+  "exports": {".": "./src/index.js", "./verify": "./src/verify.js"},
+  "engines": {"node": ">=20"}
 }

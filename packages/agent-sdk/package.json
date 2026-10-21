@@ -1,8 +1,0 @@
-{
-  "name": "@auctent/agent-sdk",
-  "version": "0.1.0",
-  "type": "module",
-  "description": "Fail-closed tool authorization for Auctent agents",
-  "exports": "./src/index.js",
-  "engines": {"node": ">=22"}
-}
