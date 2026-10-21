@@ -3,23 +3,30 @@
 @import '@fontsource/instrument-serif/400.css';
 @import '@fontsource/instrument-serif/400-italic.css';
 
+@property --ink { syntax: '<color>'; inherits: true; initial-value: #0a0f0d; }
+@property --ink-2 { syntax: '<color>'; inherits: true; initial-value: #34423b; }
+@property --ink-3 { syntax: '<color>'; inherits: true; initial-value: #64746b; }
+@property --line { syntax: '<color>'; inherits: true; initial-value: rgba(10, 15, 13, 0.1); }
+@property --line-strong { syntax: '<color>'; inherits: true; initial-value: rgba(10, 15, 13, 0.2); }
+@property --surface { syntax: '<color>'; inherits: true; initial-value: #f5f9f4; }
+
 :root {
-  --paper: #f2f0e9;
-  --paper-2: #e8e5da;
-  --surface: #fbfaf6;
-  --ink: #0e0f0c;
-  --ink-2: #3b3c36;
-  --ink-3: #6b6c63;
-  --line: rgba(14, 15, 12, 0.11);
-  --line-strong: rgba(14, 15, 12, 0.22);
-  --night: #0e0f0c;
-  --night-2: #181916;
+  --paper: #e6ede6;
+  --paper-2: #d6dfd5;
+  --surface: #f5f9f4;
+  --ink: #0a0f0d;
+  --ink-2: #34423b;
+  --ink-3: #64746b;
+  --line: rgba(10, 15, 13, 0.1);
+  --line-strong: rgba(10, 15, 13, 0.2);
+  --night: #0a100d;
+  --night-2: #141b17;
   --night-line: rgba(242, 240, 233, 0.12);
   --night-ink: #ecebe4;
   --night-ink-2: #a3a399;
-  --allow: #0f8a5b;
+  --allow: #0d8a5a;
   --allow-bg: #dcf1e5;
-  --allow-glow: #2fbf7f;
+  --allow-glow: #1fcf8e;
   --deny: #d2402a;
   --deny-bg: #fbe2dc;
   --ask: #a9700a;
