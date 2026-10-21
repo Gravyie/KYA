@@ -20,11 +20,11 @@ import {OutputPass} from 'three/examples/jsm/postprocessing/OutputPass.js';
 
 const PI = Math.PI;
 const COL = {
-  bone: new THREE.Color(0xf1e9dc), shu: new THREE.Color(0xe8321e), ember: new THREE.Color(0xff6a2a),
-  amber: new THREE.Color(0xffb020), jade: new THREE.Color(0x3ee08a), ash: new THREE.Color(0x6b6560),
+  bone: new THREE.Color(0xd8f6ff), cyan: new THREE.Color(0x19e6ff), mag: new THREE.Color(0xff2fa6), shu: new THREE.Color(0xff3b52),
+  ember: new THREE.Color(0xff2fa6), amber: new THREE.Color(0xffb21f), jade: new THREE.Color(0x2dff9a), ash: new THREE.Color(0x5d6b80),
 };
-const HOT = {neutral: COL.ash.clone().multiplyScalar(1.2), allow: COL.bone.clone().multiplyScalar(2.4), ask: COL.amber.clone().multiplyScalar(2.6), deny: COL.shu.clone().multiplyScalar(3)};
-const STAMP = {neutral: new THREE.Color(0x1a1615), allow: COL.bone.clone().multiplyScalar(1.4), deny: COL.shu.clone().multiplyScalar(2)};
+const HOT = {neutral: COL.ash.clone().multiplyScalar(1.2), allow: COL.jade.clone().multiplyScalar(2.6), ask: COL.amber.clone().multiplyScalar(2.6), deny: COL.shu.clone().multiplyScalar(3)};
+const STAMP = {neutral: new THREE.Color(0x10131f), allow: COL.cyan.clone().multiplyScalar(1.6), deny: COL.shu.clone().multiplyScalar(2)};
 
 const FLOOR_Y = -2.2;
 const GATE_H = 6.4, GATE_W = 4.6;
@@ -37,7 +37,7 @@ const STAGES = [
   /* 0 hero     */ S({az: -0.18, el: 0.05, r: 4.3, lx: 0, ly: 1.0, lz: -1, zone: Z(0.68, 0.47, 0.56, 0.84), ledger: 1}),
   /* 1 identify */ S({az: -0.5, el: 0.06, r: 2.0, lx: 0.1, ly: 0.25, lz: 1.9, zone: Z(0.7, 0.5, 0.48, 0.74), mix: [0.5, 0.2, 0.3], card: {p: [0.15, 0.3, 2.0], tilt: -0.35, rx: 0.05, s: 1.0, o: 1}}),
   /* 2 decide   */ S({az: 0.0, el: 0.22, r: 4.6, lx: 0, ly: 0.9, lz: 0, zone: Z(0.5, 0.5, 1, 1), dim: 0.55, mix: [0.45, 0.25, 0.3]}),
-  /* 3 prove    */ S({az: 0.72, el: 0.16, r: 4.6, lx: 0, ly: -0.2, lz: -5, zone: Z(0.68, 0.52, 0.56, 0.8), ledger: 1, mix: [0.75, 0.05, 0.2]}),
+  /* 3 prove    */ S({az: 0.32, el: 0.26, r: 4.4, lx: 0, ly: -0.2, lz: -5, zone: Z(0.68, 0.52, 0.56, 0.8), ledger: 1, mix: [0.75, 0.05, 0.2]}),
   /* 4 contain  */ S({az: 0.16, el: 0.04, r: 3.4, lx: 0, ly: 0.8, lz: 0, closed: 1, alert: 1, ledger: 0.6, zone: Z(0.68, 0.5, 0.52, 0.8), mix: [0, 0, 1]}),
   /* 5 lower    */ S({az: 0.18, el: 0.12, r: 7.5, lx: 0, ly: 1.6, lz: -9, zone: Z(0.5, 0.42, 1, 1), dim: 0.7, mix: [0.8, 0.1, 0.1]}),
   /* 6 finale   */ S({az: 0.0, el: 0.03, r: 5.2, lx: 0, ly: 1.4, lz: -1, zone: Z(0.5, 0.36, 1, 0.66), dim: 0.5, ledger: 0.8, mix: [0.9, 0.05, 0.05]}),
@@ -52,6 +52,44 @@ const rand = (a, b) => a + Math.random() * (b - a);
 
 /* ── Sky (and its reflection in the flooded plaza) ───────── */
 
+const TOWER_VERT = `
+  attribute vec3 aDim; attribute float aSeed; varying vec3 vObj; varying vec3 vN; varying float vSeed; varying float vDepth; varying vec3 vDim; varying float vWorldY;
+  void main(){
+    vObj = position * aDim; vN = normal; vSeed = aSeed; vDim = aDim;
+    vec4 w = modelMatrix * instanceMatrix * vec4(position, 1.0); vWorldY = w.y;
+    vec4 mv = viewMatrix * w; vDepth = -mv.z; gl_Position = projectionMatrix * mv;
+  }`;
+const TOWER_FRAG = `
+  varying vec3 vObj; varying vec3 vN; varying float vSeed; varying float vDepth; varying vec3 vDim; varying float vWorldY;
+  uniform float uTime, uAlert, uFogFar, uMirror; uniform vec3 uFog;
+  float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+  void main(){
+    bool side = abs(vN.x) > 0.5;
+    float u = side ? vObj.z : vObj.x; float v = vObj.y + vDim.y * 0.5;
+    vec2 cell = vec2(floor(u / 0.55 + 100.0), floor(v / 0.62));
+    vec2 f = vec2(fract(u / 0.55), fract(v / 0.62));
+    float on = step(0.82, hash(cell + vSeed * 50.0 + (side ? 11.0 : 0.0))) * step(0.18, f.x) * step(f.x, 0.72) * step(0.22, f.y) * step(f.y, 0.68);
+    on *= step(abs(vN.y), 0.5);
+    float flick = step(0.985, hash(cell + floor(uTime * 1.5))) ;
+    float h = hash(cell.yx + vSeed * 9.0);
+    vec3 wc = h < 0.4 ? vec3(0.1, 0.9, 1.0) : h < 0.7 ? vec3(1.0, 0.2, 0.75) : h < 0.9 ? vec3(1.0, 0.7, 0.2) : vec3(0.85, 0.95, 1.0);
+    wc = mix(wc, vec3(1.0, 0.12, 0.2), uAlert * 0.85);
+    vec3 base = vec3(0.012, 0.016, 0.04) + vec3(0.02, 0.06, 0.1) * smoothstep(0.0, 1.0, v / vDim.y) * 0.4;
+    // rim light on the top and sides facing the corridor
+    float rim = step(vDim.y - 0.12, v) * step(0.5, abs(vN.y));
+    float hw = (side ? vDim.z : vDim.x) * 0.5;
+    float edge = smoothstep(hw - 0.06, hw, abs(u)) * step(abs(vN.y), 0.5) * step(0.5, fract(vSeed * 7.0));
+    float band = step(0.93, fract(v / 3.1 + vSeed)) * step(abs(vN.y), 0.5) * step(0.7, vSeed);
+    vec3 neon = mix(vec3(0.1, 0.85, 1.0), vec3(1.0, 0.18, 0.66), step(0.5, fract(vSeed * 13.0)));
+    neon = mix(neon, vec3(1.0, 0.12, 0.3), uAlert * 0.85);
+    vec3 col = base + wc * on * (0.75 - flick * 0.4) + neon * (rim * 0.6 + edge * 1.4 + band * 0.9);
+    float fog = 1.0 - exp(-vDepth * vDepth / (uFogFar * uFogFar));
+    col = mix(col, uFog, clamp(fog, 0.0, 1.0));
+    float a = uMirror > 0.5 ? 1.0 : 1.0;
+    gl_FragColor = vec4(col, a);
+  }`;
+
+
 const SKY_VERT = 'varying vec2 vNdc; void main(){ vNdc = position.xy; gl_Position = vec4(position.xy, 1.0, 1.0); }';
 const SKY_FRAG = `
 precision highp float;
@@ -65,37 +103,41 @@ float fbm(vec2 p){ float v = 0.0, a = 0.5; for (int i = 0; i < 4; i++){ v += a *
 
 vec3 sky(vec3 d, float wet){
   float e = d.y;
-  vec3 top = vec3(0.012, 0.009, 0.011), haze = vec3(0.16, 0.025, 0.018), hor = vec3(0.42, 0.06, 0.03);
-  vec3 col = mix(hor, haze, smoothstep(0.0, 0.1, e));
-  col = mix(col, top, smoothstep(0.06, 0.55, e));
-  // smog bands drifting across the sun
-  float cl = fbm(vec2(d.x / (e + 0.25) * 2.2 + uTime * 0.01, e * 9.0));
-  col += vec3(0.25, 0.03, 0.02) * smoothstep(0.5, 0.95, cl) * smoothstep(0.35, 0.02, e);
-  // the sun: a vermilion disc low over the city, sliced by horizontal bands near its base
-  vec3 sd = normalize(vec3(0.2, 0.17, -1.0));
+  vec3 top = vec3(0.012, 0.008, 0.05), mid = vec3(0.09, 0.02, 0.19), hor = vec3(0.62, 0.06, 0.4);
+  vec3 col = mix(hor, mid, smoothstep(0.0, 0.16, e));
+  col = mix(col, top, smoothstep(0.12, 0.62, e));
+  // smog and cloud bands lit from below by the city
+  float cl = fbm(vec2(d.x / (e + 0.25) * 2.2 + uTime * 0.012, e * 9.0));
+  col += vec3(0.35, 0.05, 0.42) * smoothstep(0.5, 0.95, cl) * smoothstep(0.35, 0.02, e);
+  // stars
+  vec3 sd3 = d * 170.0; vec3 id = floor(sd3); vec3 fd = fract(sd3) - 0.5;
+  float sh = hash(id.xy + id.z * 7.0);
+  col += vec3(0.75, 0.9, 1.0) * step(0.9968, sh) * smoothstep(0.3, 0.0, length(fd)) * (0.6 + 0.4 * sin(uTime * 2.0 + sh * 90.0)) * smoothstep(0.05, 0.3, e) * 1.5;
+  // retrowave sun, banded toward its base
+  vec3 sd = normalize(vec3(0.2, 0.15, -1.0));
   vec3 sr = normalize(cross(vec3(0.0, 1.0, 0.0), sd)), su = cross(sd, sr);
   vec2 sp = vec2(dot(d, sr), dot(d, su));
   float facing = step(0.0, dot(d, sd));
   float r = length(sp);
-  float disc = smoothstep(0.125, 0.121, r) * facing;
-  float slit = 1.0 - step(0.55, fract((sp.y + 0.02) * 48.0)) * smoothstep(0.0, -0.11, sp.y) * step(sp.y, 0.0);
-  vec3 sunCol = mix(vec3(1.0, 0.42, 0.16), vec3(0.9, 0.1, 0.06), smoothstep(0.12, -0.12, sp.y));
-  col = mix(col, sunCol * 1.3, disc * slit);
-  col += vec3(0.9, 0.12, 0.05) * exp(-r * r * 40.0) * 0.4 * facing;
-  // skyline in front of the sun: two layers of towers with sparse lit windows
+  float disc = smoothstep(0.13, 0.126, r) * facing;
+  float gapW = smoothstep(0.03, -0.12, sp.y) * 0.62;
+  float slit = mix(1.0, step(gapW, fract(sp.y * 44.0)), step(sp.y, 0.03));
+  vec3 sunCol = mix(vec3(1.0, 0.78, 0.16), vec3(1.0, 0.1, 0.6), smoothstep(0.12, -0.12, sp.y));
+  col = mix(col, sunCol * 1.35, disc * slit);
+  col += vec3(1.0, 0.16, 0.55) * exp(-r * r * 36.0) * 0.42 * facing;
+  // skyline with neon windows
   float az = atan(d.x, -d.z);
-  float h1 = 0.012 + 0.07 * pow(hash(vec2(floor(az * 22.0), 1.0)), 2.0) + 0.025 * hash(vec2(floor(az * 61.0), 4.0));
-  float h2 = 0.006 + 0.035 * hash(vec2(floor(az * 40.0), 8.0));
-  float far = step(e, h2 + 0.02) * step(-0.001, e);
+  float h1 = 0.012 + 0.075 * pow(hash(vec2(floor(az * 22.0), 1.0)), 2.0) + 0.025 * hash(vec2(floor(az * 61.0), 4.0));
+  float h2 = 0.006 + 0.04 * hash(vec2(floor(az * 40.0), 8.0));
+  float far = step(e, h2 + 0.022) * step(-0.001, e);
   float near = step(e, h1) * step(-0.001, e);
-  col = mix(col, mix(col, vec3(0.05, 0.012, 0.012), 0.75), far);
+  col = mix(col, mix(col, vec3(0.05, 0.015, 0.1), 0.7), far);
   vec2 wp = vec2(az * 330.0, e * 1100.0);
-  float lit = step(0.9, hash(floor(wp))) * step(0.5, fract(wp.y)) * step(0.4, fract(wp.x));
-  vec3 win = mix(vec3(1.0, 0.82, 0.62), vec3(1.0, 0.22, 0.12), step(0.6, hash(floor(wp) + 7.0)));
-  col = mix(col, vec3(0.01, 0.008, 0.009) + win * lit * 0.85, near);
-  // a few aircraft warning lights blinking on the tallest towers
+  float lit = step(0.88, hash(floor(wp))) * step(0.5, fract(wp.y)) * step(0.4, fract(wp.x));
+  vec3 win = mix(vec3(0.1, 0.9, 1.0), vec3(1.0, 0.2, 0.75), step(0.55, hash(floor(wp) + 7.0)));
+  col = mix(col, vec3(0.008, 0.008, 0.025) + win * lit * 0.9, near);
   float blink = step(0.5, sin(uTime * 2.4 + hash(vec2(floor(az * 22.0), 3.0)) * 30.0));
-  col += vec3(1.0, 0.1, 0.05) * step(abs(e - h1 - 0.002), 0.0016) * step(0.82, hash(vec2(floor(az * 22.0), 2.0))) * blink * 2.0 * step(d.z, 0.0);
+  col += vec3(1.0, 0.1, 0.3) * step(abs(e - h1 - 0.002), 0.0016) * step(0.8, hash(vec2(floor(az * 22.0), 2.0))) * blink * 2.0 * step(d.z, 0.0);
   return col;
 }
 
@@ -111,13 +153,13 @@ void main(){
     vec2 g = d.xz * dist;
     float rip = fbm(g * 1.4 + vec2(0.0, uTime * 0.35)) - 0.5;
     vec3 rd = normalize(vec3(d.x + rip * 0.018, -d.y * (0.75 + 0.5 * fbm(g * 0.6)), d.z));
-    col = sky(rd, 1.0) * 0.36;
+    col = sky(rd, 1.0) * 0.42;
     float fres = pow(1.0 - min(1.0, -d.y * 3.0), 3.0);
     col *= 0.45 + 0.75 * fres;
     col *= 0.85 + 0.3 * fbm(g * 3.0 + uTime * 0.2);
   }
   float lum = dot(col, vec3(0.3, 0.55, 0.15));
-  col = mix(col, vec3(lum * 1.6, lum * 0.12, lum * 0.08) + vec3(0.03, 0.0, 0.0), uAlert * 0.75);
+  col = mix(col, vec3(lum * 1.7, lum * 0.1, lum * 0.16) + vec3(0.03, 0.0, 0.01), uAlert * 0.75);
   col *= 1.0 - uDim * 0.45;
   gl_FragColor = vec4(col, 1.0);
 }`;
@@ -138,8 +180,9 @@ const FINAL = {
       vec2 ab = c * (uAb * 10.0 * (0.4 + r * 3.0)) + vec2(g * 0.008, 0.0);
       vec3 col;
       col.r = texture2D(tDiffuse, uv + ab).r; col.g = texture2D(tDiffuse, uv).g; col.b = texture2D(tDiffuse, uv - ab).b;
-      // anime-cel lift: crush the deepest blacks slightly warm, like printed ink
-      col = max(col, vec3(0.012, 0.009, 0.008));
+      // cool ink floor and CRT scanlines
+      col = max(col, vec3(0.008, 0.008, 0.02));
+      col *= 0.96 + 0.04 * sin(uv.y * uRes.y * 1.6);
       col *= 1.0 - uVig * smoothstep(0.1, 0.72, r * 1.9);
       col += (hash(uv * uRes + fract(uTime) * 61.0) - 0.5) * uGrain;
       gl_FragColor = vec4(col, 1.0);
@@ -148,35 +191,37 @@ const FINAL = {
 
 /* ── Textures ────────────────────────────────────────────── */
 
-const fontsReady = () => Promise.all([document.fonts?.load('900 100px "Noto Serif JP Variable"'), document.fonts?.load('500 40px "Geist Mono Variable"'), document.fonts?.ready]).catch(() => {});
+const fontsReady = () => Promise.all([document.fonts?.load('900 100px "Noto Serif JP Variable"'), document.fonts?.load('700 100px "Chakra Petch"'), document.fonts?.load('500 40px "Geist Mono Variable"'), document.fonts?.ready]).catch(() => {});
 
 function drawPassport() {
   const W = 1280, H = 806;
   const c = document.createElement('canvas'); c.width = W; c.height = H;
   const g = c.getContext('2d');
-  g.fillStyle = '#0d0b0a'; g.fillRect(0, 0, W, H);
-  // fine paper weave
-  g.globalAlpha = 0.06; g.strokeStyle = '#f1e9dc'; g.lineWidth = 1;
-  for (let y = 0; y < H; y += 6) { g.beginPath(); g.moveTo(0, y); g.lineTo(W, y + 3); g.stroke(); }
-  g.globalAlpha = 1;
-  // vermilion band down the right edge with vertical kanji, like a Japanese ID card
-  g.fillStyle = '#e8321e'; g.fillRect(W - 180, 0, 180, H);
-  g.fillStyle = '#0d0b0a'; g.font = '900 104px "Noto Serif JP Variable", serif'; g.textAlign = 'center';
-  ['朱', '印', '証'].forEach((ch, i) => g.fillText(ch, W - 90, 170 + i * 150));
-  g.textAlign = 'left';
-  // seal stamp, slightly rotated
-  g.save(); g.translate(W - 300, 600); g.rotate(-0.12);
-  g.strokeStyle = 'rgba(232, 50, 30, 0.9)'; g.lineWidth = 9; g.strokeRect(-70, -70, 140, 140);
-  g.fillStyle = 'rgba(232, 50, 30, 0.9)'; g.font = '900 54px "Noto Serif JP Variable", serif'; g.fillText('承認', -54, 20); g.restore();
+  const bg = g.createLinearGradient(0, 0, W, H);
+  bg.addColorStop(0, '#0b1530'); bg.addColorStop(0.6, '#070b1c'); bg.addColorStop(1, '#060814');
+  g.fillStyle = bg; g.fillRect(0, 0, W, H);
+  g.strokeStyle = 'rgba(25, 230, 255, 0.07)'; g.lineWidth = 1;
+  for (let x = 0; x < W; x += 40) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, H); g.stroke(); }
+  for (let y = 0; y < H; y += 40) { g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke(); }
+  const glow = g.createRadialGradient(W - 190, 190, 10, W - 190, 190, 520);
+  glow.addColorStop(0, 'rgba(25, 230, 255, 0.32)'); glow.addColorStop(1, 'rgba(25, 230, 255, 0)');
+  g.fillStyle = glow; g.fillRect(0, 0, W, H);
+  g.strokeStyle = '#19e6ff'; g.lineWidth = 6; g.strokeRect(22, 22, W - 44, H - 44);
+  g.fillStyle = '#19e6ff'; for (const [x, y] of [[22, 22], [W - 22, 22], [22, H - 22], [W - 22, H - 22]]) g.fillRect(x - 14, y - 14, 28, 28);
+  g.strokeStyle = '#e8f4ff'; g.lineWidth = 15; g.beginPath(); g.arc(W - 190, 190, 76, 0, PI * 2); g.stroke();
+  g.fillStyle = '#2dff9a'; g.beginPath(); g.arc(W - 190, 190, 22, 0, PI * 2); g.fill();
   const mono = (px, w = 500) => `${w} ${px}px "Geist Mono Variable", ui-monospace, monospace`;
-  g.fillStyle = '#e8321e'; g.font = mono(26); g.fillText('SHUIN / AGENT PASS — 朱印状', 72, 104);
-  g.fillStyle = '#f1e9dc'; g.font = '900 108px "Noto Serif JP Variable", serif'; g.fillText('research-bot', 66, 268);
-  g.font = mono(32); g.fillStyle = '#b8ada0';
-  g.fillText('OPERATOR   Acme Inc.', 72, 372); g.fillText('SCOPES     read_file · web.search', 72, 420); g.fillText('ERC-8004   eip155:84532 · #10353', 72, 468);
-  g.fillStyle = '#3ee08a'; g.fillRect(72, 522, 14, 14); g.fillStyle = '#f1e9dc'; g.font = mono(26, 600); g.fillText('ACTIVE', 100, 536);
+  g.textBaseline = 'alphabetic';
+  g.fillStyle = '#62e8ff'; g.font = mono(27); g.fillText('SIGILANT // AGENT PASSPORT', 84, 118);
+  g.fillStyle = '#f2fbff'; g.font = '700 112px "Chakra Petch", sans-serif'; g.fillText('RESEARCH-BOT', 80, 290);
+  g.font = mono(33); g.fillStyle = '#9db8cc';
+  g.fillText('OPERATOR   ACME INC.', 84, 390); g.fillText('SCOPES     read_file · web.search', 84, 438); g.fillText('ERC-8004   eip155:84532 · #10353', 84, 486);
+  g.fillStyle = 'rgba(45, 255, 154, 0.16)'; g.fillRect(84, 540, 220, 58); g.strokeStyle = '#2dff9a'; g.lineWidth = 2; g.strokeRect(84, 540, 220, 58);
+  g.fillStyle = '#2dff9a'; g.beginPath(); g.arc(118, 569, 9, 0, PI * 2); g.fill();
+  g.fillStyle = '#7dffbf'; g.font = mono(26, 600); g.fillText('ACTIVE', 144, 578);
   const seed = [7, 3, 9, 2, 8, 4, 6, 1, 9, 5, 3, 8, 2, 7, 4, 9, 6, 2, 8, 3, 7, 5, 1, 9];
-  g.fillStyle = '#f1e9dc'; seed.forEach((v, i) => g.fillRect(72 + i * 20, 660, 7 + (v % 3) * 3, 40 + v * 3));
-  g.fillStyle = '#8f857a'; g.font = mono(22); g.fillText('ED25519 · 8F3A 91C2 77DE 0B4E', 72, 752);
+  g.fillStyle = '#e8f4ff'; seed.forEach((v, i) => g.fillRect(84 + i * 22, 690, 8 + (v % 3) * 3, 40 + v * 3));
+  g.fillStyle = '#62e8ff'; g.font = mono(24); g.fillText('ed25519  8f3a·91c2·77de·0b4e', 650, 722);
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
   return tex;
@@ -214,26 +259,28 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
   const mirror = new THREE.Group(); mirror.scale.y = -1; mirror.position.y = 2 * FLOOR_Y; world.add(mirror);
 
   // Lights: a cold bone key from the viewer, the sun as a vermilion rim from behind.
-  scene.add(new THREE.HemisphereLight(0x2a1c1a, 0x0a0405, 1.2));
-  const key = new THREE.DirectionalLight(0xf1e9dc, 1.4); key.position.set(-3, 4, 8); scene.add(key);
-  const rim = new THREE.DirectionalLight(0xff3a1e, 4.5); rim.position.set(0, 2, -10); scene.add(rim);
+  scene.add(new THREE.HemisphereLight(0x5a4cff, 0x1a0630, 1.1));
+  const key = new THREE.DirectionalLight(0x19e6ff, 1.6); key.position.set(-3, 4, 8); scene.add(key);
+  const rim = new THREE.DirectionalLight(0xff2fa6, 4.5); rim.position.set(0, 2, -10); scene.add(rim);
   const sealLight = new THREE.PointLight(0xffffff, 18, 9, 1.8); sealLight.position.set(0, 0.6, 0.6); scene.add(sealLight);
 
   /* Floor: a thin veil over the reflection, with chalk survey marks and a dark apron under the gate. */
   const veilMat = new THREE.ShaderMaterial({
     transparent: true, depthWrite: false, extensions: {derivatives: true},
-    uniforms: {uAlpha: {value: 0.55}, uLine: {value: COL.bone.clone()}, uTime: {value: 0}},
+    uniforms: {uAlpha: {value: 0.55}, uLine: {value: COL.cyan.clone()}, uLine2: {value: COL.mag.clone()}, uTime: {value: 0}},
     vertexShader: 'varying vec3 vW; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }',
-    fragmentShader: `varying vec3 vW; uniform float uAlpha, uTime; uniform vec3 uLine;
+    fragmentShader: `varying vec3 vW; uniform float uAlpha, uTime; uniform vec3 uLine, uLine2;
       float line(float v, float w){ float a = abs(fract(v - 0.5) - 0.5) / fwidth(v); return 1.0 - min(a / w, 1.0); }
       void main(){
         float d = length(vW.xz);
-        float lane = max(line(vW.x / 3.0, 0.8) * step(abs(vW.x), 3.2), 0.0) * step(vW.z, 14.0);
-        float dash = step(0.5, fract(vW.z * 0.25 - uTime * 0.6));
-        float cross = line(vW.z / 6.0, 0.6) * step(abs(vW.x), 6.0) * 0.5;
-        float ring = (1.0 - min(abs(d - 3.6) / fwidth(d) / 0.9, 1.0)) * 0.7;
-        float a = (lane * dash * 0.55 + cross * 0.25 + ring) * exp(-d * 0.05);
-        gl_FragColor = vec4(mix(vec3(0.004, 0.003, 0.003), uLine, a * 0.8), uAlpha * 0.72 + a * 0.4);
+        float minor = max(line(vW.x * 0.5, 0.8), line(vW.z * 0.5, 0.8));
+        float major = max(line(vW.x / 4.0, 1.3), line(vW.z / 4.0, 1.3));
+        float pulse = 0.55 + 0.45 * sin(vW.z * 0.3 - uTime * 2.4);
+        float lane = line(vW.x / 3.0, 1.0) * step(abs(vW.x), 3.2) * step(0.5, fract(vW.z * 0.25 - uTime * 0.8));
+        float ring = (1.0 - min(abs(d - 3.6) / fwidth(d) / 1.2, 1.0));
+        vec3 c = mix(uLine, uLine2, smoothstep(-4.0, 4.0, vW.x));
+        float a = (minor * 0.28 + major * 0.8 * pulse + lane * 0.9 + ring) * exp(-d * 0.035);
+        gl_FragColor = vec4(mix(vec3(0.004, 0.003, 0.012), c * (1.0 + major), min(1.0, a)), uAlpha * 0.62 + a * 0.5);
       }`,
   });
   const veil = new THREE.Mesh(new THREE.PlaneGeometry(220, 220), veilMat);
@@ -241,14 +288,15 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
   world.add(veil);
 
   /* The gate: two pillars, a sweeping top beam and a tie beam, in black lacquer with vermilion edge inlays. */
-  const lacquer = new THREE.MeshStandardMaterial({color: 0x0b0909, metalness: 0.55, roughness: 0.32});
-  const inlayMat = new THREE.MeshBasicMaterial({color: COL.shu.clone().multiplyScalar(1.6)});
+  const lacquer = new THREE.MeshStandardMaterial({color: 0x0a0c18, metalness: 0.7, roughness: 0.28});
+  const inlayMat = new THREE.MeshBasicMaterial({color: COL.mag.clone().multiplyScalar(1.8)});
+  const cyanMat = new THREE.MeshBasicMaterial({color: COL.cyan.clone().multiplyScalar(1.8)});
   const gate = new THREE.Group(); real.add(gate);
   const pillarGeo = new THREE.BoxGeometry(0.5, GATE_H, 0.5);
   const top = FLOOR_Y + GATE_H;
   [-GATE_W / 2, GATE_W / 2].forEach(x => {
     const p = new THREE.Mesh(pillarGeo, lacquer); p.position.set(x, FLOOR_Y + GATE_H / 2, 0); gate.add(p);
-    const strip = new THREE.Mesh(new THREE.BoxGeometry(0.03, GATE_H * 0.92, 0.03), inlayMat); strip.position.set(x + (x < 0 ? 0.26 : -0.26), FLOOR_Y + GATE_H * 0.47, 0.26); gate.add(strip);
+    const strip = new THREE.Mesh(new THREE.BoxGeometry(0.035, GATE_H * 0.92, 0.035), cyanMat); strip.position.set(x + (x < 0 ? 0.26 : -0.26), FLOOR_Y + GATE_H * 0.47, 0.26); gate.add(strip);
     const foot = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.28, 0.8), lacquer); foot.position.set(x, FLOOR_Y + 0.14, 0); gate.add(foot);
   });
   // kasagi: a long top beam whose ends lift, built from a curved extrusion
@@ -261,11 +309,11 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
   const kasagiLine = new THREE.Mesh(new THREE.BoxGeometry(KW * 0.86, 0.025, 0.03), inlayMat); kasagiLine.position.set(0, top - 0.22, 0.32); gate.add(kasagiLine);
   const nuki = new THREE.Mesh(new THREE.BoxGeometry(GATE_W + 1.1, 0.3, 0.36), lacquer); nuki.position.y = top - 1.15; gate.add(nuki);
   const plaque = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.78, 0.08), lacquer); plaque.position.set(0, top - 0.62, 0.22); gate.add(plaque);
-  const plaqueMat = new THREE.MeshBasicMaterial({transparent: true});
+  const plaqueMat = new THREE.MeshBasicMaterial({transparent: true, toneMapped: false});
   const plaqueFace = new THREE.Mesh(new THREE.PlaneGeometry(0.46, 0.68), plaqueMat); plaqueFace.position.set(0, top - 0.62, 0.265); gate.add(plaqueFace);
   fontsReady().then(() => {
     const c = document.createElement('canvas'); c.width = 128; c.height = 190; const g = c.getContext('2d');
-    g.fillStyle = '#e8321e'; g.fillRect(0, 0, 128, 190); g.fillStyle = '#0b0909'; g.font = '900 72px "Noto Serif JP Variable", serif'; g.textAlign = 'center';
+    g.fillStyle = '#06061a'; g.fillRect(0, 0, 128, 190); g.strokeStyle = '#ff2fa6'; g.lineWidth = 6; g.strokeRect(5, 5, 118, 180); g.fillStyle = '#7ff4ff'; g.shadowColor = '#19e6ff'; g.shadowBlur = 14; g.font = '900 72px "Noto Serif JP Variable", serif'; g.textAlign = 'center';
     g.fillText('関', 64, 82); g.fillText('門', 64, 166);
     plaqueMat.map = new THREE.CanvasTexture(c); plaqueMat.map.colorSpace = THREE.SRGBColorSpace; plaqueMat.needsUpdate = true;
   });
@@ -290,13 +338,13 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
   seal.add(ticks);
   const BLADES = 9, blades = [], RB = R - 0.04;
   const half = RB * Math.sin(PI / BLADES) * 1.3;
-  const bladeMat = new THREE.MeshStandardMaterial({color: 0x120c0b, metalness: 0.8, roughness: 0.35, side: THREE.DoubleSide});
+  const bladeMat = new THREE.MeshStandardMaterial({color: 0x0c0e1c, metalness: 0.8, roughness: 0.35, side: THREE.DoubleSide});
   const bladeGeo = new THREE.ShapeGeometry(new THREE.Shape([new THREE.Vector2(-half, 0), new THREE.Vector2(half, 0), new THREE.Vector2(0, -1)]));
   for (let i = 0; i < BLADES; i++) {
     const a = (i / BLADES) * PI * 2, g = new THREE.Group();
     g.position.set(Math.cos(a) * RB, Math.sin(a) * RB, 0.02 + i * 0.002); g.add(new THREE.Mesh(bladeGeo, bladeMat)); g.userData.a = a; seal.add(g); blades.push(g);
   }
-  const irisBack = new THREE.Mesh(new THREE.CircleGeometry(R - 0.02, 64), new THREE.MeshBasicMaterial({color: 0x1a0302, transparent: true, opacity: 0, depthWrite: false}));
+  const irisBack = new THREE.Mesh(new THREE.CircleGeometry(R - 0.02, 64), new THREE.MeshBasicMaterial({color: 0x1a0208, transparent: true, opacity: 0, depthWrite: false}));
   irisBack.position.z = 0.01; seal.add(irisBack);
   const stampMat = new THREE.MeshBasicMaterial({transparent: true, opacity: 0, depthWrite: false, toneMapped: false});
   const stamp = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 1.5), stampMat); stamp.position.z = 0.06; seal.add(stamp);
@@ -313,21 +361,69 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
   /* Lanterns: two rows of stone posts with warm lights lining the approach. */
   const lanternGeo = new THREE.BoxGeometry(0.22, 1.1, 0.22);
   const lanterns = new THREE.InstancedMesh(lanternGeo, lacquer, 16);
-  const lampMat = new THREE.MeshBasicMaterial({color: COL.ember.clone().multiplyScalar(2.2)});
+  const lampMat = new THREE.MeshBasicMaterial({color: 0xffffff});
   const lamps = new THREE.InstancedMesh(new THREE.BoxGeometry(0.16, 0.16, 0.16), lampMat, 16);
   for (let i = 0; i < 16; i++) {
     const side = i % 2 ? 1 : -1, z = 3 + Math.floor(i / 2) * 2.4;
     dm.rotation.set(0, 0, 0); dm.scale.setScalar(1); dm.position.set(side * 3.6, FLOOR_Y + 0.55, z); dm.updateMatrix(); lanterns.setMatrixAt(i, dm.matrix);
     dm.position.y = FLOOR_Y + 1.2; dm.updateMatrix(); lamps.setMatrixAt(i, dm.matrix);
+    lamps.setColorAt(i, (side > 0 ? COL.mag : COL.cyan).clone().multiplyScalar(2.4));
   }
   real.add(lanterns, lamps); mirror.add(lanterns.clone(), lamps.clone());
 
   /* Rain: thin falling streaks. Cheap, and it makes every light in the scene feel wet. */
   const RAIN = small ? 500 : 1100;
-  const rainMat = new THREE.MeshBasicMaterial({color: COL.bone.clone().multiplyScalar(0.55), transparent: true, opacity: 0.35, depthWrite: false});
+  const rainMat = new THREE.MeshBasicMaterial({color: COL.cyan.clone().multiplyScalar(0.5), transparent: true, opacity: 0.35, depthWrite: false});
   const rain = new THREE.InstancedMesh(new THREE.BoxGeometry(0.006, 0.42, 0.006), rainMat, RAIN);
   const drops = Array.from({length: RAIN}, () => ({x: rand(-12, 12), y: rand(FLOOR_Y, 9), z: rand(-14, 12), v: rand(9, 13)}));
   world.add(rain);
+
+  /* The city: towers lining the plaza, neon kanji signs, and air traffic between them. */
+  const towerCount = small ? 60 : 110;
+  const towerGeo = new THREE.BoxGeometry(1, 1, 1);
+  const dims = new Float32Array(towerCount * 3), seeds = new Float32Array(towerCount);
+  const towerMat = new THREE.ShaderMaterial({vertexShader: TOWER_VERT, fragmentShader: TOWER_FRAG, uniforms: {uTime: {value: 0}, uAlert: {value: 0}, uFogFar: {value: 52}, uFog: {value: new THREE.Color(0x14062a)}, uMirror: {value: 0}}});
+  const towers = new THREE.InstancedMesh(towerGeo, towerMat, towerCount);
+  const signSpots = [];
+  for (let i = 0; i < towerCount; i++) {
+    const side = i % 2 ? 1 : -1, w = rand(2, 4.2), dd = rand(2, 4.2), h = rand(4, 11) * (i > towerCount * 0.5 ? rand(1.3, 2.6) : 1);
+    const z = 10 - (i / towerCount) * 90 + rand(-2, 2), x = side * (rand(7.5, 10.5) + (i % 4 === 0 ? rand(2, 8) : 0));
+    dm.rotation.set(0, 0, 0); dm.position.set(x, FLOOR_Y + h / 2, z); dm.scale.set(w, h, dd); dm.updateMatrix(); towers.setMatrixAt(i, dm.matrix);
+    dims[i * 3] = w; dims[i * 3 + 1] = h; dims[i * 3 + 2] = dd; seeds[i] = Math.random();
+    if (i % 3 === 0 && signSpots.length < 14 && h > 5) signSpots.push({x: x - side * (w / 2 + 0.06), y: FLOOR_Y + rand(2.4, Math.min(h - 1.2, 7)), z, side});
+  }
+  towerGeo.setAttribute('aDim', new THREE.InstancedBufferAttribute(dims, 3));
+  towerGeo.setAttribute('aSeed', new THREE.InstancedBufferAttribute(seeds, 1));
+  real.add(towers); mirror.add(towers.clone());
+
+  const WORDS = ['承認', '監査', '識別', '関門', '代理人', '封鎖', '朱印', '認証', '記録', '審判', 'AGENT', '可決', '否決', '通行証'];
+  const signs = [];
+  fontsReady().then(() => {
+    signSpots.forEach((sp, i) => {
+      const word = WORDS[i % WORDS.length], vertical = /[^A-Z]/.test(word) && i % 2 === 0;
+      const c = document.createElement('canvas'); const g = c.getContext('2d');
+      const colr = i % 3 === 0 ? '#ff2fa6' : i % 3 === 1 ? '#19e6ff' : '#ffb21f';
+      if (vertical) { c.width = 128; c.height = 128 * word.length + 40; } else { c.width = 120 * word.length + 60; c.height = 160; }
+      g.fillStyle = 'rgba(6, 6, 20, 0.55)'; g.fillRect(0, 0, c.width, c.height);
+      g.strokeStyle = colr; g.lineWidth = 5; g.shadowColor = colr; g.shadowBlur = 18; g.strokeRect(8, 8, c.width - 16, c.height - 16);
+      g.fillStyle = '#ffffff'; g.font = `900 ${/[A-Z]/.test(word) ? 92 : 100}px "Noto Serif JP Variable", "Chakra Petch", serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.shadowBlur = 26;
+      if (vertical) [...word].forEach((ch, k) => g.fillText(ch, 64, 84 + k * 128)); else g.fillText(word, c.width / 2, 86);
+      const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+      const mat = new THREE.MeshBasicMaterial({map: tex, transparent: true, toneMapped: false, color: new THREE.Color(colr).multiplyScalar(1.6), side: THREE.DoubleSide, depthWrite: false});
+      const hgt = vertical ? 0.6 * word.length : 0.9, wid = hgt * c.width / c.height;
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(wid, hgt), mat);
+      m.position.set(sp.x, sp.y, sp.z); m.rotation.y = sp.side > 0 ? -PI / 2 : PI / 2;
+      real.add(m); signs.push({m, mat, base: mat.color.clone(), seed: Math.random() * 10});
+      const mm = m.clone(); mirror.add(mm);
+    });
+  });
+
+  const AIR = small ? 30 : 60;
+  const air = new THREE.InstancedMesh(new THREE.BoxGeometry(0.05, 0.05, 1), new THREE.MeshBasicMaterial({}), AIR);
+  air.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(AIR * 3), 3);
+  const flights = Array.from({length: AIR}, (_, i) => ({x: rand(-14, 14), y: FLOOR_Y + rand(4.5, 9), z: rand(-80, 12), v: rand(5, 14) * (i % 2 ? 1 : -1), len: rand(1, 3), c: [COL.cyan, COL.mag, COL.amber][i % 3]}));
+  world.add(air);
 
   /* Passport */
   const cardGroup = new THREE.Group();
@@ -336,8 +432,8 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
   const uv = cardGeo.attributes.uv, pos = cardGeo.attributes.position;
   for (let i = 0; i < uv.count; i++) uv.setXY(i, (pos.getX(i) + CW / 2) / CW, (pos.getY(i) + CH / 2) / CH);
   const cardMat = new THREE.MeshBasicMaterial({transparent: true, toneMapped: false});
-  const cardBackMat = new THREE.MeshBasicMaterial({color: 0x0d0b0a, transparent: true, side: THREE.BackSide});
-  const scanMat = new THREE.MeshBasicMaterial({color: COL.shu.clone().multiplyScalar(3), transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending});
+  const cardBackMat = new THREE.MeshBasicMaterial({color: 0x050914, transparent: true, side: THREE.BackSide});
+  const scanMat = new THREE.MeshBasicMaterial({color: COL.cyan.clone().multiplyScalar(3), transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending});
   const scan = new THREE.Mesh(new THREE.PlaneGeometry(CW * 1.1, 0.012), scanMat);
   cardGroup.add(new THREE.Mesh(cardGeo, cardMat), new THREE.Mesh(cardGeo, cardBackMat), scan);
   real.add(cardGroup);
@@ -379,7 +475,7 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
   const rt = new THREE.WebGLRenderTarget(4, 4, {type: THREE.HalfFloatType, samples: small ? 0 : 4});
   const composer = new EffectComposer(renderer, rt);
   composer.addPass(new RenderPass(scene, camera));
-  const bloom = new UnrealBloomPass(new THREE.Vector2(4, 4), 0.6, 0.6, 0.92);
+  const bloom = new UnrealBloomPass(new THREE.Vector2(4, 4), 0.7, 0.6, 0.85);
   composer.addPass(bloom);
   const finalPass = new ShaderPass(FINAL); composer.addPass(finalPass);
   composer.addPass(new OutputPass());
@@ -459,16 +555,27 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
     const alert = Math.max(cur.alert * (override === 'open' ? 0 : 1), closed > 0.5 ? (closed - 0.5) * 2 : 0); alertNow = alert;
 
     // palette
-    const tone = COL.bone.clone().lerp(COL.shu, smooth(Math.min(closed * 1.2, 1)));
+    const tone = COL.cyan.clone().lerp(COL.shu, smooth(Math.min(closed * 1.2, 1)));
     ringMat.color.copy(tone).multiplyScalar(1.6 + flash * 1.4);
     haloMat.uniforms.uColor.value.copy(tone); haloMat.uniforms.uAmount.value = (0.45 + flash * 0.5 + closed * 0.4) * intro;
     sealLight.color.copy(tone); sealLight.intensity = (14 + flash * 18) * intro;
-    inlayMat.color.copy(COL.shu).multiplyScalar(1.3 + alert * 1.5 + Math.sin(time * 8) * alert * 0.6);
-    lampMat.color.copy(COL.ember).lerp(COL.shu, alert).multiplyScalar(2.2 + alert * Math.max(0, Math.sin(time * 10)) * 2);
-    rainMat.color.copy(COL.bone).lerp(COL.shu, alert * 0.8).multiplyScalar(0.55 + alert * 0.4);
-    rim.color.copy(new THREE.Color(0xff3a1e)); rim.intensity = 4.5 + alert * 3;
+    inlayMat.color.copy(COL.mag).lerp(COL.shu, alert).multiplyScalar(1.6 + alert * 1.2 + Math.sin(time * 8) * alert * 0.6);
+    cyanMat.color.copy(COL.cyan).lerp(COL.shu, alert).multiplyScalar(1.7 + (Math.sin(time * 37) > 0.97 ? -1 : 0));
+    lampMat.color.setScalar(1).lerp(COL.shu, alert).multiplyScalar(1 + alert * Math.max(0, Math.sin(time * 10)));
+    rainMat.color.copy(COL.cyan).lerp(COL.shu, alert * 0.8).multiplyScalar(0.5 + alert * 0.4);
+    rim.color.copy(COL.mag).lerp(COL.shu, alert); rim.intensity = 4.5 + alert * 3;
+    key.color.copy(COL.cyan).lerp(COL.shu, alert);
+    towerMat.uniforms.uTime.value = time; towerMat.uniforms.uAlert.value = alert;
+    signs.forEach(sg => { const fl = Math.sin(time * 3 + sg.seed) > 0.985 || (Math.sin(time * 23 + sg.seed * 7) > 0.995) ? 0.25 : 1; sg.mat.color.copy(sg.base).lerp(COL.shu, alert * 0.8).multiplyScalar(fl); });
+    for (let i = 0; i < AIR; i++) {
+      const f = flights[i]; f.z += f.v * dt * (1 + velocity * 3);
+      if (f.z > 14) f.z = -80; if (f.z < -80) f.z = 14;
+      dm.position.set(f.x, f.y, f.z); dm.rotation.set(0, 0, 0); dm.scale.set(1, 1, f.len * (1 + velocity * 3)); dm.updateMatrix(); air.setMatrixAt(i, dm.matrix);
+      tc.copy(f.c).lerp(COL.shu, alert).multiplyScalar(1.8); air.setColorAt(i, tc);
+    }
+    air.instanceMatrix.needsUpdate = true; air.instanceColor.needsUpdate = true;
     skyMat.uniforms.uTime.value = time; skyMat.uniforms.uAlert.value = alert; skyMat.uniforms.uDim.value = cur.dim;
-    veilMat.uniforms.uTime.value = time; veilMat.uniforms.uLine.value.copy(COL.bone).lerp(COL.shu, alert);
+    veilMat.uniforms.uTime.value = time; veilMat.uniforms.uLine.value.copy(COL.cyan).lerp(COL.shu, alert); veilMat.uniforms.uLine2.value.copy(COL.mag).lerp(COL.shu, alert);
     stampMat.opacity = smooth(Math.max(0, (closed - 0.75) / 0.25)) * (override === 'open' ? 0 : 1);
 
     // gate intro: rises out of the flood
@@ -544,7 +651,7 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
     cardMat.opacity = c.o; cardBackMat.opacity = c.o;
     scan.position.y = (((time * 0.5) % 1) - 0.5) * CH; scan.position.z = 0.005; scanMat.opacity = c.o * 0.9;
 
-    bloom.strength = 0.6 + flash * 0.15 + alert * 0.35;
+    bloom.strength = 0.7 + flash * 0.15 + alert * 0.3;
     finalPass.uniforms.uTime.value = time; finalPass.uniforms.uGlitch.value = glitch * (0.3 + alert * 0.7);
     finalPass.uniforms.uAb.value = 0.0004 + Math.min(1, velocity) * 0.003 + glitch * 0.003;
     camera.fov = 32 + Math.min(1, velocity) * 4; camera.updateProjectionMatrix();

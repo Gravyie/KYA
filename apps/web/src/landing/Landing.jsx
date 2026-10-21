@@ -199,12 +199,13 @@ export default function Landing() {
       <div className="scrollbar" aria-hidden="true"><i /></div>
       {mode === 'static' ? <div className="hud static" aria-hidden="true"><div className="static-sun" /></div> : <Hud canvasRef={canvasRef} beat={beat} countApi={countApi} frameApi={frameApi} onJump={jump} alert={alert} />}
       <div className="grain" aria-hidden="true" />
+      <div className="scanlines-fx" aria-hidden="true" />
       <Nav alert={alert} />
 
       {/* ── Scene 1: the gate ── */}
       <section className="hero" data-stage="0">
         <div className="wrap hero-in">
-          <p className="kicker rise"><span className="dot" />朱印 · The red seal for AI agents</p>
+          <p className="kicker rise"><span className="dot" />朱印 · The seal for AI agents</p>
           <h1 className="hero-title" aria-label="Know your agent."><span className="ht ht1"><Words>KNOW</Words></span><span className="ht ht2"><Words>YOUR</Words></span><span className="ht ht3"><Words>AGENT.</Words></span></h1>
           <p className="lede rise">Every agent gets a verifiable identity. Every action gets a verdict. Every verdict is sealed into a record nobody can quietly edit. Open source, self-hosted, one folder.</p>
           <div className="hero-cta rise">
