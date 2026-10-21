@@ -39,7 +39,7 @@ export default function Cases() {
   return (
     <div className="bento">
       {CASES.map(c => (
-        <article key={c.tag} className={`case rise ${c.span}`}>
+        <article key={c.tag} className={`case tilt rise ${c.span}`}>
           <div className="case-top"><c.icon size={18} strokeWidth={1.6} /><span className="eyebrow">{c.tag}</span></div>
           <h3>{c.title}</h3>
           <p>{c.body}</p>

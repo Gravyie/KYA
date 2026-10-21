@@ -6,7 +6,8 @@ import {Logo, Code, CopyButton} from '../components/ui.jsx';
 import {SNIPPETS, DECISIONS} from './snippets.js';
 import {Words, useReveal, Counter} from './bits.jsx';
 import SectionHead from './SectionHead.jsx';
-import Figure, {BEATS} from './Figure.jsx';
+import Stage from './Stage.jsx';
+import Marquee from './Marquee.jsx';
 import ProductWindow from './ProductWindow.jsx';
 import Cases from './Cases.jsx';
 import Passport from './Passport.jsx';
@@ -16,24 +17,27 @@ import '../styles/landing.css';
 const Playground = lazy(() => import('./Playground.jsx'));
 const webglOk = () => { try { const c = document.createElement('canvas'); return !!(c.getContext('webgl2') || c.getContext('webgl')); } catch { return false; } };
 
-/** Mounts the 3D gate into the figure and drives it from the story's scroll position. */
-function useGate(canvasRef, frameApi, onDecision, onBeat) {
+/** Mounts the 3D gate full-bleed and drives it from the story's scroll position. */
+function useGate(canvasRef, frameApi, zoneApi, handlers) {
   const [mode, setMode] = useState('loading');
   const gateRef = useRef(null);
-  const cb = useRef({onDecision, onBeat}); cb.current = {onDecision, onBeat};
+  const cb = useRef(handlers); cb.current = handlers;
 
   useEffect(() => {
     if (!webglOk()) { setMode('static'); return undefined; }
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
     let gate, lenis, cancelled = false, raf = 0, rafLenis = 0;
+    const zoneFor = () => (innerWidth < 960 ? {cx: 0.5, cy: 0.27, w: 0.9, h: 0.34} : innerWidth < 1200 ? {cx: 0.72, cy: 0.54, w: 0.46, h: 0.7} : {cx: 0.7, cy: 0.54, w: 0.44, h: 0.74});
 
     import('./gate.js').then(({createGate}) => {
       if (cancelled || !canvasRef.current) return;
       try {
-        gate = createGate(canvasRef.current, {reduced, small: innerWidth < 760, onDecision: k => cb.current.onDecision?.(k), onFrame: (a, info) => frameApi.current?.(a, info)});
+        gate = createGate(canvasRef.current, {reduced, small: innerWidth < 760, onDecision: k => cb.current.onDecision?.(k), onFrame: (a, info) => { frameApi.current?.(a, info); cb.current.onFrame?.(info); }});
       } catch { setMode('static'); return; }
       gateRef.current = gate;
       if (location.search.includes('debug')) window.__gate = gate;
+      const applyZone = () => { zoneApi.current = zoneFor(); gate.setZone(zoneApi.current); };
+      applyZone();
       setMode('ready');
 
       const update = () => {
@@ -48,9 +52,10 @@ function useGate(canvasRef, frameApi, onDecision, onBeat) {
           if (mid >= centers[i] && mid < centers[i + 1]) { f = i + (mid - centers[i]) / (centers[i + 1] - centers[i]); break; }
         }
         gate.setStage(f);
-        cb.current.onBeat?.(Math.round(f));
+        cb.current.onStage?.(f);
       };
       const queue = () => { if (!raf) raf = requestAnimationFrame(update); };
+      const onResize = () => { applyZone(); queue(); };
       if (!reduced) {
         lenis = new Lenis({lerp: 0.1, wheelMultiplier: 0.95});
         const loop = t => { lenis.raf(t); rafLenis = requestAnimationFrame(loop); };
@@ -58,13 +63,13 @@ function useGate(canvasRef, frameApi, onDecision, onBeat) {
         lenis.on('scroll', queue);
         window.__lenis = lenis;
       }
-      addEventListener('scroll', queue, {passive: true}); addEventListener('resize', queue);
+      addEventListener('scroll', queue, {passive: true}); addEventListener('resize', onResize);
       update();
-      gate.cleanup = () => { removeEventListener('scroll', queue); removeEventListener('resize', queue); };
+      gate.cleanup = () => { removeEventListener('scroll', queue); removeEventListener('resize', onResize); };
     }).catch(() => setMode('static'));
 
     return () => { cancelled = true; cancelAnimationFrame(raf); cancelAnimationFrame(rafLenis); lenis?.destroy(); window.__lenis = null; gate?.cleanup?.(); gate?.destroy(); };
-  }, [canvasRef, frameApi]);
+  }, [canvasRef, frameApi, zoneApi]);
   return {mode, gateRef};
 }
 
@@ -109,6 +114,39 @@ function Nav() {
   );
 }
 
+/** Buttons lean toward the cursor. Small, springy, and off for reduced motion. */
+function useMagnetic(rootRef) {
+  useEffect(() => {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches || matchMedia('(hover: none)').matches) return undefined;
+    const root = rootRef.current;
+    const move = e => {
+      const el = e.target.closest?.('.magnetic'); if (!el) return;
+      const r = el.getBoundingClientRect();
+      el.style.transform = `translate(${((e.clientX - r.left) / r.width - 0.5) * 10}px, ${((e.clientY - r.top) / r.height - 0.5) * 8}px)`;
+    };
+    const leave = e => { const el = e.target.closest?.('.magnetic'); if (el) el.style.transform = ''; };
+    root.addEventListener('pointermove', move); root.addEventListener('pointerout', leave);
+    return () => { root.removeEventListener('pointermove', move); root.removeEventListener('pointerout', leave); };
+  }, [rootRef]);
+}
+
+/** Cards tilt a few degrees toward the cursor and catch a light. */
+function useTilt(rootRef) {
+  useEffect(() => {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches || matchMedia('(hover: none)').matches) return undefined;
+    const root = rootRef.current;
+    const move = e => {
+      const el = e.target.closest?.('.tilt'); if (!el) return;
+      const r = el.getBoundingClientRect(), x = (e.clientX - r.left) / r.width - 0.5, y = (e.clientY - r.top) / r.height - 0.5;
+      el.style.setProperty('--rx', `${(-y * 5).toFixed(2)}deg`); el.style.setProperty('--ry', `${(x * 6).toFixed(2)}deg`);
+      el.style.setProperty('--gx', `${((x + 0.5) * 100).toFixed(0)}%`); el.style.setProperty('--gy', `${((y + 0.5) * 100).toFixed(0)}%`);
+    };
+    const leave = e => { const el = e.target.closest?.('.tilt'); if (el) { el.style.setProperty('--rx', '0deg'); el.style.setProperty('--ry', '0deg'); } };
+    root.addEventListener('pointermove', move); root.addEventListener('pointerout', leave);
+    return () => { root.removeEventListener('pointermove', move); root.removeEventListener('pointerout', leave); };
+  }, [rootRef]);
+}
+
 const BEAT_COPY = [
   null,
   {n: '01', title: 'Identify', lead: 'Every agent carries a passport.', body: 'Its own key, a signed identity card, and the name of the person accountable for it. Publish it to the ERC-8004 registry and any service can check it. No more ten agents behind one shared API key.'},
@@ -118,72 +156,73 @@ const BEAT_COPY = [
 ];
 
 export default function Landing() {
-  const canvasRef = useRef(null), frameApi = useRef(null), rootRef = useRef(null);
-  const [tick, setTick] = useState(null);
+  const canvasRef = useRef(null), frameApi = useRef(null), zoneApi = useRef(null), rootRef = useRef(null);
   const [tab, setTab] = useState('mcp');
   const [beat, setBeat] = useState(0);
+  const [inStory, setInStory] = useState(true);
   const [revoked, setRevoked] = useState(false);
   const [booted, setBooted] = useState(() => { try { return sessionStorage.getItem('sg.boot') === '1'; } catch { return false; } });
-  const last = useRef(0);
+  const nightRef = useRef(false);
 
-  const onDecision = useCallback(kind => {
-    const now = performance.now();
-    if (now - last.current < 1100) return;
-    last.current = now;
-    const pool = DECISIONS[kind];
-    setTick({kind, text: pool[Math.floor(Math.random() * pool.length)]});
-  }, []);
-  const onBeat = useCallback(b => setBeat(prev => (prev === b ? prev : b)), []);
-  const {mode, gateRef} = useGate(canvasRef, frameApi, onDecision, onBeat);
+  const handlers = useRef({
+    onStage: f => { setBeat(prev => { const b = Math.min(4, Math.round(f)); return prev === b ? prev : b; }); setInStory(f < 4.75); },
+    onFrame: info => {
+      const root = rootRef.current; if (!root) return;
+      root.style.setProperty('--dark', info.dark.toFixed(3));
+      const night = info.dark > 0.5;
+      if (night !== nightRef.current) { nightRef.current = night; root.dataset.dark = night ? '1' : '0'; }
+    },
+  }).current;
+  const {mode, gateRef} = useGate(canvasRef, frameApi, zoneApi, handlers);
   useReveal(booted);
   useEffect(() => { document.title = 'Sigilant — Know your agent'; }, []);
   const done = useCallback(() => { setBooted(true); try { sessionStorage.setItem('sg.boot', '1'); } catch { /* private mode */ } }, []);
   useEffect(() => { if (beat !== 4) { setRevoked(false); gateRef.current?.setIris(null); } }, [beat, gateRef]);
+  useMagnetic(rootRef);
+  useTilt(rootRef);
 
   const jump = i => { const el = document.querySelector(`[data-stage="${i}"]`); if (el) window.__lenis ? window.__lenis.scrollTo(el, {offset: -(innerHeight - el.offsetHeight) / 2}) : el.scrollIntoView({behavior: 'smooth', block: 'center'}); };
   const toggleIris = () => { const next = !revoked; setRevoked(next); gateRef.current?.setIris(next ? 'closed' : 'open'); };
   const snip = SNIPPETS[tab];
-  const installCmd = 'SIGILANT_AGENT_KEY=sga_… node packages/mcp/bin/sigilant-mcp.js -- <your mcp server>';
 
   return (
-    <div className={`landing gate-${mode} ${booted ? 'booted' : ''}`} ref={rootRef}>
+    <div className={`landing gate-${mode} ${booted ? 'booted' : ''}`} ref={rootRef} data-dark="0">
       {!booted && <Preloader ready={mode !== 'loading'} onDone={done} />}
+      {mode === 'static' ? <div className="world on"><div className="aurora" aria-hidden="true"><i /><i /><i /></div><div className="stage-fallback" aria-hidden="true"><i /></div></div>
+        : <Stage canvasRef={canvasRef} beat={beat} visible={inStory} frameApi={frameApi} zoneApi={zoneApi} onJump={jump} />}
       <div className="grain" aria-hidden="true" />
       <Nav />
 
       <section id="story" className="story">
-        <div className="wrap story-grid">
+        <div className="wrap">
           <div className="story-copy">
             <div className="beat hero-beat" data-stage="0">
               <p className="eyebrow rise"><span className="dot" /> Know your agent</p>
-              <h1><Words>Every agent gets an identity.</Words><br /><span className="soft"><Words>Every action,</Words> <span className="nowrap"><Words>a</Words><em className="serif">verdict.</em></span></span></h1>
+              <h1><Words>Every agent gets an identity.</Words> <span className="soft"><Words>Every action,</Words> <span className="nowrap"><Words>a</Words> <em>verdict.</em></span></span></h1>
               <p className="lede rise">Sigilant is the open-source permission layer between AI agents and everything they can touch. A verifiable identity, scoped permissions, human approvals, and an audit trail anyone can check.</p>
               <div className="hero-cta rise">
-                <Link to="/app" className="btn pill-btn">Open the console <ArrowRight size={16} /></Link>
-                <Link to="/docs" className="btn ghost pill-btn">Read the quickstart</Link>
+                <Link to="/app" className="btn pill-btn magnetic">Open the console <ArrowRight size={16} /></Link>
+                <Link to="/docs" className="btn ghost pill-btn magnetic">Read the quickstart</Link>
               </div>
-              <ul className="standards rise" aria-label="Built on">
-                <li>ERC-8004 identity</li><li>MCP firewall</li><li>Ed25519 assertions</li><li>Self-hosted</li>
-              </ul>
+              <ul className="standards rise" aria-label="Built on"><li>ERC-8004 identity</li><li>MCP firewall</li><li>Ed25519 assertions</li><li>Self-hosted</li></ul>
             </div>
             {BEAT_COPY.slice(1).map((c, i) => (
-              <div key={c.n} className="beat" data-stage={i + 1}>
+              <div key={c.n} className="beat" data-stage={i + 1}><div className="sheet">
                 <p className="eyebrow rise"><b>{c.n}</b><i />{c.title}</p>
                 <h2 className="big"><Words>{c.lead}</Words></h2>
                 <p className="sub rise">{c.body}</p>
                 {i === 3 && (
                   <div className="rise rv-actions">
-                    <button className={`btn pill-btn ${revoked ? 'ghost' : 'danger'}`} onClick={toggleIris}>{revoked ? 'Re-issue research-bot' : 'Revoke research-bot'}</button>
+                    <button className={`btn pill-btn magnetic ${revoked ? 'ghost' : 'danger'}`} onClick={toggleIris}>{revoked ? 'Re-issue research-bot' : 'Revoke research-bot'}</button>
                     <span className={`rv-state ${revoked ? 'off' : 'on'}`}><i />{revoked ? 'REVOKED · every call denied' : 'ACTIVE · calls allowed'}</span>
                   </div>
                 )}
-              </div>
+              </div></div>
             ))}
           </div>
-          <div className="story-fig">
-            {mode === 'static' ? <div className="fig static-fig"><div className="stage-fallback"><i /></div></div> : <Figure canvasRef={canvasRef} beat={beat} tick={tick} frameApi={frameApi} onJump={jump} />}
-          </div>
         </div>
+        <div className="outro" data-stage="5" aria-hidden="true" />
+        <Marquee />
       </section>
 
       <section id="product" className="sec">

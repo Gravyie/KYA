@@ -90,7 +90,7 @@ function Lookup() {
 export default function Passport() {
   const [tab, setTab] = useState('lookup');
   return (
-    <div className="inspector">
+    <div className="inspector tilt">
       <div className="insp-tabs" role="tablist">{TABS.map(([k, l]) => <button key={k} role="tab" aria-selected={tab === k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{l}</button>)}</div>
       <div className="insp-body">
         {tab === 'lookup' && <Lookup />}

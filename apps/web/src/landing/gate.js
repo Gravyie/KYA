@@ -18,17 +18,19 @@ const COLORS = {
 const LEDGER = {neutral: new THREE.Color(0x56635d), allow: new THREE.Color(0x2fc58a), deny: new THREE.Color(0xe9553a)};
 
 const HIDDEN = {p: [-3.6, 0.2, -3.2], tilt: 0.4, rx: 0, s: 0.7, o: 0};
-// Each stage frames a bounding radius `r` around `look`, so the subject always fits the figure frame.
-// az/el orbit it, `closed` is the iris, `dark` night-tints the plate, `card` is the passport pose.
+// Each stage frames a bounding radius `r` around `look` *inside the subject zone* (the right side of the
+// screen), so the subject always fits its zone and never reaches the copy column.
+// az/el orbit it, `closed` is the iris, `dark` is page night-mode, `opacity` fades the whole scene out.
 const STAGES = [
-  /* 0 hero     */ {az: PI + 0.75, el: 0.16, r: 3.35, lx: -0.1, ly: -0.05, lz: 0.5, closed: 0, dark: 0, mix: [0.6, 0.2, 0.2], card: {p: [-1.4, -0.7, -1.2], tilt: 0.22, rx: -0.05, s: 0.72, o: 1}},
-  /* 1 identify */ {az: PI + 0.32, el: 0.06, r: 1.95, lx: 0.05, ly: 0.28, lz: -1.3, closed: 0, dark: 0, mix: [0.5, 0.2, 0.3], card: {p: [0.1, 0.35, -1.4], tilt: -0.28, rx: 0.08, s: 1.05, o: 1}},
-  /* 2 decide   */ {az: PI + 0.1, el: 0.04, r: 2.25, lx: 0, ly: 0, lz: 0, closed: 0, dark: 0, mix: [0.45, 0.25, 0.3], card: {...HIDDEN}},
-  /* 3 prove    */ {az: PI + 1.05, el: 0.2, r: 4.5, lx: 0, ly: -0.1, lz: 2.4, closed: 0, dark: 0, mix: [0.75, 0.05, 0.2], card: {...HIDDEN}},
-  /* 4 contain  */ {az: PI + 0.12, el: 0.04, r: 2.25, lx: 0, ly: 0, lz: 0, closed: 1, dark: 1, mix: [0, 0, 1], card: {...HIDDEN}},
+  /* 0 hero     */ {az: PI + 0.78, el: 0.16, r: 3.05, lx: -0.1, ly: -0.05, lz: 0.5, closed: 0, dark: 0, opacity: 1, ledger: 1, mix: [0.6, 0.2, 0.2], card: {p: [-1.4, -0.7, -1.2], tilt: 0.22, rx: -0.05, s: 0.72, o: 1}},
+  /* 1 identify */ {az: PI + 0.32, el: 0.06, r: 1.85, lx: 0.05, ly: 0.28, lz: -1.3, closed: 0, dark: 0, opacity: 1, ledger: 0, mix: [0.5, 0.2, 0.3], card: {p: [0.1, 0.35, -1.4], tilt: -0.28, rx: 0.08, s: 1.05, o: 1}},
+  /* 2 decide   */ {az: PI + 0.1, el: 0.04, r: 2.15, lx: 0, ly: 0, lz: 0, closed: 0, dark: 0, opacity: 1, ledger: 0, mix: [0.45, 0.25, 0.3], card: {...HIDDEN}},
+  /* 3 prove    */ {az: PI + 1.05, el: 0.2, r: 4.3, lx: 0, ly: -0.1, lz: 2.6, closed: 0, dark: 0, opacity: 1, ledger: 1, mix: [0.75, 0.05, 0.2], card: {...HIDDEN}},
+  /* 4 contain  */ {az: PI + 0.12, el: 0.04, r: 2.15, lx: 0, ly: 0, lz: 0, closed: 1, dark: 1, opacity: 1, ledger: 0.7, mix: [0, 0, 1], card: {...HIDDEN}},
+  /* 5 outro    */ {az: PI + 0.12, el: 0.04, r: 2.6, lx: 0, ly: 0, lz: 0, closed: 1, dark: 0, opacity: 0, ledger: 0, mix: [0, 0, 1], card: {...HIDDEN}},
 ];
-const NUM = ['az', 'el', 'r', 'lx', 'ly', 'lz', 'closed', 'dark'];
-const LIGHT_PLATE = new THREE.Color(0xdce6dc), NIGHT_PLATE = new THREE.Color(0x0b1411);
+const NUM = ['az', 'el', 'r', 'lx', 'ly', 'lz', 'closed', 'dark', 'opacity', 'ledger'];
+const LIGHT_BG = new THREE.Color(0xe8eee7), NIGHT_BG = new THREE.Color(0x060d0a);
 
 const smooth = t => t * t * (3 - 2 * t);
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -133,7 +135,7 @@ export function createGate(canvas, {onDecision, onFrame, reduced = false, small 
   const envTexture = makeEnvironment(renderer);
   scene.environment = envTexture;
   const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 90);
-  scene.fog = new THREE.Fog(LIGHT_PLATE.clone(), 8, 20);
+  scene.fog = new THREE.Fog(LIGHT_BG.clone(), 8, 20);
   const world = new THREE.Group();
   scene.add(world);
 
@@ -200,6 +202,16 @@ export function createGate(canvas, {onDecision, onFrame, reduced = false, small 
     dummy.scale.set(long ? 1.6 : 1, long ? 1.6 : 1, long ? 1.8 : 0.8); dummy.updateMatrix(); ticks.setMatrixAt(i, dummy.matrix);
   }
   world.add(ticks);
+
+  // Dust: a faint field of motes through the whole volume. Pure ambience, never competes with the subject.
+  const DUST = small ? 220 : 520;
+  const dustGeo = new THREE.BufferGeometry();
+  const dp = new Float32Array(DUST * 3);
+  for (let i = 0; i < DUST; i++) { dp[i * 3] = rand(-9, 9); dp[i * 3 + 1] = rand(-5, 5); dp[i * 3 + 2] = rand(-7, 12); }
+  dustGeo.setAttribute('position', new THREE.BufferAttribute(dp, 3));
+  const dustMat = new THREE.PointsMaterial({color: 0x0f2a20, size: 0.028, transparent: true, opacity: 0.35, depthWrite: false, sizeAttenuation: true});
+  const dust = new THREE.Points(dustGeo, dustMat);
+  world.add(dust);
 
   // Passport
   const cardGroup = new THREE.Group();
@@ -270,16 +282,19 @@ export function createGate(canvas, {onDecision, onFrame, reduced = false, small 
     width = w; height = h; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
   }
 
+  // The subject zone: where on screen the scene is composed (fractions of the viewport).
+  let zone = {cx: 0.7, cy: 0.52, w: 0.44, h: 0.8};
   const sph = new THREE.Spherical(), cp = new THREE.Vector3(), tmp = new THREE.Vector3(), look = new THREE.Vector3();
   const HALF = THREE.MathUtils.degToRad(camera.fov / 2);
   let dist = 8;
   function placeCamera() {
-    const aspect = width / height;
-    const half = Math.min(HALF, Math.atan(Math.tan(HALF) * aspect)); // fit the limiting axis
-    dist = cur.r / Math.sin(half);
+    const t = Math.tan(HALF), aspect = width / height;
+    // distance at which radius r fills the zone's height and width, whichever binds first
+    dist = Math.max(cur.r / (zone.h * t), cur.r / (zone.w * aspect * t));
     look.set(cur.lx, cur.ly, cur.lz);
     sph.set(dist, PI / 2 - cur.el - pointer.sy * 0.04, cur.az + pointer.sx * 0.08);
     cp.setFromSpherical(sph).add(look); camera.position.copy(cp); camera.lookAt(look);
+    camera.setViewOffset(width, height, -(zone.cx - 0.5) * width, -(zone.cy - 0.5) * height, width, height);
   }
 
   const anchors = {};
@@ -305,6 +320,8 @@ export function createGate(canvas, {onDecision, onFrame, reduced = false, small 
     pointer.sy += (pointer.y - pointer.sy) * (1 - Math.pow(0.004, dt));
     const closed = cur.closed;
 
+    dust.rotation.y = time * 0.012; dust.position.y = Math.sin(time * 0.2) * 0.12;
+    dustMat.color.set(cur.dark > 0.5 ? 0xbfe9d3 : 0x0f2a20);
     ring.rotation.z = time * 0.04; ticks.rotation.z = -time * 0.03; blueprint.rotation.z = time * 0.012;
     pulse = Math.max(0, pulse - dt * 2.4); flash = Math.max(0, flash - dt * 3);
 
@@ -361,7 +378,7 @@ export function createGate(canvas, {onDecision, onFrame, reduced = false, small 
     for (let i = 0; i < CHAIN; i++) {
       blocks.setColorAt(i, LEDGER[ledger[i]]);
       dummy.position.copy(slots[i]); dummy.rotation.set(0, time * 0.15 + i * 0.4, 0);
-      dummy.scale.setScalar((0.55 + (1 - i / CHAIN) * 0.45) * (i === 0 ? 1 + pulse * 0.35 : 1)); dummy.updateMatrix(); blocks.setMatrixAt(i, dummy.matrix);
+      dummy.scale.setScalar(Math.max(0.0001, (0.55 + (1 - i / CHAIN) * 0.45) * (i === 0 ? 1 + pulse * 0.35 : 1) * cur.ledger)); dummy.updateMatrix(); blocks.setMatrixAt(i, dummy.matrix);
     }
     blocks.instanceMatrix.needsUpdate = true; blocks.instanceColor.needsUpdate = true;
 
@@ -371,7 +388,8 @@ export function createGate(canvas, {onDecision, onFrame, reduced = false, small 
     cardGroup.scale.setScalar(c.s); cardGroup.visible = c.o > 0.02;
     cardMat.opacity = c.o; backMat.opacity = c.o;
 
-    scene.fog.color.copy(LIGHT_PLATE).lerp(NIGHT_PLATE, Math.min(1, cur.dark));
+    scene.fog.color.copy(LIGHT_BG).lerp(NIGHT_BG, Math.min(1, cur.dark));
+    canvas.style.opacity = String(Math.max(0, Math.min(1, cur.opacity)));
     scene.fog.near = dist + 0.2; scene.fog.far = dist + 6.5;
   }
 
@@ -412,6 +430,8 @@ export function createGate(canvas, {onDecision, onFrame, reduced = false, small 
       stage = f; aim(f);
       if (reduced) { for (const key of NUM) cur[key] = target[key]; cur.card = clone(target.card); step(0.016); draw(); }
     },
+    /** Where on screen the subject is composed, as fractions of the viewport. */
+    setZone(z) { zone = {...zone, ...z}; if (!running) draw(); },
     /** Debug/screenshot helper: advance the simulation n steps and draw. */
     settle(n = 60) { for (let i = 0; i < n; i++) step(0.05); draw(); },
     /** Let the visitor close or reopen the iris by hand; null returns control to scroll. */
