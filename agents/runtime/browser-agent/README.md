@@ -39,7 +39,7 @@ The agent will:
 1. Launch Chromium in **headless** mode (`headless: true`) using the saved session state.
 2. Navigate to `https://x.com/home`.
 3. Capture the page screenshot and interactive accessibility tree.
-4. Consult 0G Compute (`gpt-oss-120b`, TEE-verified) to choose the next action (`click`, `type`, `press`).
+4. Consult 0G Compute (`qwen3.8-flash`, TEE-verified) to choose the next action (`click`, `type`, `press`).
 5. Execute the action and loop until `task_complete` or 15 steps are reached.
 6. Execute independent outcome verification via 0G Compute on the final page state.
 7. Print the final structured JSON result with TEE attestation evidence.
@@ -60,7 +60,7 @@ Unlike traditional AI agents that self-report success:
 The agent strictly reuses your root `.env` settings:
 ```env
 # 0G Compute Router
-OG_COMPUTE_MODEL=gpt-oss-120b
+OG_COMPUTE_MODEL=qwen3.8-flash
 OG_VERIFY_TEE=true
 OG_COMPUTE_BASE_URL=https://router-api.0g.ai/v1
 OG_COMPUTE_API_KEY=your_0g_compute_api_key_here

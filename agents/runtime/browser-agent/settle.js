@@ -56,7 +56,7 @@ export async function settleBrowserRun({
     judgment: summary.judgment || '',
     visualEvidence: summary.visualEvidence || '',
     attestation: summary.attestation || null,
-    model: summary.actionsLog?.[0]?.model || 'gpt-oss-120b',
+    model: summary.actionsLog?.[0]?.model || process.env.OG_COMPUTE_MODEL || 'qwen3.8-flash',
     latencyMs: totalLatencyMs,
     engine: summary.attestation?.provider || '0g-compute-verified',
     finalScreenshot: summary.finalScreenshotPath || null,

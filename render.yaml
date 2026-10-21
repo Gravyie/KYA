@@ -29,6 +29,6 @@ services:
       - key: OG_COMPUTE_API_KEY
         sync: false
       - key: OG_COMPUTE_MODEL
-        value: gpt-oss-120b
+        value: qwen3.8-flash
       - key: OG_VERIFY_TEE
         value: "true"

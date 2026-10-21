@@ -194,18 +194,18 @@ export default function ScraperAgentView({ onPick }) {
           <Card className="border-white/10 bg-black/40 backdrop-blur-md overflow-hidden">
             <CardHeader className="py-3.5 px-6 border-b border-white/5 flex flex-row items-center justify-between bg-white/[0.03]">
               <div className="flex items-center gap-2.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="w-2.5 h-2.5 rounded-full bg-primary animate-pulse-glow" />
                 <button
                   onClick={() => onPick && onPick('scout.kya.eth')}
                   className="font-mono text-sm font-semibold text-white hover:text-primary transition-colors cursor-pointer"
                 >
                   scout.kya.eth
                 </button>
-                <Badge variant="outline" className="text-[10px] font-mono text-emerald-400 border-emerald-500/30 bg-emerald-500/10">
+                <Badge variant="outline" className="text-[10px] font-mono text-primary border-primary/30 bg-primary/10">
                   Passport #3
                 </Badge>
-                <Badge variant="outline" className="text-[10px] font-mono text-cyan-400 border-cyan-500/30 bg-cyan-500/10">
-                  openai/gpt-oss-120b
+                <Badge variant="outline" className="text-[10px] font-mono text-muted-foreground border-white/10 bg-white/5">
+                  0G Compute Verified
                 </Badge>
               </div>
               <div className="flex items-center gap-3">
@@ -295,13 +295,13 @@ export default function ScraperAgentView({ onPick }) {
                   </label>
 
                   <span className="text-[11px] font-mono text-muted-foreground">
-                    Mandate: <span className="text-amber-400">research</span> · Spend Limit: <span className="text-white">1 OG / day</span>
+                    Mandate: <span className="text-white font-medium">research</span> · Spend Limit: <span className="text-white">1 OG / day</span>
                   </span>
                 </div>
               </form>
 
               {error && (
-                <div className="p-4 bg-red-950/40 border border-red-800 text-red-300 text-xs font-mono rounded-lg flex items-center gap-2">
+                <div className="p-4 bg-destructive/10 border border-destructive/30 text-destructive text-xs font-mono rounded-lg flex items-center gap-2">
                   <span className="font-bold">Execution Error:</span>
                   <span>{error}</span>
                 </div>
@@ -313,38 +313,38 @@ export default function ScraperAgentView({ onPick }) {
           {agentData && (
             <div className="space-y-6">
               {/* 0G Storage & On-Chain Settlement Card */}
-              <div className="rounded-xl border border-emerald-500/30 bg-emerald-950/15 p-5 space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-emerald-500/20 pb-2.5">
+              <div className="rounded-xl border border-white/10 bg-black/40 backdrop-blur-md p-5 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/5 pb-2.5">
                   <div className="flex items-center gap-2">
-                    <IconChip size={16} className="text-emerald-400" />
-                    <span className="text-xs font-bold uppercase tracking-wider text-emerald-300 font-mono">
+                    <IconChip size={16} className="text-primary" />
+                    <span className="text-xs font-bold uppercase tracking-wider text-white font-mono">
                       0G Storage & On-Chain Settlement Receipt
                     </span>
                   </div>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 uppercase font-bold">
+                  <Badge variant="outline" className="text-[10px] font-mono text-primary border-primary/30 bg-primary/10 uppercase font-bold">
                     Receipt Verified
-                  </span>
+                  </Badge>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 font-mono text-xs">
-                  <div className="bg-black/40 p-3 rounded border border-white/5">
+                  <div className="bg-white/[0.02] p-3 rounded border border-white/5">
                     <span className="text-muted-foreground block text-[10px] uppercase">0G Storage Digest</span>
                     <button
                       onClick={() => copyDigest(agentData.storage?.digest)}
-                      className="text-emerald-400 font-bold hover:text-white transition flex items-center gap-1 mt-1 truncate max-w-full"
+                      className="text-primary font-bold hover:underline transition flex items-center gap-1 mt-1 truncate max-w-full"
                       title="Click to copy full digest"
                     >
                       {short(agentData.storage?.digest, 8, 6)}
-                      {copiedDigest && <IconCheck size={11} className="text-emerald-400" />}
+                      {copiedDigest && <IconCheck size={11} className="text-primary" />}
                     </button>
                     <span className="text-[10px] text-muted-foreground/60 block mt-0.5">
                       Backend: {agentData.storage?.backend || 'local:content-addressed'}
                     </span>
                   </div>
 
-                  <div className="bg-black/40 p-3 rounded border border-white/5">
+                  <div className="bg-white/[0.02] p-3 rounded border border-white/5">
                     <span className="text-muted-foreground block text-[10px] uppercase">Settlement Hash</span>
-                    <span className="text-cyan-300 font-bold block mt-1 truncate">
+                    <span className="text-white font-bold block mt-1 truncate">
                       {agentData.settlement?.hash ? short(agentData.settlement.hash, 8, 6) : 'Dry Run (unsettled)'}
                     </span>
                     <span className="text-[10px] text-muted-foreground/60 block mt-0.5">
@@ -352,7 +352,7 @@ export default function ScraperAgentView({ onPick }) {
                     </span>
                   </div>
 
-                  <div className="bg-black/40 p-3 rounded border border-white/5">
+                  <div className="bg-white/[0.02] p-3 rounded border border-white/5">
                     <span className="text-muted-foreground block text-[10px] uppercase">Reputation Delta</span>
                     <div className="flex items-center gap-2 mt-1">
                       {agentData.reputationDelta ? (
@@ -378,9 +378,9 @@ export default function ScraperAgentView({ onPick }) {
                     </span>
                   </div>
 
-                  <div className="bg-black/40 p-3 rounded border border-white/5">
+                  <div className="bg-white/[0.02] p-3 rounded border border-white/5">
                     <span className="text-muted-foreground block text-[10px] uppercase">Log Hash Integrity</span>
-                    <span className="text-emerald-400 font-bold block mt-1 flex items-center gap-1">
+                    <span className="text-primary font-bold block mt-1 flex items-center gap-1">
                       <IconCheck size={12} />
                       {agentData.integrity?.verified ? 'Merkle Verified' : 'Chain Anchored'}
                     </span>
@@ -392,10 +392,10 @@ export default function ScraperAgentView({ onPick }) {
               </div>
 
               {/* Synthesized Output Brief */}
-              <div className="rounded-xl border border-white/10 bg-neutral-900/70 p-6 space-y-4">
+              <div className="rounded-xl border border-white/10 bg-black/40 backdrop-blur-md p-6 space-y-4">
                 <div className="border-b border-white/10 pb-3 flex items-center justify-between">
                   <div>
-                    <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-700 uppercase font-mono">
+                    <span className="text-[10px] font-mono font-bold text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/30 uppercase">
                       Research Synthesis Complete
                     </span>
                     <h3 className="text-xl font-bold text-white mt-2">{agentData.title}</h3>
@@ -505,11 +505,11 @@ export default function ScraperAgentView({ onPick }) {
 
                   <div className="flex flex-wrap items-center gap-3 pt-2 font-mono text-[11px]">
                     <span className="text-muted-foreground">
-                      Storage Digest: <span className="text-emerald-400">{short(run.storage?.digest, 6, 4)}</span>
+                      Storage Digest: <span className="text-white font-medium">{short(run.storage?.digest, 6, 4)}</span>
                     </span>
                     {run.settlement?.hash && (
                       <span className="text-muted-foreground">
-                        Tx: <span className="text-cyan-400">{short(run.settlement.hash, 6, 4)}</span>
+                        Tx: <span className="text-muted-foreground/90 font-medium">{short(run.settlement.hash, 6, 4)}</span>
                       </span>
                     )}
                     {run.reputationDelta && (
