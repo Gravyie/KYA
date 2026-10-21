@@ -1,4 +1,5 @@
 export {verifyAssertion, verifyAuditExport, checkStatus} from './verify.js';
+export * as erc8004 from './erc8004.js';
 
 export class SigilantError extends Error {
   constructor(message, {status, code, executed = false, cause} = {}) {

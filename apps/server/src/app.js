@@ -5,6 +5,8 @@ import {resolve, extname} from 'node:path';
 import {cleanScopes, cleanLimits, parseRequest, decide, fail} from './policy.js';
 import {sha256, newToken, now, safeEqual, GENESIS} from './store.js';
 import {verifyAssertion} from '../../../packages/sdk/src/verify.js';
+import {registrationFile, toDataUri, agentRegistryId, encodeRegister} from '../../../packages/sdk/src/erc8004.js';
+import {chainList, getChain, readIdentity} from './chain.js';
 
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
@@ -21,6 +23,13 @@ export function createApp(store, {webDist, root = process.cwd()} = {}) {
   const {state, events} = store;
   const bearer = req => /^Bearer (.+)$/i.exec(req.headers.authorization || '')?.[1] || '';
   const issuer = () => `sigilant:${store.fingerprint().slice(0, 16)}`;
+  const origin = req => process.env.SIGILANT_PUBLIC_URL?.replace(/\/$/, '') || `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers.host}`;
+  const lookups = new Map(); // tiny per-IP limiter for the public chain reader
+  const allowLookup = req => {
+    const ip = req.socket.remoteAddress, now = Date.now(), hits = (lookups.get(ip) ?? []).filter(t => now - t < 60e3);
+    if (hits.length >= 30) return false;
+    hits.push(now); lookups.set(ip, hits); return true;
+  };
 
   function ownerAuth(req) {
     if (!state.owner) fail(403, 'Set up an owner first');
@@ -38,7 +47,7 @@ export function createApp(store, {webDist, root = process.cwd()} = {}) {
   const view = (a, stats) => ({
     id: a.id, name: a.name, description: a.description, createdAt: a.createdAt, revokedAt: a.revokedAt,
     expiresAt: a.expiresAt, scopes: a.scopes, limits: a.limits, lastUsedAt: a.lastUsedAt, keyHint: a.keyHint,
-    status: a.revokedAt ? 'revoked' : expired(a) ? 'expired' : 'active',
+    status: a.revokedAt ? 'revoked' : expired(a) ? 'expired' : 'active', onchain: a.onchain ?? null,
     stats: stats ?? {allowed: 0, denied: 0, asked: 0, last24h: 0},
   });
 
@@ -194,6 +203,7 @@ export function createApp(store, {webDist, root = process.cwd()} = {}) {
     const card = {
       issuer: issuer(), operator: state.owner?.name ?? null, id: a.id, name: a.name, description: a.description,
       createdAt: a.createdAt, revokedAt: a.revokedAt, expiresAt: a.expiresAt, scopes: a.scopes, limits: a.limits,
+      erc8004: a.onchain ? {agentRegistry: agentRegistryId(a.onchain.chainId, a.onchain.registry), agentId: a.onchain.agentId} : null,
     };
     return {card, signature: store.signJson(card), algorithm: 'Ed25519', publicKey: store.publicKey()};
   }, {public: true});
@@ -201,6 +211,53 @@ export function createApp(store, {webDist, root = process.cwd()} = {}) {
   route('GET', /^\/api\/agents\/([^/]+)\/status$/, (_req, _b, [id]) => {
     const a = findAgent(id);
     return {id, name: a.name, active: !a.revokedAt && !expired(a), revokedAt: a.revokedAt, expiresAt: a.expiresAt};
+  }, {public: true});
+
+  // ── ERC-8004 (on-chain identity) ────────────────────────────────────────
+  const registrationFor = (req, a) => registrationFile({
+    agent: view(a), operator: state.owner?.name ?? 'unknown', origin: origin(req), issuer: issuer(), fingerprint: store.fingerprint(), onchain: a.onchain,
+  });
+
+  route('GET', /^\/api\/chains$/, () => ({chains: chainList()}), {public: true});
+
+  route('GET', /^\/api\/agents\/([^/]+)\/registration\.json$/, (req, _b, [id]) => registrationFor(req, findAgent(id)), {public: true});
+
+  route('GET', /^\/api\/agents\/([^/]+)\/erc8004$/, (req, _b, [id]) => {
+    ownerAuth(req);
+    const a = findAgent(id), file = registrationFor(req, a), agentURI = toDataUri(file);
+    return {file, agentURI, chains: chainList(), onchain: a.onchain ?? null, publicUrl: origin(req)};
+  });
+
+  route('POST', /^\/api\/agents\/([^/]+)\/onchain$/, async (req, b, [id]) => {
+    ownerAuth(req);
+    const a = findAgent(id);
+    if (a.revokedAt) fail(409, 'Agent is revoked');
+    const chain = getChain(b.chainId) ?? fail(400, 'Unsupported chain');
+    const identity = await readIdentity(chain.id, b.agentId);
+    if (!identity) fail(404, `agentId ${b.agentId} is not registered on ${chain.name}`);
+    if (identity.file && identity.file.sigilant?.agentId && identity.file.sigilant.agentId !== a.id) fail(409, 'That on-chain identity belongs to a different Sigilant agent');
+    if (b.owner && String(b.owner).toLowerCase() !== identity.owner.toLowerCase()) fail(409, 'The wallet does not own that on-chain agent');
+    a.onchain = {
+      chainId: chain.id, registry: chain.registry, agentId: identity.agentId, owner: identity.owner,
+      txHash: /^0x[0-9a-fA-F]{64}$/.test(b.txHash ?? '') ? b.txHash : null, uriKind: identity.uriKind,
+      uriBound: identity.file?.sigilant?.agentId === a.id, linkedAt: now(),
+    };
+    store.append(a.id, 'agent.onchain.linked', {chain: chain.name, chainId: chain.id, agentId: identity.agentId, owner: identity.owner, txHash: a.onchain.txHash});
+    store.save();
+    return {agent: view(a)};
+  });
+
+  route('GET', /^\/api\/chain\/lookup$/, async req => {
+    if (!allowLookup(req)) fail(429, 'Slow down: 30 lookups per minute');
+    const q = new URL(req.url, 'http://x').searchParams;
+    const identity = await readIdentity(q.get('chainId'), q.get('agentId'));
+    if (!identity) fail(404, 'No agent with that id on this chain');
+    const f = identity.file;
+    return {
+      chain: {id: identity.chain.id, name: identity.chain.name, registry: identity.chain.registry, explorer: identity.chain.explorer},
+      agentId: identity.agentId, owner: identity.owner, uriKind: identity.uriKind, tokenURI: identity.uriKind === 'data' ? null : identity.tokenURI.slice(0, 300),
+      registration: f ? {name: String(f.name ?? '').slice(0, 120), description: String(f.description ?? '').slice(0, 400), active: f.active ?? null, services: Array.isArray(f.services) ? f.services.slice(0, 8).map(s => ({name: String(s.name).slice(0, 40), endpoint: String(s.endpoint).slice(0, 200)})) : [], x402Support: f.x402Support ?? null, sigilant: !!f.sigilant} : null,
+    };
   }, {public: true});
 
   // ── Agent-facing ────────────────────────────────────────────────────────
@@ -280,6 +337,7 @@ export function createApp(store, {webDist, root = process.cwd()} = {}) {
     const claims = {
       iss: issuer(), sub: a.id, name: a.name, operator: state.owner.name, aud: audience, iat, exp: iat + ttl,
       jti: randomUUID(), scp: [...new Set(a.scopes.filter(s => s.mode !== 'deny').map(s => s.action))],
+      ...(a.onchain ? {erc8004: {agentRegistry: agentRegistryId(a.onchain.chainId, a.onchain.registry), agentId: a.onchain.agentId}} : {}),
     };
     const b64 = o => Buffer.from(JSON.stringify(o)).toString('base64url');
     const signingInput = `${b64({alg: 'EdDSA', typ: 'sigilant+jwt', kid: store.fingerprint().slice(0, 16)})}.${b64(claims)}`;
@@ -288,13 +346,21 @@ export function createApp(store, {webDist, root = process.cwd()} = {}) {
     return {token, claims, expiresIn: ttl};
   });
 
-  route('POST', /^\/api\/verify$/, (_req, b) => {
+  route('POST', /^\/api\/verify$/, async (_req, b) => {
     const result = verifyAssertion(String(b.token ?? ''), {publicKey: store.publicKey(), audience: b.audience || undefined});
     if (result.valid) {
       const a = state.agents.find(x => x.id === result.claims.sub);
       if (!a) return {valid: false, reason: 'Unknown agent'};
       if (a.revokedAt) return {valid: false, reason: 'Agent has been revoked', claims: result.claims};
       if (expired(a)) return {valid: false, reason: 'Agent credential has expired', claims: result.claims};
+      if (a.onchain) {
+        try {
+          const id = await readIdentity(a.onchain.chainId, a.onchain.agentId);
+          result.onchain = id
+            ? {ok: id.owner.toLowerCase() === a.onchain.owner.toLowerCase(), chain: id.chain.name, agentId: id.agentId, owner: id.owner, bound: id.file?.sigilant?.agentId === a.id}
+            : {ok: false, reason: 'Not found on-chain any more'};
+        } catch (e) { result.onchain = {ok: null, reason: e.message}; }
+      }
     }
     return result;
   }, {public: true});

@@ -7,8 +7,11 @@ import {join, resolve} from 'node:path';
 import {createInterface} from 'node:readline';
 import {createSigilant, SigilantDeniedError, verifyAssertion, verifyAuditExport} from '../../../packages/sdk/src/index.js';
 import {decide} from '../src/policy.js';
+import {createServer} from 'node:http';
+import {encodeRegister, encodeSetAgentURI, decodeString, fromDataUri, parseRegisteredLog, REGISTERED_TOPIC, registrationFile} from '../../../packages/sdk/src/erc8004.js';
 
-let dir, server, base, owner;
+let dir, server, base, owner, rpc;
+const registry = new Map(); // agentId -> {owner, uri}: a stand-in ERC-8004 Identity Registry
 const port = 53000 + Math.floor(Math.random() * 2000);
 
 async function api(path, {method = 'GET', key = '', body} = {}) {
@@ -23,11 +26,24 @@ const makeAgent = async (name, scopes, extra = {}) => (await api('/api/agents', 
 before(async () => {
   dir = await mkdtemp(join(tmpdir(), 'sigilant-'));
   base = 'http://127.0.0.1:' + port;
-  server = spawn(process.execPath, [resolve('apps/server/src/index.js')], {env: {...process.env, SIGILANT_DATA_DIR: dir, PORT: String(port)}, stdio: 'ignore'});
+  const word = n => BigInt(n).toString(16).padStart(64, '0');
+  rpc = createServer((req, res) => {
+    let body = ''; req.on('data', c => { body += c; });
+    req.on('end', () => {
+      const {id, params} = JSON.parse(body); const data = params[0].data; const agentId = BigInt('0x' + data.slice(10, 74)).toString();
+      const entry = registry.get(agentId); const reply = o => res.end(JSON.stringify({jsonrpc: '2.0', id, ...o}));
+      if (!entry) return reply({error: {code: 3, message: 'execution reverted: ERC721NonexistentToken'}});
+      if (data.startsWith('0x6352211e')) return reply({result: '0x' + '0'.repeat(24) + entry.owner.slice(2)});
+      const b = Buffer.from(entry.uri); const padded = b.toString('hex').padEnd(Math.ceil(b.length / 32) * 64, '0');
+      reply({result: '0x' + word(32) + word(b.length) + padded});
+    });
+  }).listen(0, '127.0.0.1');
+  await new Promise(r => rpc.once('listening', r));
+  server = spawn(process.execPath, [resolve('apps/server/src/index.js')], {env: {...process.env, SIGILANT_DATA_DIR: dir, PORT: String(port), SIGILANT_RPC_84532: `http://127.0.0.1:${rpc.address().port}`}, stdio: 'ignore'});
   for (let i = 0; i < 60; i++) { try { await api('/health'); break; } catch { await new Promise(r => setTimeout(r, 50)); } }
   owner = (await api('/api/setup', {method: 'POST', body: {name: 'Test owner'}})).data.key;
 });
-after(async () => { server.kill(); await rm(dir, {recursive: true, force: true}); });
+after(async () => { server.kill(); rpc.close(); await rm(dir, {recursive: true, force: true}); });
 
 test('policy: deny beats allow, default deny, amount caps, wildcards', () => {
   const agent = {revokedAt: null, expiresAt: null, limits: {}, scopes: [
@@ -155,6 +171,58 @@ test('MCP guard: allows, blocks, filters tools, and logs receipts', async () => 
   } finally { proxy.kill(); }
 });
 
+test('ERC-8004: calldata matches the real registry ABI, registration file is spec-shaped', () => {
+  // Produced by `cast calldata "register(string)" "data:application/json;base64,eyJ0eXBlIjoidGVzdCJ9"`
+  const expected = '0xf2c298be00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000031646174613a6170706c69636174696f6e2f6a736f6e3b6261736536342c65794a306558426c496a6f696447567a64434a39000000000000000000000000000000';
+  assert.equal(encodeRegister('data:application/json;base64,eyJ0eXBlIjoidGVzdCJ9'), expected);
+  assert.match(encodeSetAgentURI(7, 'ipfs://x'), /^0x0af28bd3/);
+  assert.equal(decodeString('0x' + '20'.padStart(64, '0') + '3'.padStart(64, '0') + Buffer.from('abc').toString('hex').padEnd(64, '0')), 'abc');
+  const receipt = {logs: [{address: '0x8004A818BFB912233c491871b3d84c89A494BD9e', topics: [REGISTERED_TOPIC, '0x' + (10353).toString(16).padStart(64, '0')]}]};
+  assert.equal(parseRegisteredLog(receipt, '0x8004a818bfb912233c491871b3d84c89a494bd9e'), '10353');
+  const file = registrationFile({agent: {id: 'a-1', name: 'Bot', description: '', status: 'active', scopes: [{action: 'read_file', mode: 'allow'}, {action: 'rm', mode: 'deny'}]}, operator: 'Acme', origin: 'https://reg.example', issuer: 'sigilant:abc', fingerprint: 'ff', onchain: null});
+  assert.equal(file.type, 'https://eips.ethereum.org/EIPS/eip-8004#registration-v1');
+  assert.deepEqual(file.sigilant.actions, ['read_file']);
+  assert.equal(file.services[0].endpoint, 'https://reg.example/api/agents/a-1/card');
+});
+
+test('ERC-8004: link a registered agent on-chain; assertions and verification carry it', async () => {
+  const {agent, key} = await makeAgent('Onchain bot', [{action: 'api.call', resources: ['*']}]);
+  const info = (await api(`/api/agents/${agent.id}/erc8004`, {key: owner})).data;
+  assert.equal(info.file.sigilant.agentId, agent.id);
+  assert.ok(info.agentURI.startsWith('data:application/json;base64,'));
+  assert.equal((await api(`/api/agents/${agent.id}/registration.json`)).data.name, 'Onchain bot');
+
+  // not registered yet -> refuse
+  assert.equal((await api(`/api/agents/${agent.id}/onchain`, {method: 'POST', key: owner, body: {chainId: 84532, agentId: 7}})).status, 404);
+  const wallet = '0x21fdEd74C901129977B8e28C2588595163E1e235';
+  registry.set('7', {owner: wallet, uri: info.agentURI});
+  // a different wallet claim is refused
+  assert.equal((await api(`/api/agents/${agent.id}/onchain`, {method: 'POST', key: owner, body: {chainId: 84532, agentId: 7, owner: '0x' + '1'.repeat(40)}})).status, 409);
+  const linked = await api(`/api/agents/${agent.id}/onchain`, {method: 'POST', key: owner, body: {chainId: 84532, agentId: 7, owner: wallet}});
+  assert.equal(linked.status, 200); assert.equal(linked.data.agent.onchain.uriBound, true);
+  assert.equal(fromDataUri(info.agentURI).sigilant.agentId, agent.id);
+
+  const card = (await api(`/api/agents/${agent.id}/card`)).data.card;
+  assert.equal(card.erc8004.agentId, '7');
+  assert.equal(card.erc8004.agentRegistry, 'eip155:84532:0x8004A818BFB912233c491871b3d84c89A494BD9e');
+  assert.equal((await api(`/api/agents/${agent.id}/registration.json`)).data.registrations[0].agentId, 7);
+
+  const sdk = createSigilant({agentKey: key, baseUrl: base});
+  const {token, claims} = await sdk.assertion('https://partner.example');
+  assert.equal(claims.erc8004.agentId, '7');
+  const verified = (await api('/api/verify', {method: 'POST', body: {token}})).data;
+  assert.equal(verified.valid, true); assert.equal(verified.onchain.ok, true); assert.equal(verified.onchain.bound, true);
+
+  // ownership moves on-chain -> verification flags it
+  registry.set('7', {owner: '0x' + '2'.repeat(40), uri: info.agentURI});
+  assert.equal((await api('/api/verify', {method: 'POST', body: {token}})).data.onchain.ok, false);
+
+  const lookup = (await api('/api/chain/lookup?chainId=84532&agentId=7')).data;
+  assert.equal(lookup.registration.name, 'Onchain bot'); assert.equal(lookup.chain.name, 'Base Sepolia');
+  assert.equal((await api('/api/chain/lookup?chainId=84532&agentId=999')).status, 404);
+  assert.equal((await api('/api/chain/lookup?chainId=1&agentId=1')).status, 400);
+});
+
 test('owner key recovery from the host terminal', async () => {
   const r = spawnSync(process.execPath, [resolve('scripts/recover-owner.mjs')], {env: {...process.env, SIGILANT_DATA_DIR: dir, SIGILANT_URL: base}, encoding: 'utf8'});
   assert.equal(r.status, 0, r.stderr);
@@ -163,3 +231,4 @@ test('owner key recovery from the host terminal', async () => {
   assert.equal((await api('/api/dashboard', {key: fresh})).status, 200);
   assert.equal((await api('/api/audit/verify', {key: fresh})).data.valid, true);
 });
+

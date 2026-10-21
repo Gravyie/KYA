@@ -1,9 +1,9 @@
 {
   "name": "@sigilant/sdk",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
-  "description": "Identity, scoped permissions and audit for AI agents. Fail-closed tool authorization.",
+  "description": "Identity, scoped permissions and audit for AI agents. Fail-closed tool authorization, ERC-8004 helpers.",
   "license": "MIT",
-  "exports": {".": "./src/index.js", "./verify": "./src/verify.js"},
+  "exports": {".": "./src/index.js", "./verify": "./src/verify.js", "./erc8004": "./src/erc8004.js"},
   "engines": {"node": ">=20"}
 }
