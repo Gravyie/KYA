@@ -11,7 +11,7 @@ export const BEATS = [
 
 // Tags hang off their 3D anchor at (dx, dy) and are clamped to the scene's side of the screen.
 const TAGS = {
-  0: [{id: 'plaque', n: '門', title: 'THE GATE', text: 'Every tool call passes here', dx: 70, dy: -40}, {id: 'seal', n: '印', title: 'THE SEAL', text: 'One verdict per call', dx: 110, dy: 40}],
+  0: [],
   1: [{id: 'card', n: '01', title: 'PASS', text: 'Key · operator · scopes', dx: 40, dy: 170}],
   3: [{id: 'ledger', n: '03', title: 'LEDGER', text: 'Each block seals the last', dx: -40, dy: -150}],
   4: [],

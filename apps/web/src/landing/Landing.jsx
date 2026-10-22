@@ -40,14 +40,18 @@ function useWorld(canvasRef, frameApi, handlers) {
       if (location.search.includes('debug')) window.__world = world;
       setMode('ready');
 
+      // Stage centres are measured once (and on resize), then mapped from scrollY: no layout reads while scrolling.
+      let centers = [];
+      const measure = () => {
+        const beats = [...document.querySelectorAll('[data-stage]')].sort((a, b) => a.dataset.stage - b.dataset.stage);
+        centers = beats.map(el => { const r = el.getBoundingClientRect(); return r.top + scrollY + r.height / 2; });
+      };
       const update = () => {
         raf = 0;
-        const beats = [...document.querySelectorAll('[data-stage]')].sort((a, b) => a.dataset.stage - b.dataset.stage);
-        if (!beats.length) return;
-        const mid = innerHeight * 0.5;
-        const centers = beats.map(el => { const r = el.getBoundingClientRect(); return r.top + r.height / 2; });
+        if (!centers.length) return;
+        const mid = scrollY + innerHeight * 0.5;
         let f = 0;
-        if (mid >= centers.at(-1)) f = beats.length - 1;
+        if (mid >= centers.at(-1)) f = centers.length - 1;
         else if (mid > centers[0]) for (let i = 0; i < centers.length - 1; i++) {
           if (mid >= centers[i] && mid < centers[i + 1]) { f = i + (mid - centers[i]) / (centers[i + 1] - centers[i]); break; }
         }
@@ -62,9 +66,11 @@ function useWorld(canvasRef, frameApi, handlers) {
         lenis.on('scroll', e => { world.setVelocity(Math.abs(e.velocity) / 40); queue(); });
         window.__lenis = lenis;
       }
-      addEventListener('scroll', queue, {passive: true}); addEventListener('resize', queue);
-      update();
-      world.cleanup = () => { removeEventListener('scroll', queue); removeEventListener('resize', queue); };
+      const remeasure = () => { measure(); queue(); };
+      const ro = new ResizeObserver(remeasure); ro.observe(document.body);
+      addEventListener('scroll', queue, {passive: true});
+      measure(); update();
+      world.cleanup = () => { removeEventListener('scroll', queue); ro.disconnect(); };
     }).catch(e => { console.error(e); setMode('static'); });
 
     return () => { cancelled = true; cancelAnimationFrame(raf); cancelAnimationFrame(rafLenis); lenis?.destroy(); window.__lenis = null; world?.cleanup?.(); world?.destroy(); };
@@ -198,24 +204,33 @@ export default function Landing() {
       <a className="skip" href="#console">Skip to content</a>
       <div className="scrollbar" aria-hidden="true"><i /></div>
       {mode === 'static' ? <div className="hud static" aria-hidden="true"><div className="static-sun" /></div> : <Hud canvasRef={canvasRef} beat={beat} countApi={countApi} frameApi={frameApi} onJump={jump} alert={alert} />}
-      <div className="grain" aria-hidden="true" />
-      <div className="scanlines-fx" aria-hidden="true" />
       <Nav alert={alert} />
 
       {/* ── Scene 1: the gate ── */}
       <section className="hero" data-stage="0">
         <div className="wrap hero-in">
-          <p className="kicker rise"><span className="dot" />朱印 · The seal for AI agents</p>
-          <h1 className="hero-title" aria-label="Know your agent."><span className="ht ht1"><Words>KNOW</Words></span><span className="ht ht2"><Words>YOUR</Words></span><span className="ht ht3"><Words>AGENT.</Words></span></h1>
-          <p className="lede rise">Every agent gets a verifiable identity. Every action gets a verdict. Every verdict is sealed into a record nobody can quietly edit. Open source, self-hosted, one folder.</p>
+          <p className="kicker rise"><span className="dot" />The permission layer for AI agents<span className="kj" lang="ja">朱印</span></p>
+          <h1 className="hero-word"><span className="chrome-script">Shuin</span></h1>
+          <div className="stack" aria-label="What Shuin does">
+            <p className="rise"><small>Give every</small> AI agent <small>its own</small> identity</p>
+            <p className="rise"><small>Allow,</small> ask <small>or</small> block <small>every</small> tool call</p>
+            <p className="rise">Spend limits <small>and</small> human approvals</p>
+            <p className="rise"><small>A</small> tamper-evident audit trail <small>on</small> ERC-8004</p>
+          </div>
           <div className="hero-cta rise">
             <Link to="/app" className="btn magnetic">Open the console <ArrowRight size={16} /></Link>
             <Link to="/docs" className="btn ghost magnetic">Read the quickstart</Link>
           </div>
+          <p className="meta rise">Open source · self-hosted · one folder · free</p>
         </div>
         <p className="vert" lang="ja" aria-hidden="true">汝の代理人を知れ</p>
         <div className="ticker" ref={tickRef} data-kind="allow" aria-hidden="true"><b>可決 ALLOW</b><code>read_file workspace/q3-report.md</code><em>simulated</em></div>
       </section>
+
+      <div className="tapes" aria-hidden="true">
+        <div className="tape t1"><div>{'ROGUE TOOL CALL BLOCKED // 否決 // KNOW YOUR AGENT // 認証済み // EVERY ACTION GETS A VERDICT // '.repeat(4)}</div></div>
+        <div className="tape t2"><div>{'CAUTION // AGENTS AT WORK // 注意 // SCOPED KEYS ONLY // HUMAN IN THE LOOP // '.repeat(4)}</div></div>
+      </div>
 
       <Chapter no="一" jp="識別" title="IDENTIFY" line="No more ten agents behind one shared key." />
       <section id="identify" className="scene" data-stage="1">
@@ -235,7 +250,7 @@ export default function Landing() {
             <h2 className="big"><Words>Every call meets the gate.</Words></h2>
             <p className="sub">Identity, policy and limits each cast a vote. Allow, refer to a human, or reject. This is the same decision code the server runs. Try to get something past it.</p>
           </div>
-          <div className="rise"><Magi /></div>
+          <div className="rise has-sticker"><span className="sticker s-a">Live engine · try me</span><Magi /></div>
         </div>
       </section>
 
@@ -245,6 +260,7 @@ export default function Landing() {
           <p className="eyebrow"><b>03</b><i />記録 · Evidence</p>
           <h2 className="big"><Words>Every verdict joins the ledger.</Words></h2>
           <p className="sub">Each event carries the hash of the one before it. Export the log and verify it offline against your registry key. Below is a real SHA-256 chain, running in your browser.</p>
+          <span className="sticker s-b">Tamper with it</span>
           <Chain />
         </div></div>
       </section>
@@ -256,7 +272,7 @@ export default function Landing() {
           <p className="eyebrow"><b>04</b><i />封鎖 · Containment</p>
           <h2 className="big"><Words>Revoke once. Closed everywhere.</Words></h2>
           <p className="sub">Pending approvals are cancelled, the next call is refused, and every service that checks status stops trusting the agent. Rotate a leaked key without losing its history.</p>
-          <div className="rv-actions">
+          <div className="rv-actions"><span className="sticker s-c">Pull the plug</span>
             <button className={`btn magnetic ${revoked ? 'ghost' : 'danger'}`} onClick={toggleIris}>{revoked ? 'Re-issue research-bot' : 'Revoke research-bot'}</button>
             <span className={`rv-state ${revoked ? 'off' : 'on'}`}><i />{revoked ? 'REVOKED · 封鎖' : 'ACTIVE · 稼働'}</span>
           </div>
@@ -334,7 +350,7 @@ export default function Landing() {
       <section className="finale" data-stage="10">
         <div className="wrap fin-in">
           <div className="fin-seal rise"><Mark size={96} /></div>
-          <h2 className="fin-title" aria-label="Know your agent."><span><Words>KNOW YOUR</Words></span><span><Words>AGENT.</Words></span></h2>
+          <h2 className="fin-title" aria-label="Know your agent."><span><Words>KNOW YOUR</Words></span><span className="chrome-script fin-script">agent.</span></h2>
           <p className="sub rise">One process, one folder. No account, no database, no paid service.</p>
           <div className="cta-code rise"><Code title="terminal" plain>{`git clone https://github.com/shuin-dev/shuin && cd shuin
 npm --prefix apps/web install && npm run build

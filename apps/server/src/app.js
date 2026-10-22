@@ -14,7 +14,7 @@ const MIME = {
   '.woff2': 'font/woff2', '.woff': 'font/woff', '.txt': 'text/plain; charset=utf-8', '.ico': 'image/x-icon',
 };
 const CSP = [
-  "default-src 'self'", "script-src 'self'", "style-src 'self' 'unsafe-inline'", "font-src 'self'",
+  "default-src 'self'", "script-src 'self'", "style-src 'self' 'unsafe-inline'", "font-src 'self' data:",
   "img-src 'self' data: blob:", "connect-src 'self' https: http://127.0.0.1:* http://localhost:*",
   "object-src 'none'", "base-uri 'self'", "frame-ancestors 'none'",
 ].join('; ');

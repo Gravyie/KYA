@@ -4,6 +4,7 @@ import {RenderPass} from 'three/examples/jsm/postprocessing/RenderPass.js';
 import {UnrealBloomPass} from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import {ShaderPass} from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import {OutputPass} from 'three/examples/jsm/postprocessing/OutputPass.js';
+import {createChrome} from './chrome.js';
 
 /*
  * 関門 · THE CHECKPOINT. One WebGL world for the whole page.
@@ -36,7 +37,7 @@ const S = o => ({az: 0, el: 0.08, r: 4, lx: 0, ly: 0, lz: 0, closed: 0, alert: 0
 const FULL = Z(0.5, 0.5, 1, 1);
 const fly = (lz, az, dim = 0.55, extra = {}) => S({az, el: 0.08, r: 3.6, lx: az * 4, ly: 1.1, lz, zone: FULL, dim, ledger: 1, mix: [0.8, 0.1, 0.1], ...extra});
 const STAGES = [
-  /* 0 hero      */ S({az: -0.18, el: 0.05, r: 4.3, lx: 0, ly: 1.0, lz: -1, zone: Z(0.68, 0.47, 0.56, 0.84), ledger: 1}),
+  /* 0 hero      */ S({az: 0.0, el: 0.06, r: 4.4, lx: 0, ly: 1.15, lz: -1, zone: Z(0.5, 0.55, 1, 0.98), dim: 0.4, ledger: 1}),
   /* 1 identify  */ S({az: -0.5, el: 0.06, r: 2.0, lx: 0.1, ly: 0.25, lz: 1.9, zone: Z(0.7, 0.5, 0.48, 0.74), mix: [0.5, 0.2, 0.3], card: {p: [0.15, 0.3, 2.0], tilt: -0.35, rx: 0.05, s: 1.0, o: 1}}),
   /* 2 decide    */ S({az: 0.0, el: 0.16, r: 4.6, lx: 0, ly: 0.9, lz: 0, zone: FULL, dim: 0.55, mix: [0.45, 0.25, 0.3]}),
   /* 3 prove     */ S({az: 0.06, el: 0.14, r: 3.2, lx: 0.6, ly: 0.2, lz: -16, zone: Z(0.7, 0.55, 0.56, 0.8), ledger: 1, mix: [0.75, 0.05, 0.2]}),
@@ -109,12 +110,20 @@ float fbm(vec2 p){ float v = 0.0, a = 0.5; for (int i = 0; i < 4; i++){ v += a *
 
 vec3 sky(vec3 d, float wet){
   float e = d.y;
-  vec3 top = vec3(0.012, 0.008, 0.05), mid = vec3(0.09, 0.02, 0.19), hor = vec3(0.62, 0.06, 0.4);
+  vec3 top = vec3(0.02, 0.012, 0.09), mid = vec3(0.13, 0.03, 0.27), hor = vec3(0.7, 0.1, 0.55);
   vec3 col = mix(hor, mid, smoothstep(0.0, 0.16, e));
   col = mix(col, top, smoothstep(0.12, 0.62, e));
   // smog and cloud bands lit from below by the city
   float cl = fbm(vec2(d.x / (e + 0.25) * 2.2 + uTime * 0.012, e * 9.0));
   col += vec3(0.35, 0.05, 0.42) * smoothstep(0.5, 0.95, cl) * smoothstep(0.35, 0.02, e);
+  // milky way band and a synthwave cloud bank sitting on the skyline
+  float mw = exp(-pow(dot(d, normalize(vec3(0.35, 0.45, 0.82))) * 4.0, 2.0)) * smoothstep(0.08, 0.5, e);
+  col += vec3(0.3, 0.26, 0.75) * mw * (0.35 + 0.65 * fbm(d.xy * 7.0 + d.z * 3.0)) * 0.55;
+  float azc = atan(d.x, -d.z);
+  float cb = fbm(vec2(azc * 3.2 + uTime * 0.008, e * 13.0));
+  float bank = smoothstep(0.42, 0.82, cb) * smoothstep(0.3, 0.03, e) * step(-0.001, e);
+  vec3 cloud = mix(vec3(0.95, 0.3, 0.85), vec3(0.42, 0.18, 0.85), smoothstep(0.0, 0.22, e)) * (0.45 + 0.7 * cb);
+  col = mix(col, cloud, bank * 0.8);
   // stars
   vec3 sd3 = d * 170.0; vec3 id = floor(sd3); vec3 fd = fract(sd3) - 0.5;
   float sh = hash(id.xy + id.z * 7.0);
@@ -246,12 +255,13 @@ function roundedRect(w, h, r) {
 
 export function createSeal(canvas, {onDecision, onFrame, reduced = false, small = false} = {}) {
   const renderer = new THREE.WebGLRenderer({canvas, antialias: false, powerPreference: 'high-performance'});
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, small ? 1.5 : 1.75));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, small ? 1.25 : 1.5));
   renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.0;
 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 400);
   scene.add(camera);
+  const chrome = createChrome(camera);
 
   const skyMat = new THREE.ShaderMaterial({
     vertexShader: SKY_VERT, fragmentShader: SKY_FRAG, depthTest: false, depthWrite: false,
@@ -377,11 +387,27 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
   }
   real.add(lanterns, lamps); mirror.add(lanterns.clone(), lamps.clone());
 
-  /* Rain: thin falling streaks. Cheap, and it makes every light in the scene feel wet. */
-  const RAIN = small ? 500 : 1100;
-  const rainMat = new THREE.MeshBasicMaterial({color: COL.cyan.clone().multiplyScalar(0.5), transparent: true, opacity: 0.35, depthWrite: false});
-  const rain = new THREE.InstancedMesh(new THREE.BoxGeometry(0.006, 0.42, 0.006), rainMat, RAIN);
-  const drops = Array.from({length: RAIN}, () => ({x: rand(-12, 12), y: rand(FLOOR_Y, 9), z: rand(-14, 12), v: rand(9, 13)}));
+  /* Rain: thin falling streaks, animated entirely on the GPU (no per-frame CPU work). It follows the camera. */
+  const RAIN = small ? 600 : 1400;
+  const rainGeo = new THREE.InstancedBufferGeometry().copy(new THREE.BoxGeometry(0.006, 0.42, 0.006));
+  rainGeo.instanceCount = RAIN;
+  const seeds4 = new Float32Array(RAIN * 4);
+  for (let i = 0; i < RAIN; i++) { seeds4[i * 4] = rand(-12, 12); seeds4[i * 4 + 1] = rand(-14, 12); seeds4[i * 4 + 2] = Math.random(); seeds4[i * 4 + 3] = rand(9, 13); }
+  rainGeo.setAttribute('aSeed', new THREE.InstancedBufferAttribute(seeds4, 4));
+  const rainMat = new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false,
+    uniforms: {uTime: {value: 0}, uCamZ: {value: 8}, uVel: {value: 0}, uColor: {value: COL.cyan.clone().multiplyScalar(0.5)}, uFloor: {value: FLOOR_Y}},
+    vertexShader: `attribute vec4 aSeed; uniform float uTime, uCamZ, uVel, uFloor;
+      void main(){
+        float range = 11.2;
+        float y = uFloor + mod(aSeed.z * range - uTime * aSeed.w * (1.0 + uVel * 0.5), range);
+        vec3 p = position; p.y *= 1.0 + uVel * 2.0; p.x += p.y * (0.05 + uVel * 0.2);
+        vec3 w = vec3(aSeed.x - uTime * 0.3, y, uCamZ - 6.0 + aSeed.y) + p;
+        gl_Position = projectionMatrix * viewMatrix * vec4(w, 1.0);
+      }`,
+    fragmentShader: 'uniform vec3 uColor; void main(){ gl_FragColor = vec4(uColor, 0.35); }',
+  });
+  const rain = new THREE.Mesh(rainGeo, rainMat); rain.frustumCulled = false;
   world.add(rain);
 
   /* The city: towers lining the plaza, neon kanji signs, and air traffic between them. */
@@ -507,6 +533,8 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
   const composer = new EffectComposer(renderer, rt);
   composer.addPass(new RenderPass(scene, camera));
   const bloom = new UnrealBloomPass(new THREE.Vector2(4, 4), 0.7, 0.6, 0.85);
+  // bloom at half resolution: it is a soft glow, extra pixels buy nothing
+  const bloomSetSize = bloom.setSize.bind(bloom); bloom.setSize = (w, h) => bloomSetSize(Math.ceil(w / 2), Math.ceil(h / 2));
   composer.addPass(bloom);
   const finalPass = new ShaderPass(FINAL); composer.addPass(finalPass);
   composer.addPass(new OutputPass());
@@ -594,7 +622,7 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
     inlayMat.color.copy(COL.mag).lerp(COL.shu, alert).multiplyScalar(1.6 + alert * 1.2 + Math.sin(time * 8) * alert * 0.6);
     cyanMat.color.copy(COL.cyan).lerp(COL.shu, alert).multiplyScalar(1.7 + (Math.sin(time * 37) > 0.97 ? -1 : 0));
     lampMat.color.setScalar(1).lerp(COL.shu, alert).multiplyScalar(1 + alert * Math.max(0, Math.sin(time * 10)));
-    rainMat.color.copy(COL.cyan).lerp(COL.shu, alert * 0.8).multiplyScalar(0.5 + alert * 0.4);
+    rainMat.uniforms.uColor.value.copy(COL.cyan).lerp(COL.shu, alert * 0.8).multiplyScalar(0.5 + alert * 0.4);
     rim.color.copy(COL.mag).lerp(COL.shu, alert); rim.intensity = 4.5 + alert * 3;
     key.color.copy(COL.cyan).lerp(COL.shu, alert);
     towerMat.uniforms.uTime.value = time; towerMat.uniforms.uAlert.value = alert;
@@ -642,15 +670,7 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
       tc.copy(c.c).lerp(COL.shu, alert * 0.9).multiplyScalar(2); lanes.setColorAt(i, tc);
     }
     lanes.instanceMatrix.needsUpdate = true; lanes.instanceColor.needsUpdate = true;
-    // rain
-    const wind = 0.08 + Math.min(1, velocity) * 0.3;
-    for (let i = 0; i < RAIN; i++) {
-      const d = drops[i];
-      d.y -= d.v * dt * (1 + velocity * 0.5); d.x -= wind * dt * 4;
-      if (d.y < FLOOR_Y || Math.abs(d.z - cz + 6) > 16) { d.y = d.y < FLOOR_Y ? 9 : rand(FLOOR_Y, 9); d.x = rand(-12, 12); d.z = cz - 6 + rand(-14, 12); }
-      dm.position.set(d.x, d.y, d.z); dm.rotation.set(0, 0, wind * 0.6); dm.scale.set(1, 1 + velocity * 2, 1); dm.updateMatrix(); rain.setMatrixAt(i, dm.matrix);
-    }
-    rain.instanceMatrix.needsUpdate = true;
+    rainMat.uniforms.uTime.value = time; rainMat.uniforms.uCamZ.value = cz; rainMat.uniforms.uVel.value = Math.min(1, velocity);
 
     // calls
     for (let i = 0; i < COUNT; i++) {
@@ -716,22 +736,31 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
     placeCamera(time);
     skyMat.uniforms.uInvProj.value.copy(camera.projectionMatrixInverse); skyMat.uniforms.uCamWorld.value.copy(camera.matrixWorld);
     if (usePost) composer.render(); else renderer.render(scene, camera);
+    chrome.render(renderer);
     camera.updateMatrixWorld();
     project('card', cardGroup.position, real); project('seal', sealAnchor, seal); project('ledger', slots[4], real); project('plaque', plaqueAnchor, gate);
+    const pt = width / height < 0.85;
+    chrome.update({time, stage, intro: smooth(introT), alert: alertNow, px: pointer.sx, py: pointer.sy, cy: pt ? 0.29 : 0.345, w: pt ? 1.05 : 0.84, maxH: pt ? 0.6 : 0.56, aspectView: width / height});
     onFrame?.(anchors, {stage, closed: cur.closed, alert: alertNow});
   }
 
   // tag mirror nodes with their source so animated parts can be synced cheaply
   (function link(src, dst) { dst.userData.src = src; src.children.forEach((c, i) => dst.children[i] && link(c, dst.children[i])); })(gate, gateMirror);
 
-  let ema = 0.016, quality = 'high';
+  // Adaptive quality, two steps: first drop pixel ratio, then drop post-processing. Judged on a smoothed frame time.
+  let ema = 0.016, quality = 2, settleUntil = 45;
   const lockHigh = new URLSearchParams(location.search).get('q') === 'high';
-  function downgrade() { quality = 'lite'; usePost = false; renderer.setPixelRatio(1); rain.count = Math.floor(RAIN / 3); width = 0; resize(); }
+  function downgrade() {
+    quality -= 1; settleUntil = frames + 60;
+    if (quality === 1) renderer.setPixelRatio(1);
+    else { usePost = false; rainGeo.instanceCount = Math.floor(RAIN / 3); }
+    width = 0; resize();
+  }
   function frame() {
     if (!running) return;
     const raw = clock.getDelta();
-    ema = ema * 0.92 + raw * 0.08; frames++;
-    if (quality === 'high' && !lockHigh && frames > 30 && ema > 0.05) downgrade();
+    ema = ema * 0.94 + Math.min(raw, 0.2) * 0.06; frames++;
+    if (quality > 0 && !lockHigh && frames > settleUntil && ema > 0.034) downgrade();
     step(Math.min(raw, 0.05)); draw();
     raf = requestAnimationFrame(frame);
   }
@@ -758,7 +787,7 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
     destroy() {
       stop(); ro.disconnect(); document.removeEventListener('visibilitychange', onVisibility); removeEventListener('pointermove', onPointer);
       scene.traverse(o => { o.geometry?.dispose?.(); const m = o.material; (Array.isArray(m) ? m : m ? [m] : []).forEach(x => { x.map?.dispose?.(); x.dispose(); }); });
-      composer.dispose(); renderer.dispose();
+      chrome.dispose(); composer.dispose(); renderer.dispose();
     },
   };
 }
