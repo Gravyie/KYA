@@ -25,7 +25,7 @@ export function createStore(dataDir) {
   const stateFile = resolve(dataDir, 'state.json');
   const eventsFile = resolve(dataDir, 'events.jsonl');
   const recoveryFile = resolve(dataDir, 'recovery.key');
-  if (!existsSync(recoveryFile)) writeFileSync(recoveryFile, newToken('sr') + '\n', {mode: 0o600, flag: 'wx'});
+  if (!existsSync(recoveryFile)) writeFileSync(recoveryFile, newToken('mir') + '\n', {mode: 0o600, flag: 'wx'});
 
   let state;
   let events = [];

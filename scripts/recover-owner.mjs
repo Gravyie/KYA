@@ -3,8 +3,8 @@ import {resolve, dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
 
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
-const dataDir=process.env.SHUIN_DATA_DIR || resolve(root,'.data/shuin');
-const url=process.env.SHUIN_URL || `http://127.0.0.1:${process.env.PORT || 5055}`;
+const dataDir=process.env.MIHARI_DATA_DIR || resolve(root,'.data/mihari');
+const url=process.env.MIHARI_URL || `http://127.0.0.1:${process.env.PORT || 5055}`;
 
 try {
   const credential=readFileSync(resolve(dataDir,'recovery.key'),'utf8').trim();
@@ -19,6 +19,6 @@ try {
   console.log(result.key);
 } catch (error) {
   console.error(`Owner recovery failed: ${error.message}`);
-  console.error('Run the Shuin API on this machine and use its data directory. Set SHUIN_DATA_DIR and SHUIN_URL if you use custom values.');
+  console.error('Run the Mihari API on this machine and use its data directory. Set MIHARI_DATA_DIR and MIHARI_URL if you use custom values.');
   process.exitCode=1;
 }

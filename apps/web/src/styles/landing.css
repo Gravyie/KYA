@@ -5,7 +5,7 @@
 @import '@fontsource/chakra-petch/latin-700.css';
 
 /* ════════════════════════════════════════════════════════════════════
-   SHUIN 朱印 — sumi ink, bone paper, one vermilion.
+   MIHARI 見張り — night city, cyan and magenta, one watching eye.
    Type: Anton (display), Noto Sans JP Black (kanji), Chakra Petch (HUD), Geist / Geist Mono (reading, data).
    ════════════════════════════════════════════════════════════════════ */
 .landing {
@@ -282,7 +282,7 @@
 .p-steps b { font: 900 20px var(--jp); color: var(--shu); } .p-steps h3 { font: 900 22px var(--jp); margin: 0 0 6px; } .p-steps p { color: var(--bone-2); max-width: 42ch; margin: 0; }
 .holo { width: min(100%, 460px); aspect-ratio: 1.586; transform-style: preserve-3d; position: relative; }
 .holo-face { position: absolute; inset: 0; overflow: hidden; background: linear-gradient(150deg, #1a1513, #0d0b0a 60%); color: var(--bone); padding: 22px 24px; display: flex; flex-direction: column; border: 1px solid var(--line-2); box-shadow: 0 40px 80px -30px rgba(0, 0, 0, 0.9); }
-.holo-face::after { content: '朱印証'; position: absolute; right: 0; top: 0; bottom: 0; width: 70px; background: var(--shu); color: #120302; writing-mode: vertical-rl; font: 900 30px var(--jp); display: grid; place-items: center; letter-spacing: 0.2em; }
+.holo-face::after { content: '見張り'; position: absolute; right: 0; top: 0; bottom: 0; width: 70px; background: var(--shu); color: #120302; writing-mode: vertical-rl; font: 900 30px var(--jp); display: grid; place-items: center; letter-spacing: 0.2em; }
 .guilloche { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0.35; } .guilloche path { fill: none; stroke: rgba(241, 233, 220, 0.3); stroke-width: 0.6; }
 .holo-foil { position: absolute; inset: 0; opacity: 0.1; transition: opacity 0.4s; mix-blend-mode: color-dodge; background: conic-gradient(at var(--gx, 60%) var(--gy, 30%), #e8321e, #ffb020, #f1e9dc, #e8321e); -webkit-mask-image: radial-gradient(circle at var(--gx, 60%) var(--gy, 30%), #000, transparent 60%); mask-image: radial-gradient(circle at var(--gx, 60%) var(--gy, 30%), #000, transparent 60%); }
 .holo:hover .holo-foil { opacity: 0.4; }
@@ -385,7 +385,7 @@
 @media (prefers-reduced-motion: reduce) { .rise { opacity: 1; transform: none; } .words .w > span { transform: none; } .opening { display: none; } .chapter .ch-jp, .chapter .ch-en { clip-path: none; } }
 
 
-/* ════ NEON pass: v7 theme on the Shuin flow ════ */
+/* ════ NEON pass: v7 theme on the Mihari flow ════ */
 .landing .btn { font-family: var(--hud); clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px)); background: var(--cyan); color: #031017; letter-spacing: 0.14em; }
 .landing .btn::after { display: none; }
 .landing .btn:hover { background: #7cf3ff; box-shadow: none; filter: drop-shadow(0 0 16px rgba(25, 230, 255, 0.7)); }
@@ -585,66 +585,64 @@
 @media (max-width: 960px) { .pillars { display: grid; grid-template-columns: 1fr 1fr; } .pillars li + li { border-left: 0; } .pillars li { border-top: 1px solid var(--line-2); } .pillars li:nth-child(-n+2) { border-top: 0; } .pillars li:nth-child(even) { border-left: 1px solid var(--line-2); } }
 .landing .fin-title > span { letter-spacing: 0.005em !important; font-size: inherit !important; }
 
-/* ════ v13 Horizons-grade chrome: hero and finale ════ */
-.landing .hero.hz { display: flex; align-items: center; justify-content: center; text-align: center; padding: 96px 0 84px; }
-.landing .hero.hz::before, .landing .finale.hz::before { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
-  background: radial-gradient(62% 46% at 50% 44%, rgba(4, 3, 14, 0.72), rgba(4, 3, 14, 0.38) 60%, transparent 85%), linear-gradient(to bottom, rgba(4, 3, 14, 0.55), transparent 22%, transparent 72%, rgba(4, 3, 14, 0.6)); }
-.hz-in { display: flex; flex-direction: column; align-items: center; max-width: 1200px; }
-.hz-kicker { margin: 0; font: 400 clamp(18px, 1.9vw, 26px)/1 var(--poster); letter-spacing: 0.04em; text-transform: uppercase; color: #efe6ff; text-shadow: 0 2px 18px rgba(0, 0, 0, 0.8); }
-.hz-title { margin: clamp(4px, 1vh, 12px) 0 clamp(8px, 1.6vh, 18px); width: min(92vw, 1120px); display: block; }
-.hz-stack { display: grid; gap: 4px; }
-.hz-stack p { margin: 0; font: 400 clamp(22px, 2.7vw, 38px)/1.02 var(--poster); text-transform: uppercase; letter-spacing: 0.005em; color: #f1e9ff; text-shadow: 0 2px 0 rgba(30, 6, 60, 0.85), 0 0 26px rgba(160, 90, 255, 0.35); }
-.hz-stack small { font-size: 0.55em; margin: 0 0.22em; vertical-align: 0.08em; opacity: 0.9; }
-.hz-cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: clamp(20px, 3.2vh, 34px); }
-.hz-emblem { display: flex; align-items: center; gap: 10px; margin-top: 22px; font: 900 13px var(--kanji); color: var(--red); letter-spacing: 0.2em; opacity: 0.9; }
-.landing .hero.hz .ticker { display: none; }
-
-/* the chrome lettering */
-.chrome-word { position: relative; display: block; width: 100%; aspect-ratio: 3.4 / 1; }
-.chrome-word .cw-text { position: absolute; inset: 0; display: grid; place-items: center; font: 400 clamp(80px, 11vw, 190px)/1 'Sacramento', cursive; color: #f4f0ff; text-transform: none; letter-spacing: 0;
-  transform: skewX(4.5deg); text-shadow: 0 0 30px rgba(170, 120, 255, 0.6); transition: opacity 0.6s; }
-.chrome-word.ready .cw-text { opacity: 0; }
-.chrome-word .cw-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; user-select: none; -webkit-user-drag: none;
-  filter: drop-shadow(0 10px 14px rgba(14, 4, 40, 0.85)) drop-shadow(0 0 34px rgba(150, 90, 255, 0.45)); animation: cw-in 1.1s var(--ease) both; }
-.chrome-word .cw-sheen { position: absolute; inset: 0; pointer-events: none; -webkit-mask: var(--chrome) center / contain no-repeat; mask: var(--chrome) center / contain no-repeat;
-  background: linear-gradient(105deg, transparent 38%, rgba(255, 255, 255, 0.85) 48%, rgba(255, 255, 255, 0) 56%) 0 0 / 260% 100% no-repeat; mix-blend-mode: screen; animation: sheen 6.5s ease-in-out 1.2s infinite; }
-@keyframes cw-in { from { opacity: 0; transform: translateY(14px) scale(0.97); filter: blur(6px); } }
-@keyframes sheen { 0% { background-position: 130% 0; } 45%, 100% { background-position: -40% 0; } }
-
-/* finale: same family, one screen with the footer */
-.landing .finale.hz .fin-in { padding-top: 70px; gap: 0; }
-.fin-word { width: min(56vw, 600px) !important; }
-.landing .finale.hz .install { margin-top: 20px; }
-@media (max-width: 760px) {
-  .landing .hero.hz { padding: 90px 0 60px; }
-  .hz-title { width: 100%; } .fin-word { width: 86vw !important; }
-  .hz-stack p { font-size: clamp(17px, 5vw, 24px); }
-}
-@media (prefers-reduced-motion: reduce) { .chrome-word .cw-sheen { animation: none; opacity: 0; } .chrome-word .cw-img { animation: none; } }
-.chrome-word .cw-text { flex-direction: column; display: flex; justify-content: center; align-items: center; }
-@media (max-width: 760px) { .hz-kicker { font-size: 15px; max-width: 30ch; line-height: 1.15; } .hz-title { margin: 6px 0 14px; } }
-
-/* ════ v14 lockup: block + chrome script ════ */
-.mark { filter: drop-shadow(0 0 6px rgba(25, 230, 255, 0.55)) drop-shadow(0 0 14px rgba(255, 47, 166, 0.35)); }
+/* ════ v15 MIHARI: the watching eye ════ */
+.mark { filter: drop-shadow(0 0 6px rgba(25, 230, 255, 0.5)) drop-shadow(0 0 14px rgba(255, 47, 166, 0.35)); }
 .logo-word small { color: var(--mag) !important; }
-.hz-lockup { position: relative; width: min(92vw, 1080px); margin: 10px 0 22px; display: grid; justify-items: center; }
-.hz-block { display: block; font: 400 clamp(84px, 12.5vw, 200px)/0.84 var(--poster); letter-spacing: 0.01em; color: #f3eaff; text-transform: uppercase;
-  text-shadow: 4px 4px 0 rgba(25, 230, 255, 0.85), -3px -2px 0 rgba(255, 47, 166, 0.8), 0 0 50px rgba(160, 90, 255, 0.45); }
-.hz-block .w > span { text-shadow: inherit; }
-.hz-script.chrome-word { width: min(66vw, 720px); margin-top: clamp(-90px, -6.5vw, -40px); margin-left: 18%; transform: rotate(-7deg); z-index: 2; aspect-ratio: 2.4 / 1; }
-.hz-script .cw-text, .fin-word .cw-text { font-family: 'Mr Dafoe', cursive !important; transform: none; }
-.hz-script .cw-img, .fin-word .cw-img { filter: drop-shadow(0 8px 10px rgba(5, 0, 30, 0.9)) drop-shadow(0 0 28px rgba(255, 47, 166, 0.45)) drop-shadow(0 0 60px rgba(25, 230, 255, 0.2)); }
-.landing .hero.hz .hz-kicker { margin-bottom: 4px; }
-.fin-word { width: min(62vw, 700px) !important; transform: rotate(-5deg); margin: 6px 0 14px !important; }
+
+/* opening: full-screen eye, the pupil is a hole onto the city */
+.eye-intro { position: fixed; inset: 0; z-index: 200; pointer-events: auto; cursor: pointer; background: #05050f; }
+.eye-intro.falling { background: transparent; }
+.eye-intro.falling .ei-cap { opacity: 0; transition: opacity .3s; }
+.eye-intro canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.ei-cap { position: absolute; left: 50%; bottom: 34px; transform: translateX(-50%); margin: 0; font: 500 11px var(--mono); letter-spacing: 0.24em; text-transform: uppercase; color: rgba(220, 230, 255, 0.55); white-space: nowrap; animation: ei-cap 3.4s ease both; }
+.ei-cap span { font-family: var(--kanji); font-weight: 900; color: var(--mag); margin-right: 6px; }
+.ei-cap em { font-style: normal; color: rgba(220, 230, 255, 0.35); }
+@keyframes ei-cap { 0% { opacity: 0; } 20%, 70% { opacity: 1; } 100% { opacity: 0; } }
+
+/* hero: one block headline, the eye in the sky owns the right half */
+.landing .hero.mh { display: flex; align-items: center; min-height: 100vh; min-height: 100svh; padding: 100px 0 90px; position: relative; text-align: left; }
+.landing .hero.mh::before, .landing .finale.mh-fin::before { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; }
+.landing .hero.mh::before { background: linear-gradient(90deg, rgba(3, 3, 12, 0.88) 0%, rgba(3, 3, 12, 0.55) 42%, transparent 68%); }
+.mh-in { max-width: 1240px; }
+.mh-kicker { display: flex; align-items: center; gap: 10px; margin: 0 0 22px; font: 500 12px var(--mono); letter-spacing: 0.18em; text-transform: uppercase; color: #b9c6dc; }
+.mh-kicker span[lang] { font-family: var(--kanji); font-weight: 900; color: var(--mag); letter-spacing: 0.1em; text-shadow: 0 0 12px rgba(255, 47, 166, 0.6); }
+.mh-kicker .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--mag); box-shadow: 0 0 10px var(--mag); animation: mh-blink 1.6s steps(2) infinite; }
+@keyframes mh-blink { 50% { opacity: 0.2; } }
+.landing .mh-title { margin: 0 0 24px; display: grid; font: 400 clamp(56px, min(8.6vw, 14.5vh), 156px)/0.88 var(--poster); letter-spacing: 0.005em; text-transform: uppercase; color: #eef2ff; }
+.mh-title .mh-l { display: block; }
+.mh-title .w > span { text-shadow: 0 2px 30px rgba(0, 0, 0, 0.7); }
+.mh-w { position: relative; color: var(--mag); width: max-content; }
+.mh-w .w > span { color: var(--mag); text-shadow: 3px 0 0 rgba(25, 230, 255, 0.85), 0 0 40px rgba(255, 47, 166, 0.55); }
+.mh-w::after { content: attr(data-text); position: absolute; inset: 0; color: var(--cyan); clip-path: inset(0 0 100% 0); animation: mh-glitch 5s steps(1) infinite; pointer-events: none; }
+@keyframes mh-glitch { 0%, 91%, 100% { clip-path: inset(0 0 100% 0); transform: none; } 92% { clip-path: inset(18% 0 58% 0); transform: translateX(-6px); } 94% { clip-path: inset(62% 0 12% 0); transform: translateX(8px); } 96% { clip-path: inset(40% 0 44% 0); transform: translateX(-3px); } }
+.mh-sub { max-width: 46ch; margin: 0 0 28px; font-size: clamp(16px, 1.2vw, 18.5px); line-height: 1.6; color: #c8d3e3; }
+.mh-cta { display: flex; gap: 12px; flex-wrap: wrap; }
+.mh-hud { position: absolute; top: 96px; right: clamp(20px, 4vw, 64px); display: grid; justify-items: end; gap: 14px; pointer-events: none; }
+.mh-live { display: flex; align-items: center; gap: 8px; font: 600 10.5px var(--mono); letter-spacing: 0.22em; color: var(--cyan); padding: 6px 10px; border: 1px solid rgba(25, 230, 255, 0.35); background: rgba(3, 6, 14, 0.7); }
+.mh-live i { width: 6px; height: 6px; background: var(--red, #ff3b4a); border-radius: 50%; box-shadow: 0 0 8px var(--red, #ff3b4a); animation: mh-blink 1.2s steps(2) infinite; }
+.mh-jp { writing-mode: vertical-rl; font: 900 15px var(--kanji); letter-spacing: 0.4em; color: rgba(255, 47, 166, 0.75); text-shadow: 0 0 12px rgba(255, 47, 166, 0.5); }
+.landing .hero.mh .ticker { display: flex; }
+@media (prefers-reduced-motion: reduce) { .mh-w::after, .mh-kicker .dot, .mh-live i { animation: none; } }
+
+/* finale + footer share one screen */
+.landing .finale.mh-fin { min-height: 100vh; min-height: 100svh; display: flex; flex-direction: column; padding: 0; position: relative; }
+.landing .finale.mh-fin::before { background: radial-gradient(58% 52% at 50% 48%, rgba(3, 3, 12, 0.85), rgba(3, 3, 12, 0.4) 70%, transparent); }
+.mh-fin .fin-in { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding-top: 70px; }
+.mh-fin .fin-eye { margin-bottom: 18px; }
+.mh-fin .fin-eye .mark { width: clamp(76px, 10vh, 120px); height: auto; }
+.mh-fin .mh-kicker { justify-content: center; }
+.landing .mh-fin .fin-t { display: block; font-size: clamp(54px, min(9vw, 15vh), 160px); }
+.mh-fin .fin-t .mh-l { display: inline-block; }
+.mh-fin .mh-w { display: inline-block; margin-left: 0.04em; }
+.mh-fin .mh-sub { margin: 0 auto 26px; }
+.mh-fin .mh-cta { justify-content: center; }
+.mh-fin .install { margin-top: 20px; }
+
 @media (max-width: 760px) {
-  .hz-block { font-size: clamp(64px, 19vw, 96px); }
-  .hz-script.chrome-word { width: 82vw; margin-left: 10%; margin-top: -30px; }
-  .fin-word { width: 84vw !important; }
-}
-@media (min-width: 761px) {
-  .hz-block { font-size: clamp(72px, min(10vw, 17vh), 170px); }
-  .hz-script.chrome-word { width: min(48vw, 600px, 78vh); margin-top: clamp(-80px, -5vw, -36px); }
-  .hz-stack p { font-size: clamp(20px, min(2.3vw, 3.7vh), 34px); }
-  .hz-lockup { margin: 6px 0 14px; }
-  .hz-cta { margin-top: 22px; }
+  .landing .hero.mh { align-items: flex-end; padding: 44vh 0 56px; }
+  .landing .hero.mh::before { background: linear-gradient(to top, rgba(3, 3, 12, 0.95) 0%, rgba(3, 3, 12, 0.7) 55%, transparent 82%); }
+  .landing .mh-title { font-size: clamp(46px, 14.5vw, 80px); }
+  .mh-hud { top: 80px; } .mh-jp { display: none; }
+  .landing .hero.mh .ticker { display: none; }
+  .landing .mh-fin .fin-t { font-size: clamp(44px, 14vw, 76px); }
 }

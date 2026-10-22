@@ -1,4 +1,4 @@
-# Sigilant: product, name and design brief
+# Mihari: product, name and design brief
 
 ## 1. Understanding what existed
 
@@ -33,9 +33,12 @@ Agents now hold real capability: they read repos, query databases, send email an
 
 ## 4. The name
 
+**Current name: Mihari 見張り** ("lookout", "guard on watch"). It matches the product (every agent call is watched) and the visual system (an eye that watches the city and opens onto it). The working names before it were Auctent, Sigilant and Shuin 朱印. Checked 23 Oct 2026: `mihari`, `@mihari/sdk` and `mihari-mcp` are free on npm, and the `mihari-dev` GitHub name is free (`mihari` is taken). An open-source threat-intel tool called Mihari (ninoseki/mihari, a Ruby gem) already exists in the security space, so the product should always be written with its qualifier, e.g. "Mihari for agents". This is not a trademark search. The earlier shortlist follows.
+
+
 | Name | Reasoning | npm / @scope / GitHub |
 | --- | --- | --- |
-| **Sigilant** (chosen) | *sigil* (a seal that authorises) + *vigilant*. Says "signed identity" and "watching" in one word; easy to say. | free / free / free |
+| Sigilant (earlier pick) | *sigil* (a seal that authorises) + *vigilant*. Says "signed identity" and "watching" in one word; easy to say. | free / free / free |
 | Wardkit | A ward guards; a kit is what developers install. Plain, a little generic. | free / free / free |
 | Leashd | Short and memorable, but reads as punitive. | free / free / free |
 | Sealgate | Seal + gate; literal to the product, clunky aloud. | free / free / free |

@@ -26,7 +26,7 @@ export default function Terminal() {
   }, []);
   return (
     <div className="term" ref={ref} aria-label="Example firewall output" role="img">
-      <div className="term-bar"><i /><i /><i /><span>shuin-mcp · research-bot</span></div>
+      <div className="term-bar"><i /><i /><i /><span>mihari-mcp · research-bot</span></div>
       <ul>
         {lines.map(l => (
           <li key={l.id} className={l.kind}>

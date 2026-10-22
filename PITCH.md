@@ -1,4 +1,4 @@
-# Shuin: pitch notes
+# Mihari: pitch notes
 
 **One line:** the permission layer between AI agents and everything they can touch. Identity, approvals, limits and evidence for every agent action.
 

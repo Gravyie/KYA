@@ -101,7 +101,8 @@ const SKY_FRAG = `
 precision highp float;
 varying vec2 vNdc;
 uniform mat4 uInvProj, uCamWorld;
-uniform float uTime, uAlert, uDim;
+uniform float uTime, uAlert, uDim, uOpen;
+uniform vec2 uLook;
 float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float noise(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
   return mix(mix(hash(i), hash(i + vec2(1, 0)), f.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), f.x), f.y); }
@@ -127,18 +128,46 @@ vec3 sky(vec3 d, float wet){
   vec3 sd3 = d * 170.0; vec3 id = floor(sd3); vec3 fd = fract(sd3) - 0.5;
   float sh = hash(id.xy + id.z * 7.0);
   col += vec3(0.75, 0.9, 1.0) * step(0.9968, sh) * smoothstep(0.3, 0.0, length(fd)) * (0.6 + 0.4 * sin(uTime * 2.0 + sh * 90.0)) * smoothstep(0.05, 0.3, e) * 1.5;
-  // retrowave sun, banded toward its base
-  vec3 sd = normalize(vec3(0.2, 0.15, -1.0));
+  // 見張り: a giant eye hangs over the city where the sun would be. It blinks, and its pupil follows the cursor.
+  vec3 sd = normalize(vec3(0.0, 0.175, -1.0));
   vec3 sr = normalize(cross(vec3(0.0, 1.0, 0.0), sd)), su = cross(sd, sr);
-  vec2 sp = vec2(dot(d, sr), dot(d, su));
+  vec2 sp = vec2(dot(d, sr), dot(d, su)) / 0.5;
   float facing = step(0.0, dot(d, sd));
-  float r = length(sp);
-  float disc = smoothstep(0.13, 0.126, r) * facing;
-  float gapW = smoothstep(0.03, -0.12, sp.y) * 0.62;
-  float slit = mix(1.0, step(gapW, fract(sp.y * 44.0)), step(sp.y, 0.03));
-  vec3 sunCol = mix(vec3(1.0, 0.55, 0.12), vec3(1.0, 0.08, 0.2), smoothstep(0.12, -0.12, sp.y));
-  col = mix(col, sunCol * 1.35, disc * slit);
-  col += vec3(1.0, 0.16, 0.55) * exp(-r * r * 36.0) * 0.42 * facing;
+  float EW = 0.46, EU = 0.2 * uOpen, EL = 0.13 * uOpen;
+  float ex = clamp(1.0 - pow(sp.x / EW, 2.0), 0.0, 1.0);
+  float yu = EU * pow(ex, 0.8), yl = -EL * pow(ex, 0.9);
+  float inEye = step(yl, sp.y) * step(sp.y, yu) * step(abs(sp.x), EW) * facing;
+  vec2 ic = uLook * vec2(0.13, 0.05);
+  vec2 ip = sp - ic; float ir = length(ip);
+  float ang = atan(ip.y, ip.x);
+  float bolt = pow(1.0 - abs(fbm(vec2(ang * 6.0, ir * 14.0 - uTime * 0.3)) * 2.0 - 1.0), 8.0);
+  vec3 irisCol = mix(vec3(0.03, 0.1, 0.45), vec3(0.1, 0.5, 0.75), smoothstep(0.13, 0.04, ir));
+  irisCol = mix(irisCol, vec3(0.75, 0.12, 0.55), smoothstep(0.09, 0.13, ir) * 0.8);
+  irisCol += vec3(0.5, 0.75, 1.0) * bolt * 0.45;
+  irisCol = mix(irisCol, vec3(1.0, 0.1, 0.2) * (0.6 + bolt), uAlert);
+  float irisM = smoothstep(0.132, 0.126, ir);
+  float pupilM = smoothstep(0.052, 0.046, ir);
+  vec3 scl = mix(vec3(0.03, 0.015, 0.09), vec3(0.16, 0.06, 0.26), smoothstep(0.0, 0.4, EW - abs(sp.x)));
+  vec3 eyeC = mix(scl, irisCol, irisM);
+  eyeC = mix(eyeC, vec3(0.0), pupilM);
+  eyeC += vec3(0.8, 1.0, 1.0) * smoothstep(0.016, 0.0, length(ip - vec2(-0.035, 0.035))) * 1.4;
+  eyeC *= 1.0 - smoothstep(0.05, 0.0, yu - sp.y) * 0.6;
+  col = mix(col, eyeC, inEye);
+  // lid rims glow, lashes as dark spikes along the upper lid, a soft halo
+  float rimU = smoothstep(0.012, 0.0, abs(sp.y - yu)) * step(abs(sp.x), EW) * facing;
+  float rimL = smoothstep(0.008, 0.0, abs(sp.y - yl)) * step(abs(sp.x), EW) * facing;
+  col = mix(col, vec3(0.01, 0.0, 0.03), rimU);
+  col += mix(vec3(1.0, 0.25, 0.8), vec3(1.0, 0.1, 0.2), uAlert) * (rimL * 0.9 + smoothstep(0.02, 0.0, abs(sp.y - yu)) * step(abs(sp.x), EW) * facing * 0.35);
+  float lash = 0.0;
+  float lx = sp.x / EW;
+  float above = sp.y - yu;
+  float cell = floor((lx + 1.0) * 26.0);
+  float lf = fract((lx + 1.0) * 26.0) - 0.5;
+  float llen = (0.04 + 0.05 * hash(vec2(cell, 1.0))) * ex * uOpen;
+  lash = step(0.0, above) * step(above, llen) * smoothstep(0.22, 0.0, abs(lf + above * 6.0 * lx) - 0.08 * (1.0 - above / max(llen, 0.001)));
+  col = mix(col, vec3(0.01, 0.0, 0.03), lash * step(abs(lx), 1.0) * facing);
+  float halo = exp(-pow(length(sp * vec2(0.8, 1.6)) * 2.4, 2.0)) * facing;
+  col += mix(vec3(0.25, 0.3, 1.0), vec3(1.0, 0.1, 0.2), uAlert) * halo * 0.22;
   // skyline with neon windows
   float az = atan(d.x, -d.z);
   float h1 = 0.012 + 0.075 * pow(hash(vec2(floor(az * 22.0), 1.0)), 2.0) + 0.025 * hash(vec2(floor(az * 61.0), 4.0));
@@ -226,7 +255,7 @@ function drawPassport() {
   g.fillStyle = '#2dff9a'; g.beginPath(); g.arc(W - 190, 190, 22, 0, PI * 2); g.fill();
   const mono = (px, w = 500) => `${w} ${px}px "Geist Mono Variable", ui-monospace, monospace`;
   g.textBaseline = 'alphabetic';
-  g.fillStyle = '#62e8ff'; g.font = mono(27); g.fillText('SHUIN // AGENT PASSPORT', 84, 118);
+  g.fillStyle = '#62e8ff'; g.font = mono(27); g.fillText('MIHARI // AGENT PASSPORT', 84, 118);
   g.fillStyle = '#f2fbff'; g.font = '700 112px "Chakra Petch", sans-serif'; g.fillText('RESEARCH-BOT', 80, 290);
   g.font = mono(33); g.fillStyle = '#9db8cc';
   g.fillText('OPERATOR   ACME INC.', 84, 390); g.fillText('SCOPES     read_file · web.search', 84, 438); g.fillText('ERC-8004   eip155:84532 · #10353', 84, 486);
@@ -263,7 +292,7 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
 
   const skyMat = new THREE.ShaderMaterial({
     vertexShader: SKY_VERT, fragmentShader: SKY_FRAG, depthTest: false, depthWrite: false,
-    uniforms: {uInvProj: {value: new THREE.Matrix4()}, uCamWorld: {value: new THREE.Matrix4()}, uTime: {value: 0}, uAlert: {value: 0}, uDim: {value: 0}},
+    uniforms: {uInvProj: {value: new THREE.Matrix4()}, uCamWorld: {value: new THREE.Matrix4()}, uTime: {value: 0}, uAlert: {value: 0}, uDim: {value: 0}, uOpen: {value: 1}, uLook: {value: new THREE.Vector2()}},
   });
   const sky = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), skyMat); sky.frustumCulled = false; sky.renderOrder = -1000;
   scene.add(sky);
@@ -426,7 +455,7 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
   towerGeo.setAttribute('aSeed', new THREE.InstancedBufferAttribute(seeds, 1));
   real.add(towers); mirror.add(towers.clone());
 
-  const WORDS = ['承認', '監査', '識別', '関門', '代理人', '封鎖', '朱印', '認証', '記録', '審判', 'AGENT', '可決', '否決', '通行証'];
+  const WORDS = ['承認', '監査', '識別', '関門', '代理人', '封鎖', '見張り', '認証', '記録', '審判', 'AGENT', '可決', '否決', '通行証'];
   const signs = [];
   fontsReady().then(() => {
     signSpots.forEach((sp, i) => {
@@ -639,7 +668,10 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
       tc.copy(f.c).lerp(COL.shu, alert).multiplyScalar(1.8); air.setColorAt(i, tc);
     }
     air.instanceMatrix.needsUpdate = true; air.instanceColor.needsUpdate = true;
-    skyMat.uniforms.uTime.value = time; skyMat.uniforms.uAlert.value = alert; skyMat.uniforms.uDim.value = cur.dim;
+    skyMat.uniforms.uTime.value = time;
+    // the sky eye: blinks every few seconds, looks where the cursor is
+    const bp = (time % 6.5) / 0.22; skyMat.uniforms.uOpen.value = bp < 1 ? Math.abs(Math.cos(bp * Math.PI)) : 1;
+    skyMat.uniforms.uLook.value.set(pointer.sx, -pointer.sy); skyMat.uniforms.uAlert.value = alert; skyMat.uniforms.uDim.value = cur.dim;
     veilMat.uniforms.uTime.value = time; veilMat.uniforms.uLine.value.copy(COL.cyan).lerp(COL.shu, alert); veilMat.uniforms.uLine2.value.copy(COL.mag).lerp(COL.shu, alert);
     stampMat.opacity = smooth(Math.max(0, (closed - 0.75) / 0.25)) * (override === 'open' ? 0 : 1);
 

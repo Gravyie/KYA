@@ -16,22 +16,22 @@ export default function Connect() {
       "command": "node",
       "args": ["${mcp}", "--",
                "npx", "@modelcontextprotocol/server-filesystem", "/path/to/project"],
-      "env": { "SHUIN_AGENT_KEY": "sa_…", "SHUIN_URL": "${url}" }
+      "env": { "MIHARI_AGENT_KEY": "mia_…", "MIHARI_URL": "${url}" }
     }
   }
 }`, 'Paste into Claude Desktop, Cursor or any MCP client config. Tool names become rule actions (read_file, write_file…); the first path, url or query argument becomes the resource. Tools the agent has no rule for are hidden from it.'],
     sdk: ['Node SDK', `# in your agent's project
 npm install ${sdk}
 
-import { createShuin } from '@shuin/sdk';
-const guard = createShuin({ agentKey: process.env.SHUIN_AGENT_KEY, baseUrl: '${url}' });
+import { createMihari } from '@mihari/sdk';
+const guard = createMihari({ agentKey: process.env.MIHARI_AGENT_KEY, baseUrl: '${url}' });
 
 await guard.run(
   { action: 'files.read', resource: 'workspace/report.md', note: 'why the agent wants it' },
   () => readFile('report.md', 'utf8'),
-);`, 'Fails closed if Shuin is unreachable. “Ask me” rules block until you decide in Approvals.'],
+);`, 'Fails closed if Mihari is unreachable. “Ask me” rules block until you decide in Approvals.'],
     rest: ['REST', `curl -s ${url}/api/authorize \\
-  -H "authorization: Bearer $SHUIN_AGENT_KEY" -H "content-type: application/json" \\
+  -H "authorization: Bearer $MIHARI_AGENT_KEY" -H "content-type: application/json" \\
   -d '{"action":"payments.send","resource":"acme-corp","amount":240,"note":"March invoice"}'
 
 # outcome is "allow", "ask" or "deny"
@@ -39,10 +39,10 @@ await guard.run(
 # then:  POST ${url}/api/receipt  {"eventId":"…","outcome":"success"}`, 'Any language works. Every authorize call is one audit event.'],
     example: ['Try an example', `# 1. register an agent from the “Coding agent” template, copy its key
 # 2. run a scripted agent that tries allowed, denied and approval-gated calls:
-SHUIN_AGENT_KEY=sa_… SHUIN_URL=${url} node ${examples}/research-agent.mjs
+MIHARI_AGENT_KEY=mia_… MIHARI_URL=${url} node ${examples}/research-agent.mjs
 
 # or put the firewall in front of the bundled demo MCP server:
-SHUIN_AGENT_KEY=sa_… SHUIN_URL=${url} node ${mcp} -- node ${examples}/demo-mcp-server.mjs`, 'The research agent pauses on the write: approve it under Approvals and watch it continue.'],
+MIHARI_AGENT_KEY=mia_… MIHARI_URL=${url} node ${mcp} -- node ${examples}/demo-mcp-server.mjs`, 'The research agent pauses on the write: approve it under Approvals and watch it continue.'],
     verify: ['Prove identity', `# the agent mints a short-lived assertion for one audience
 const { token } = await guard.assertion('https://api.partner.com');
 

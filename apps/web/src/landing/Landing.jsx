@@ -8,7 +8,6 @@ import {Words, useReveal, Counter} from './bits.jsx';
 import SectionHead from './SectionHead.jsx';
 import Hud from './Hud.jsx';
 import Magi from './Magi.jsx';
-import ChromeWord from './ChromeWord.jsx';
 import Chain from './Chain.jsx';
 import ProductWindow from './ProductWindow.jsx';
 import Cases from './Cases.jsx';
@@ -78,33 +77,19 @@ function useWorld(canvasRef, frameApi, handlers) {
   return {mode, worldRef};
 }
 
-/** Opening card: three lines of type, then the seal comes down. Plays once per session; any key or click skips. */
-function Opening({ready, onDone}) {
-  const [phase, setPhase] = useState(0);
-  const [gone, setGone] = useState(false);
+/** Opening: the eye blinks awake, glances at you, and you fall through its pupil into the city. Once per session. */
+function EyeIntro({onReveal, onDone}) {
+  const ref = useRef(null), box = useRef(null);
   useEffect(() => {
-    const ts = [setTimeout(() => setPhase(1), 120), setTimeout(() => setPhase(2), 650), setTimeout(() => setPhase(3), 1150)];
-    return () => ts.forEach(clearTimeout);
-  }, []);
-  useEffect(() => {
-    if (phase < 3 || !ready) return undefined;
-    const t = setTimeout(() => { setGone(true); setTimeout(onDone, 800); }, 900);
-    return () => clearTimeout(t);
-  }, [phase, ready, onDone]);
-  useEffect(() => {
-    const skip = () => { setGone(true); setTimeout(onDone, 500); };
-    addEventListener('keydown', skip); addEventListener('pointerdown', skip);
-    return () => { removeEventListener('keydown', skip); removeEventListener('pointerdown', skip); };
-  }, [onDone]);
+    let stop = () => {}, live = true;
+    const onFall = () => box.current?.classList.add('falling');
+    import('./eye.js').then(({playEye}) => { if (live && ref.current) stop = playEye(ref.current, {onReveal, onDone, onFall}); });
+    return () => { live = false; stop(); };
+  }, [onReveal, onDone]);
   return (
-    <div className={`opening p${phase} ${gone ? 'gone' : ''}`} aria-hidden="true">
-      <div className="op-type">
-        <span className="op-a">第壱話</span>
-        <span className="op-b">KNOW YOUR</span>
-        <span className="op-c">AGENT</span>
-      </div>
-      <div className="op-seal"><Mark size={150} /><i className="op-ink" /></div>
-      <span className="op-foot">SHUIN 朱印 — {ready ? 'READY' : 'LOADING THE CITY'}</span>
+    <div className="eye-intro" ref={box} aria-hidden="true">
+      <canvas ref={ref} />
+      <p className="ei-cap"><span lang="ja">見張り</span> MIHARI — <em>click to skip</em></p>
     </div>
   );
 }
@@ -172,7 +157,7 @@ export default function Landing() {
   const [beat, setBeat] = useState(0);
   const [revoked, setRevoked] = useState(false);
   const [alert, setAlert] = useState(false);
-  const [booted, setBooted] = useState(() => { try { return sessionStorage.getItem('shuin.boot') === '1'; } catch { return false; } });
+  const [booted, setBooted] = useState(() => { try { return sessionStorage.getItem('mihari.boot') === '1'; } catch { return false; } });
   const countRef = useRef(0), lastTick = useRef(0);
 
   const handlers = useRef({
@@ -188,10 +173,10 @@ export default function Landing() {
   }).current;
   const {mode, worldRef} = useWorld(canvasRef, frameApi, handlers);
   useReveal(booted);
-  useEffect(() => { document.title = 'Shuin 朱印 — Know your agent'; }, []);
-  const done = useCallback(() => { setBooted(true); try { sessionStorage.setItem('shuin.boot', '1'); } catch { /* private mode */ } }, []);
+  useEffect(() => { document.title = 'Mihari 見張り — Know your agent'; }, []);
+  const done = useCallback(() => { setBooted(true); try { sessionStorage.setItem('mihari.boot', '1'); } catch { /* private mode */ } }, []);
   useEffect(() => { if (beat !== 4) { setRevoked(false); worldRef.current?.setIris(null); } }, [beat, worldRef]);
-  useEffect(() => { if (booted && mode === 'ready') { const t = setTimeout(() => worldRef.current?.intro(), 60); return () => clearTimeout(t); } return undefined; }, [booted, mode, worldRef]);
+  const reveal = useCallback(() => worldRef.current?.intro(), [worldRef]);
   useMagnetic(rootRef); useTilt(rootRef); useScrollBar(rootRef);
 
   const jump = i => { const el = document.querySelector(`[data-stage="${i}"]`); if (el) window.__lenis ? window.__lenis.scrollTo(el, {offset: -(innerHeight - el.offsetHeight) / 2}) : el.scrollIntoView({behavior: 'smooth', block: 'center'}); };
@@ -200,28 +185,31 @@ export default function Landing() {
 
   return (
     <div className={`landing w-${mode} ${booted ? 'booted' : ''} ${alert ? 'is-alert' : ''}`} ref={rootRef} data-end={beat >= 5 ? '1' : '0'}>
-      {!booted && <Opening ready={mode !== 'loading'} onDone={done} />}
+      {!booted && <EyeIntro onReveal={reveal} onDone={done} />}
       <a className="skip" href="#console">Skip to content</a>
       <div className="scrollbar" aria-hidden="true"><i /></div>
       {mode === 'static' ? <div className="hud static" aria-hidden="true"><div className="static-sun" /></div> : <Hud canvasRef={canvasRef} beat={beat} countApi={countApi} frameApi={frameApi} onJump={jump} alert={alert} />}
       <Nav alert={alert} />
 
       {/* ── Scene 1: the gate ── */}
-      <section className="hero hz" data-stage="0">
-        <div className="wrap hz-in">
-          <p className="hz-kicker rise">The open-source permission layer for AI agents</p>
-          <h1 className="hz-title hz-lockup" aria-label="Know your agent."><span className="hz-block" aria-hidden="true"><Words>KNOW YOUR</Words></span><ChromeWord text="agent." className="hz-script" /></h1>
-          <div className="hz-stack rise" aria-label="What Shuin does">
-            <p><small>Give every</small> AI agent <small>its own</small> identity</p>
-            <p><small>Allow,</small> ask <small>or</small> block <small>every</small> tool call</p>
-            <p>Spend limits <small>and</small> human approvals</p>
-            <p><small>A</small> tamper-evident audit trail <small>on</small> ERC-8004</p>
-          </div>
-          <div className="hz-cta rise">
+      <section className="hero mh" data-stage="0">
+        <div className="wrap mh-in">
+          <p className="mh-kicker rise"><span className="dot" /><span lang="ja">見張り</span> MIHARI — the open-source lookout for AI agents</p>
+          <h1 className="mh-title" aria-label="Every agent. Every action. Watched.">
+            <span className="mh-l"><Words>EVERY AGENT.</Words></span>
+            <span className="mh-l"><Words>EVERY ACTION.</Words></span>
+            <span className="mh-l mh-w" data-text="WATCHED."><Words>WATCHED.</Words></span>
+          </h1>
+          <p className="mh-sub rise">Mihari gives each AI agent a verifiable identity, checks every tool call before it runs — allow it, ask a human, or block it — and keeps a record nobody can quietly edit.</p>
+          <div className="mh-cta rise">
             <Link to="/app" className="btn magnetic">Open the console <ArrowRight size={16} /></Link>
             <Link to="/docs" className="btn ghost magnetic">Read the quickstart</Link>
           </div>
-                  </div>
+        </div>
+        <div className="mh-hud" aria-hidden="true">
+          <span className="mh-live"><i />MONITORING · LIVE</span>
+          <span className="mh-jp" lang="ja">汝の代理人を知れ</span>
+        </div>
         <div className="ticker" ref={tickRef} data-kind="allow" aria-hidden="true"><b>可決 ALLOW</b><code>read_file workspace/q3-report.md</code><em>live sim</em></div>
       </section>
 
@@ -324,7 +312,7 @@ export default function Landing() {
 
         <section id="stack" className="sec" data-stage="9">
           <div className="wrap">
-            <SectionHead n="09" label="構成 · Your stack" title="It fits next to what you already run." sub="Identity providers answer who an agent is and which apps it may open. Shuin answers whether it may do this particular thing right now, and proves what happened." />
+            <SectionHead n="09" label="構成 · Your stack" title="It fits next to what you already run." sub="Identity providers answer who an agent is and which apps it may open. Mihari answers whether it may do this particular thing right now, and proves what happened." />
             <Stack />
             <dl className="numbers">
               <div className="rise"><dt><Counter to={0} /></dt><dd>runtime dependencies in the server</dd></div>
@@ -338,25 +326,23 @@ export default function Landing() {
                 <li><ShieldCheck size={16} /> Zero-dependency server. Your data is a folder on your machine.</li>
                 <li><ShieldCheck size={16} /> MIT licensed. No telemetry, no account, no paid service.</li>
               </ul>
-              <div className="limits rise"><p className="eyebrow">但し書き · Honest limits</p><p>Shuin decides and records. It cannot stop a tool that skips the check, so enforce at the tool or MCP layer. Receipts are agent-reported. The log is tamper-evident against a known head, not a distributed ledger.</p></div>
+              <div className="limits rise"><p className="eyebrow">但し書き · Honest limits</p><p>Mihari decides and records. It cannot stop a tool that skips the check, so enforce at the tool or MCP layer. Receipts are agent-reported. The log is tamper-evident against a known head, not a distributed ledger.</p></div>
             </div>
           </div>
         </section>
       </div>
 
-      <section className="finale hz" data-stage="10">
-        <div className="wrap hz-in fin-in">
-          <p className="hz-kicker rise">Know your agent</p>
-          <h2 className="hz-title fin-word"><ChromeWord text="Shuin" /></h2>
-          <div className="hz-stack rise">
-            <p><small>Self-hosted</small> in a minute</p>
-            <p>One process <small>·</small> one folder <small>·</small> free</p>
-          </div>
-          <div className="hz-cta rise">
+      <section className="finale mh-fin" data-stage="10">
+        <div className="wrap fin-in">
+          <div className="fin-eye" aria-hidden="true"><Mark size={120} /></div>
+          <p className="mh-kicker rise"><span lang="ja">見張り</span> The watch never sleeps</p>
+          <h2 className="mh-title fin-t" aria-label="Know your agent."><span className="mh-l"><Words>KNOW YOUR</Words></span><span className="mh-l mh-w" data-text="AGENT."><Words>AGENT.</Words></span></h2>
+          <p className="mh-sub rise">Self-hosted in a minute. One process, one folder, no account and no paid service.</p>
+          <div className="mh-cta rise">
             <Link to="/app" className="btn magnetic">Open the console <ArrowRight size={16} /></Link>
             <Link to="/docs" className="btn ghost magnetic">Read the quickstart</Link>
           </div>
-          <div className="install rise"><span>$</span><code>git clone https://github.com/shuin-dev/shuin && cd shuin && npm start</code><CopyButton text="git clone https://github.com/shuin-dev/shuin && cd shuin && npm --prefix apps/web install && npm run build && npm start" /></div>
+          <div className="install rise"><span>$</span><code>git clone https://github.com/mihari-dev/mihari && cd mihari && npm start</code><CopyButton text="git clone https://github.com/mihari-dev/mihari && cd mihari && npm --prefix apps/web install && npm run build && npm start" /></div>
         </div>
         <footer className="foot">
           <div className="wrap foot-in">

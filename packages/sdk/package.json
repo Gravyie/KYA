@@ -1,5 +1,5 @@
 {
-  "name": "@shuin/sdk",
+  "name": "@mihari/sdk",
   "version": "0.3.0",
   "type": "module",
   "description": "Identity, scoped permissions and audit for AI agents. Fail-closed tool authorization, ERC-8004 helpers.",

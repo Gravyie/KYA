@@ -1,7 +1,7 @@
 import {spawn} from 'node:child_process';
 import {createInterface} from 'node:readline';
 import {posix, resolve as resolvePath} from 'node:path';
-import {createShuin} from '../../sdk/src/index.js';
+import {createMihari} from '../../sdk/src/index.js';
 
 const RESOURCE_ARGS = ['path', 'file', 'filepath', 'file_path', 'filename', 'directory', 'dir', 'source', 'destination', 'uri', 'url', 'resource', 'repo', 'repository', 'to', 'recipient', 'table', 'query', 'command', 'name'];
 const PATH_ARGS = new Set(['path', 'file', 'filepath', 'file_path', 'filename', 'directory', 'dir', 'source', 'destination']);
@@ -38,7 +38,7 @@ export function deriveAmount(args = {}) {
  * use, so a model is not tempted by tools it cannot run.
  */
 export function createMcpGuard({command, args = [], agentKey, baseUrl, resourceArg, filterTools = true, approvalTimeoutMs, log = () => {}, input = process.stdin, output = process.stdout, env}) {
-  const guard = createShuin({agentKey, baseUrl, approvalTimeoutMs, onApprovalPending: a => log(`waiting for owner approval (${a.eventId})`)});
+  const guard = createMihari({agentKey, baseUrl, approvalTimeoutMs, onApprovalPending: a => log(`waiting for owner approval (${a.eventId})`)});
   const child = spawn(command, args, {stdio: ['pipe', 'pipe', 'inherit'], env: {...process.env, ...env}});
   const calls = new Map();      // id → {eventId}
   const listIds = new Set();    // ids of in-flight tools/list requests
@@ -49,19 +49,19 @@ export function createMcpGuard({command, args = [], agentKey, baseUrl, resourceA
   async function handleToolCall(msg) {
     const {name, arguments: toolArgs = {}} = msg.params ?? {};
     const resource = deriveResource(toolArgs, {resourceArg});
-    if (resource.split('/').includes('..')) return toClient(rpcError(msg.id, 'Blocked by Shuin: path escapes its directory'));
+    if (resource.split('/').includes('..')) return toClient(rpcError(msg.id, 'Blocked by Mihari: path escapes its directory'));
     try {
       const auth = await guard.check({action: name, resource, amount: deriveAmount(toolArgs), note: `MCP tools/call ${name}`});
       if (!auth.decision.allowed) {
         log(`BLOCK ${name} ${resource}: ${auth.decision.reason}`);
-        return toClient(rpcError(msg.id, `Blocked by Shuin: ${auth.decision.reason}. Do not retry this action; ask the user to change this agent's policy.`));
+        return toClient(rpcError(msg.id, `Blocked by Mihari: ${auth.decision.reason}. Do not retry this action; ask the user to change this agent's policy.`));
       }
       log(`ALLOW ${name} ${resource}`);
       calls.set(key(msg.id), {eventId: auth.eventId});
       toServer(msg);
     } catch (error) {
       log(`FAIL-CLOSED ${name}: ${error.message}`);
-      toClient(rpcError(msg.id, `Blocked by Shuin: ${error.message}`));
+      toClient(rpcError(msg.id, `Blocked by Mihari: ${error.message}`));
     }
   }
 

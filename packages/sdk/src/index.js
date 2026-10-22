@@ -1,20 +1,20 @@
 export {verifyAssertion, verifyAuditExport, checkStatus} from './verify.js';
 export * as erc8004 from './erc8004.js';
 
-export class ShuinError extends Error {
+export class MihariError extends Error {
   constructor(message, {status, code, executed = false, cause} = {}) {
     super(message, {cause});
-    this.name = 'ShuinError';
+    this.name = 'MihariError';
     this.status = status;
     this.code = code;
     this.executed = executed;
   }
 }
 
-export class ShuinDeniedError extends ShuinError {
+export class MihariDeniedError extends MihariError {
   constructor(reason, decision) {
-    super(`Shuin blocked the tool call: ${reason}`, {code: 'DENIED'});
-    this.name = 'ShuinDeniedError';
+    super(`Mihari blocked the tool call: ${reason}`, {code: 'DENIED'});
+    this.name = 'MihariDeniedError';
     this.decision = decision;
   }
 }
@@ -24,10 +24,10 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 /**
  * Create a guard for one agent.
  *
- *   const guard = createShuin({agentKey: process.env.SHUIN_AGENT_KEY});
+ *   const guard = createMihari({agentKey: process.env.MIHARI_AGENT_KEY});
  *   await guard.run({action: 'files.read', resource: 'workspace/a.md'}, () => readFile(...));
  */
-export function createShuin({
+export function createMihari({
   agentKey, baseUrl = 'http://127.0.0.1:5055', fetchImpl = globalThis.fetch,
   timeoutMs = 5000, approvalTimeoutMs = 10 * 60e3, pollMs = 1500, onApprovalPending,
 } = {}) {
@@ -46,10 +46,10 @@ export function createShuin({
         signal: AbortSignal.timeout(timeoutMs),
       });
     } catch (cause) {
-      throw new ShuinError('Shuin is unreachable. The tool was not authorized.', {code: 'UNREACHABLE', cause});
+      throw new MihariError('Mihari is unreachable. The tool was not authorized.', {code: 'UNREACHABLE', cause});
     }
     const data = await response.json().catch(() => null);
-    if (!response.ok || !data) throw new ShuinError(data?.error || `Shuin returned HTTP ${response.status}`, {status: response.status, code: 'API_ERROR'});
+    if (!response.ok || !data) throw new MihariError(data?.error || `Mihari returned HTTP ${response.status}`, {status: response.status, code: 'API_ERROR'});
     return data;
   };
 
@@ -83,7 +83,7 @@ export function createShuin({
     if (typeof tool !== 'function') throw new TypeError('tool must be a function');
     const authorization = await check({action, resource, amount, note});
     if (!authorization.decision?.allowed) {
-      throw new ShuinDeniedError(authorization.decision?.reason || 'No active rule', authorization.decision);
+      throw new MihariDeniedError(authorization.decision?.reason || 'No active rule', authorization.decision);
     }
     let result;
     try {
@@ -96,7 +96,7 @@ export function createShuin({
     try {
       await report(authorization.eventId, 'success', note);
     } catch (cause) {
-      throw new ShuinError('The tool ran, but Shuin could not record its outcome. Do not retry the tool automatically.', {code: 'RECEIPT_FAILED', executed: true, cause});
+      throw new MihariError('The tool ran, but Mihari could not record its outcome. Do not retry the tool automatically.', {code: 'RECEIPT_FAILED', executed: true, cause});
     }
     return result;
   }

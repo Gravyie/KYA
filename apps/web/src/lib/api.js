@@ -1,4 +1,4 @@
-const STORE = 'shuin.owner';
+const STORE = 'mihari.owner';
 export const ownerKey = {
   get() { try { return localStorage.getItem(STORE) || ''; } catch { return ''; } },
   set(k) { try { localStorage.setItem(STORE, k); } catch { /* private mode */ } },
@@ -18,7 +18,7 @@ async function call(path, {method = 'GET', key, body} = {}) {
       body: body ? JSON.stringify(body) : undefined,
     });
   } catch {
-    throw new ApiError('Cannot reach the Shuin server. Is it running?', 0);
+    throw new ApiError('Cannot reach the Mihari server. Is it running?', 0);
   }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new ApiError(data.error || `Request failed (${res.status})`, res.status);

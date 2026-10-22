@@ -46,10 +46,10 @@ export default function ProductWindow() {
 
   return (
     <div className="pw" ref={ref}>
-      <div className="pw-bar"><i /><i /><i /><span>shuin · console</span><em>Illustrative, interactive</em></div>
+      <div className="pw-bar"><i /><i /><i /><span>mihari · console</span><em>Illustrative, interactive</em></div>
       <div className="pw-body">
         <aside>
-          <b className="pw-logo"><svg width="18" height="18" viewBox="0 0 32 32"><circle cx="16" cy="16" r="11" fill="none" stroke="currentColor" strokeWidth="3.4" /><circle cx="16" cy="16" r="3.4" fill="var(--allow-glow)" /></svg> Shuin</b>
+          <b className="pw-logo"><svg width="18" height="18" viewBox="0 0 32 32"><circle cx="16" cy="16" r="11" fill="none" stroke="currentColor" strokeWidth="3.4" /><circle cx="16" cy="16" r="3.4" fill="var(--allow-glow)" /></svg> Mihari</b>
           <span><LayoutDashboard size={15} /> Overview</span><span><Bot size={15} /> Agents</span>
           <span className="on"><Inbox size={15} /> Approvals {pending && <u>1</u>}</span><span><ScrollText size={15} /> Audit log</span>
         </aside>

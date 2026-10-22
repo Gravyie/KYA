@@ -2,27 +2,29 @@ import {useState} from 'react';
 import {Link} from '../lib/router.jsx';
 
 /**
- * The Shuin mark: a neon torii (the checkpoint) inside a chamfered seal frame, with a single magenta dot in the
- * gateway: the verdict. Reads as a hanko stamp at small sizes and as a sign at large ones.
+ * The Mihari mark: a watching eye. Almond lids in ink-cyan, three manga lash strokes, a magenta iris whose pupil
+ * is a portal (the dark centre with a cyan catchlight). It reads at 16px and scales to a sign.
  */
 export function Mark({size = 24, className = ''}) {
   return (
     <svg className={`mark ${className}`} width={size} height={size} viewBox="0 0 64 64" aria-hidden="true">
-      <path d="M14 4H50L60 14V50L50 60H14L4 50V14Z" fill="#0a0d1c" stroke="#19e6ff" strokeWidth="3" strokeLinejoin="round" />
-      <path d="M11 19.5Q32 14 53 19.5L52 24.5Q32 20 12 24.5Z" fill="#ff2fa6" />
-      <rect x="17" y="29" width="30" height="3.4" fill="#19e6ff" />
-      <rect x="20" y="23" width="5" height="29" fill="#eaf7ff" />
-      <rect x="39" y="23" width="5" height="29" fill="#eaf7ff" />
-      <circle cx="32" cy="43" r="4.2" fill="#ff2fa6" />
+      <path d="M4 34 Q32 6 60 34 Q32 56 4 34 Z" fill="#0b0b22" />
+      <circle cx="32" cy="33" r="12.5" fill="#ff2fa6" />
+      <circle cx="32" cy="33" r="12.5" fill="none" stroke="#ffd0f0" strokeWidth="1" opacity=".55" />
+      <circle cx="32" cy="33" r="5.6" fill="#05050f" />
+      <circle cx="28.4" cy="29.4" r="2" fill="#bff8ff" />
+      <path d="M4 34 Q32 6 60 34" fill="none" stroke="#19e6ff" strokeWidth="3.6" strokeLinecap="round" />
+      <path d="M8 35 Q32 54 56 35" fill="none" stroke="#19e6ff" strokeWidth="2" strokeLinecap="round" opacity=".7" />
+      <path d="M16 21 L11 12 M25 15.5 L23 6 M36 15 L39 5.5" stroke="#19e6ff" strokeWidth="3" strokeLinecap="round" />
     </svg>
   );
 }
 
 export function Logo({size = 24, withWord = true}) {
   return (
-    <Link to="/" className="logo" aria-label="Shuin home">
+    <Link to="/" className="logo" aria-label="Mihari home">
       <Mark size={size} />
-      {withWord && <span className="logo-word">SHUIN<small lang="ja">朱印</small></span>}
+      {withWord && <span className="logo-word">MIHARI<small lang="ja">見張り</small></span>}
     </Link>
   );
 }

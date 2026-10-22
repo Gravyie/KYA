@@ -22,8 +22,8 @@ const CSP = [
 export function createApp(store, {webDist, root = process.cwd()} = {}) {
   const {state, events} = store;
   const bearer = req => /^Bearer (.+)$/i.exec(req.headers.authorization || '')?.[1] || '';
-  const issuer = () => `shuin:${store.fingerprint().slice(0, 16)}`;
-  const origin = req => process.env.SHUIN_PUBLIC_URL?.replace(/\/$/, '') || `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers.host}`;
+  const issuer = () => `mihari:${store.fingerprint().slice(0, 16)}`;
+  const origin = req => process.env.MIHARI_PUBLIC_URL?.replace(/\/$/, '') || `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers.host}`;
   const lookups = new Map(); // tiny per-IP limiter for the public chain reader
   const allowLookup = req => {
     const ip = req.socket.remoteAddress, now = Date.now(), hits = (lookups.get(ip) ?? []).filter(t => now - t < 60e3);
@@ -81,9 +81,9 @@ export function createApp(store, {webDist, root = process.cwd()} = {}) {
   const routes = [];
   const route = (method, pattern, fn, opts = {}) => routes.push({method, pattern, fn, public: !!opts.public});
 
-  route('GET', /^\/health$/, () => ({ok: true, product: 'Shuin', storage: 'local', events: events.length}), {public: true});
+  route('GET', /^\/health$/, () => ({ok: true, product: 'Mihari', storage: 'local', events: events.length}), {public: true});
   route('GET', /^\/api\/registry$/, () => ({
-    product: 'Shuin', issuer: issuer(), algorithm: 'Ed25519', publicKey: store.publicKey(), fingerprint: store.fingerprint(),
+    product: 'Mihari', issuer: issuer(), algorithm: 'Ed25519', publicKey: store.publicKey(), fingerprint: store.fingerprint(),
   }), {public: true});
   route('GET', /^\/api\/status$/, () => ({
     configured: !!state.owner, owner: state.owner?.name ?? null, agentCount: state.agents.length, eventCount: events.length,
@@ -98,7 +98,7 @@ export function createApp(store, {webDist, root = process.cwd()} = {}) {
     if (state.owner) fail(409, 'Owner already configured');
     const name = String(b.name ?? '').trim();
     if (name.length < 2 || name.length > 80) fail(400, 'Owner name must be 2 to 80 characters');
-    const key = newToken('so');
+    const key = newToken('mio');
     state.owner = {name, keyHash: sha256(key), createdAt: now()};
     store.append(null, 'owner.created', {name}); store.save();
     return {owner: {name}, key, notice: 'Save this key. It is shown once and cannot be recovered.'};
@@ -108,7 +108,7 @@ export function createApp(store, {webDist, root = process.cwd()} = {}) {
     if (!state.owner) fail(409, 'Set up an owner first');
     if (!['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.socket.remoteAddress)) fail(403, 'Local recovery only');
     if (!safeEqual(sha256(bearer(req)), store.recoveryHash())) fail(401, 'Local recovery credential required');
-    const key = newToken('so');
+    const key = newToken('mio');
     state.owner.keyHash = sha256(key);
     store.append(null, 'owner.key.recovered', {method: 'local-terminal'}); store.save();
     return {key, notice: 'The previous owner key is invalid. Save this new key now.'};
@@ -121,7 +121,7 @@ export function createApp(store, {webDist, root = process.cwd()} = {}) {
     const recent = state.approvals.filter(a => a.status !== 'pending').slice(-30).reverse();
     return {
       owner: state.owner.name, registry: {fingerprint: store.fingerprint(), issuer: issuer()},
-      paths: {mcp: resolve(root, 'packages/mcp/bin/shuin-mcp.js'), sdk: resolve(root, 'packages/sdk'), examples: resolve(root, 'examples')},
+      paths: {mcp: resolve(root, 'packages/mcp/bin/mihari-mcp.js'), sdk: resolve(root, 'packages/sdk'), examples: resolve(root, 'examples')},
       agents: state.agents.map(a => view(a, stats.get(a.id))),
       approvals: [...pending, ...recent], eventCount: events.length, events: events.slice(-300).reverse(),
     };
@@ -147,7 +147,7 @@ export function createApp(store, {webDist, root = process.cwd()} = {}) {
     ownerAuth(req);
     const name = String(b.name ?? '').trim();
     if (name.length < 2 || name.length > 80) fail(400, 'Agent name must be 2 to 80 characters');
-    const key = newToken('sa');
+    const key = newToken('mia');
     const agent = {
       id: randomUUID(), name, createdAt: now(), revokedAt: null, expiresAt: null,
       keyHash: sha256(key), keyHint: key.slice(-6), lastUsedAt: null, ...newAgentFields(b, null),
@@ -178,7 +178,7 @@ export function createApp(store, {webDist, root = process.cwd()} = {}) {
     ownerAuth(req);
     const a = findAgent(id);
     if (a.revokedAt) fail(409, 'Agent is revoked');
-    const key = newToken('sa');
+    const key = newToken('mia');
     a.keyHash = sha256(key); a.keyHint = key.slice(-6);
     store.append(id, 'agent.key.rotated', {}); store.save();
     return {agent: view(a), key};
@@ -235,12 +235,12 @@ export function createApp(store, {webDist, root = process.cwd()} = {}) {
     const chain = getChain(b.chainId) ?? fail(400, 'Unsupported chain');
     const identity = await readIdentity(chain.id, b.agentId);
     if (!identity) fail(404, `agentId ${b.agentId} is not registered on ${chain.name}`);
-    if (identity.file && identity.file.shuin?.agentId && identity.file.shuin.agentId !== a.id) fail(409, 'That on-chain identity belongs to a different Shuin agent');
+    if (identity.file && identity.file.mihari?.agentId && identity.file.mihari.agentId !== a.id) fail(409, 'That on-chain identity belongs to a different Mihari agent');
     if (b.owner && String(b.owner).toLowerCase() !== identity.owner.toLowerCase()) fail(409, 'The wallet does not own that on-chain agent');
     a.onchain = {
       chainId: chain.id, registry: chain.registry, agentId: identity.agentId, owner: identity.owner,
       txHash: /^0x[0-9a-fA-F]{64}$/.test(b.txHash ?? '') ? b.txHash : null, uriKind: identity.uriKind,
-      uriBound: identity.file?.shuin?.agentId === a.id, linkedAt: now(),
+      uriBound: identity.file?.mihari?.agentId === a.id, linkedAt: now(),
     };
     store.append(a.id, 'agent.onchain.linked', {chain: chain.name, chainId: chain.id, agentId: identity.agentId, owner: identity.owner, txHash: a.onchain.txHash});
     store.save();
@@ -256,7 +256,7 @@ export function createApp(store, {webDist, root = process.cwd()} = {}) {
     return {
       chain: {id: identity.chain.id, name: identity.chain.name, registry: identity.chain.registry, explorer: identity.chain.explorer},
       agentId: identity.agentId, owner: identity.owner, uriKind: identity.uriKind, tokenURI: identity.uriKind === 'data' ? null : identity.tokenURI.slice(0, 300),
-      registration: f ? {name: String(f.name ?? '').slice(0, 120), description: String(f.description ?? '').slice(0, 400), active: f.active ?? null, services: Array.isArray(f.services) ? f.services.slice(0, 8).map(s => ({name: String(s.name).slice(0, 40), endpoint: String(s.endpoint).slice(0, 200)})) : [], x402Support: f.x402Support ?? null, shuin: !!f.shuin} : null,
+      registration: f ? {name: String(f.name ?? '').slice(0, 120), description: String(f.description ?? '').slice(0, 400), active: f.active ?? null, services: Array.isArray(f.services) ? f.services.slice(0, 8).map(s => ({name: String(s.name).slice(0, 40), endpoint: String(s.endpoint).slice(0, 200)})) : [], x402Support: f.x402Support ?? null, mihari: !!f.mihari} : null,
     };
   }, {public: true});
 
@@ -340,7 +340,7 @@ export function createApp(store, {webDist, root = process.cwd()} = {}) {
       ...(a.onchain ? {erc8004: {agentRegistry: agentRegistryId(a.onchain.chainId, a.onchain.registry), agentId: a.onchain.agentId}} : {}),
     };
     const b64 = o => Buffer.from(JSON.stringify(o)).toString('base64url');
-    const signingInput = `${b64({alg: 'EdDSA', typ: 'shuin+jwt', kid: store.fingerprint().slice(0, 16)})}.${b64(claims)}`;
+    const signingInput = `${b64({alg: 'EdDSA', typ: 'mihari+jwt', kid: store.fingerprint().slice(0, 16)})}.${b64(claims)}`;
     const token = `${signingInput}.${store.signBytes(signingInput).toString('base64url')}`;
     store.append(a.id, 'assertion.issued', {aud: audience, jti: claims.jti, exp: claims.exp});
     return {token, claims, expiresIn: ttl};
@@ -357,7 +357,7 @@ export function createApp(store, {webDist, root = process.cwd()} = {}) {
         try {
           const id = await readIdentity(a.onchain.chainId, a.onchain.agentId);
           result.onchain = id
-            ? {ok: id.owner.toLowerCase() === a.onchain.owner.toLowerCase(), chain: id.chain.name, agentId: id.agentId, owner: id.owner, bound: id.file?.shuin?.agentId === a.id}
+            ? {ok: id.owner.toLowerCase() === a.onchain.owner.toLowerCase(), chain: id.chain.name, agentId: id.agentId, owner: id.owner, bound: id.file?.mihari?.agentId === a.id}
             : {ok: false, reason: 'Not found on-chain any more'};
         } catch (e) { result.onchain = {ok: null, reason: e.message}; }
       }
@@ -370,7 +370,7 @@ export function createApp(store, {webDist, root = process.cwd()} = {}) {
   route('GET', /^\/api\/audit\/export$/, req => {
     ownerAuth(req);
     const head = events.at(-1)?.hash ?? GENESIS;
-    const body = {format: 'shuin-audit-v2', exportedAt: now(), publicKey: store.publicKey(), count: events.length, head};
+    const body = {format: 'mihari-audit-v2', exportedAt: now(), publicKey: store.publicKey(), count: events.length, head};
     return {...body, headSignature: store.signJson({head, count: events.length}), events};
   });
 

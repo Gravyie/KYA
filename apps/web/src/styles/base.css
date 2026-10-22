@@ -128,7 +128,7 @@ textarea.input { height: auto; padding: 10px 12px; resize: vertical; }
   *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
 }
 
-/* Shuin app chrome: sharp, ink on sumi, one vermilion */
+/* Mihari app chrome: sharp, ink on sumi, one vermilion */
 .btn { border-radius: 0; background: var(--shu); color: var(--seal-ink); letter-spacing: 0.06em; }
 .btn:hover { background: var(--shu-2); }
 .btn.ghost { background: transparent; color: var(--ink); border-color: var(--line-strong); }

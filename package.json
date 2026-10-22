@@ -1,8 +1,8 @@
 {
-  "name": "shuin",
+  "name": "mihari",
   "private": true,
   "version": "0.2.0",
-  "description": "Shuin: identity, permissions and audit for AI agents. Know your agent.",
+  "description": "Mihari: identity, permissions and audit for AI agents. Know your agent.",
   "license": "MIT",
   "type": "module",
   "engines": {"node": ">=20.12"},
@@ -12,6 +12,6 @@
     "start": "node apps/server/src/index.js",
     "test": "node --test --test-timeout=20000 apps/server/test/api.test.mjs",
     "owner:recover": "node scripts/recover-owner.mjs",
-    "demo:mcp": "node packages/mcp/bin/shuin-mcp.js -- node examples/demo-mcp-server.mjs"
+    "demo:mcp": "node packages/mcp/bin/mihari-mcp.js -- node examples/demo-mcp-server.mjs"
   }
 }

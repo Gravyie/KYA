@@ -162,7 +162,7 @@ details { margin-top: 18px; } summary { cursor: pointer; font-size: 14px; color:
 .oc-link { margin-top: 20px; padding-top: 18px; border-top: 1px dashed var(--line-strong); max-width: 520px; }
 .mt { margin-top: 16px; }
 @media (max-width: 700px) { .oc-row { grid-template-columns: 1fr; } }
-/* Shuin skin */
+/* Mihari skin */
 .panel, .stat, .empty, .integrity, .modal, .auth-card, .ask-card, .tpl, .code, .verdict, .secret, .seg, .seg button, .side nav a, .error, .input, .icon-btn, .toast, .chip { border-radius: 0 !important; }
 .side { background: #090706; }
 .side nav a.on { background: rgba(241, 233, 220, 0.06); color: var(--ink); box-shadow: inset 2px 0 0 var(--shu); }

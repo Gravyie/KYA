@@ -1,6 +1,6 @@
 /*
  * ERC-8004 ("Trustless Agents") helpers: chain registry, registration-file
- * builder, and the few ABI calls Shuin needs. Pure functions, no dependencies,
+ * builder, and the few ABI calls Mihari needs. Pure functions, no dependencies,
  * so the server, the SDK and the browser console share one implementation.
  * Spec: https://eips.ethereum.org/EIPS/eip-8004
  */
@@ -69,7 +69,7 @@ export function fromDataUri(uri) {
 
 const SIGIL = "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='#0a0f0d'/><circle cx='32' cy='32' r='15' fill='none' stroke='#eaf6f0' stroke-width='5'/><circle cx='32' cy='32' r='5' fill='#1fcf8e'/></svg>";
 
-/** Build the ERC-8004 registration file for a Shuin agent. */
+/** Build the ERC-8004 registration file for a Mihari agent. */
 export function registrationFile({agent, operator, origin, issuer, fingerprint, onchain}) {
   const description = agent.description || `${agent.name}: an AI agent operated by ${operator}. Every action it takes is checked against policy and recorded in a verifiable audit log.`;
   return {
@@ -78,13 +78,13 @@ export function registrationFile({agent, operator, origin, issuer, fingerprint, 
     description,
     image: `data:image/svg+xml;utf8,${encodeURIComponent(SIGIL)}`,
     services: [
-      {name: 'shuin-card', endpoint: `${origin}/api/agents/${agent.id}/card`, version: '1'},
-      {name: 'shuin-status', endpoint: `${origin}/api/agents/${agent.id}/status`, version: '1'},
+      {name: 'mihari-card', endpoint: `${origin}/api/agents/${agent.id}/card`, version: '1'},
+      {name: 'mihari-status', endpoint: `${origin}/api/agents/${agent.id}/status`, version: '1'},
     ],
     x402Support: false,
     active: agent.status === 'active',
     registrations: onchain ? [{agentId: Number(onchain.agentId), agentRegistry: agentRegistryId(onchain.chainId, onchain.registry)}] : [],
-    shuin: {
+    mihari: {
       agentId: agent.id, operator, issuer, registryFingerprint: fingerprint,
       actions: [...new Set(agent.scopes.filter(s => s.mode !== 'deny').map(s => s.action))],
     },

@@ -10,7 +10,7 @@ legacy/hackathon/contracts/lib/
 legacy/hackathon/contracts/deployments/
 legacy/hackathon/agents/runtime/*/.runs/
 legacy/hackathon/agents/runtime/*/.storage/
-.shuin-demo/
+.mihari-demo/
 
 # env & secrets
 .env
