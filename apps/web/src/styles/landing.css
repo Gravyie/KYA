@@ -592,10 +592,16 @@
 /* opening: a loader with the mark, then a thin frame while the 3D eye wakes and the camera pulls back */
 .opening { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center; pointer-events: none; }
 .opening.op-loading { background: #05050f; pointer-events: auto; }
-.opening.op-playing { background: transparent; animation: op-out 0.9s ease both; }
+.opening.op-playing { background: transparent; animation: op-out 0.5s ease both; }
 @keyframes op-out { from { background: #05050f; } to { background: rgba(5, 5, 15, 0); } }
-.op-mark { transition: opacity 0.5s, transform 0.9s var(--ease); }
-.op-playing .op-mark { opacity: 0; transform: scale(2.4); }
+.op-term { width: min(520px, calc(100vw - 48px)); font: 500 13px/1.9 var(--mono); color: #c9d4ea; transition: opacity 0.45s, transform 0.6s var(--ease); }
+.op-term .mark { display: block; margin: 0 0 18px; }
+.op-term p { margin: 0; white-space: nowrap; overflow: hidden; opacity: 0; animation: op-line 0.32s steps(16) var(--d) forwards; }
+.op-term p:first-of-type { color: #fff; letter-spacing: 0.08em; }
+.op-term b { font-weight: 600; color: var(--mag); margin-right: 6px; } .op-term b.ok { color: var(--jade, #2dff9a); } .op-term b.wait { color: var(--cyan); animation: mk-cur 0.8s steps(1) infinite; }
+.op-cursor { display: inline-block; width: 9px; height: 16px; background: var(--cyan); vertical-align: middle; animation: mk-cur 1s steps(1) infinite; }
+@keyframes op-line { from { opacity: 1; clip-path: inset(0 100% 0 0); } to { opacity: 1; clip-path: inset(0 0 0 0); } }
+.op-playing .op-term { opacity: 0; transform: translateY(-8px); }
 .op-cap { position: absolute; left: 50%; bottom: 32px; transform: translateX(-50%); margin: 0; display: flex; gap: 14px; align-items: baseline; font: 600 11px var(--mono); letter-spacing: 0.3em; color: rgba(225, 232, 255, 0.75); white-space: nowrap; }
 .op-cap span { font: 900 12px var(--kanji); letter-spacing: 0.2em; color: var(--mag); }
 .op-cap em { font-style: normal; font-weight: 500; letter-spacing: 0.2em; color: rgba(225, 232, 255, 0.4); text-transform: uppercase; }

@@ -1,26 +1,28 @@
-# Mihari 見張り — design vision (v16: "Into the Eye")
+# Mihari 見張り — design vision (v17: "Text-vision")
 
 ## One sentence
-The page is one flight down a flooded neon canyon toward a colossal eye hanging in storm cloud at its end. The site opens on that eye in close-up, waking; the camera pulls back to show the city it watches; scrolling travels back toward it; the finale ends at its pupil.
+The city as the watcher sees it: a neon canyon drawn entirely in glyphs, and above its far end, filling the sky, one vast eye. The site boots like a terminal, the city decodes out of noise, the eye opens and finds you; scrolling travels toward it, and the finale ends at its pupil.
 
-## The eye (apps/web/src/landing/watcher.js)
-Built like a real eye so it holds up from a hundred metres and in close-up:
-- **Ball**: sclera with fibre-optic veins, an iris *disc* set inside the ball (true parallax), a clear cornea that only carries reflections (a window catchlight with mullions, the city's neon horizon), a retina lining the inside, seen through the pupil, which is a real hole.
-- **Iris**: layered radial fibres, collarette, crypts, contraction furrows, a dark limbal ring; a faint implant layer (segmented ring, tick scale, data-glyph band, scan sweep). Pupil breathes, narrows on verdicts, becomes a cursor-like slit on lockdown.
-- **Lids**: two hemispherical shells rotating about the eye's horizontal axis, so the opening is a true almond; lashes ride them. Lids and a backdrop share one planar storm-cloud shader, so no eyeball silhouette shows: only the opening, the wet margin and the lashes.
-- **Behaviour**: saccades (snaps, not pans), blinks (sometimes double), looks at your cursor, reads the agent pass and the scan ring, turns red on revocation. Its reflection sits in the flood.
+## Text-vision (apps/web/src/landing/ascii.js)
+The 3D scene is rendered tiny (two samples per character cell), then every cell becomes one glyph tinted with the cell's colour. Glyphs come from two density ramps measured off the real font at load (ASCII mixed with half-width katakana in the mid-tones, alternated per cell so flat areas never stripe); where the image has an edge, the cell gets a stroke (| - / \) along it, so towers and rings read as line art. A faint tone-mapped underlay keeps the neon atmosphere; bloom, scanlines and grain sit on top. Rendering the scene this small is also what makes it cheap. The agent's pass is the one object drawn crisp over the glyphs, a real document inside the text-vision.
+
+## The eye (apps/web/src/landing/skyeye.js)
+Not an eyeball: one plane far beyond the canyon, drawn like a manga panel, but in light rather than ink (black lines vanish in text-vision): a heavy glowing liner ending in a wing, fanned lashes longer at the outer corner, a crease, a big iris with fibres, collarette, crypts, a dark limbal ring and an implant layer (segmented ring, tick scale, data-glyph band), a window catchlight. All linework is drawn at the scale of a character cell. It blinks (sometimes twice), snaps its gaze, reads the pass and the scan ring, narrows to a slit and goes red on revocation; its reflection lies in the flood.
 
 ## The story as space
 | Scroll | Where you are | What it means |
 |---|---|---|
-| Opening | Close on the eye, shut. It opens, looks left, right, at you; the camera pulls back down the canyon. Once per session; click, key or wheel hurries it. | You are seen. |
-| Hero | Street level, the eye over the end of the canyon. "EVERY AGENT. EVERY ACTION. WATCHED." | Nothing gets through unseen. |
-| 01 Identify | The eye's beam reads the agent's pass. | Identity first. |
-| 02 Decide | Calls stream through the eye's scan ring and get verdicts. MAGI vote panel. | One verdict per call. |
-| 03 Prove | The ledger runs toward the eye; its reflection in the flood. | Every verdict is a block. |
+| Opening | A terminal boots ("[ ok ] audit chain verified … opening the eye"); the city decodes out of scrambled glyphs; the eye opens, blinks, looks left, right, at you. Once per session; input hurries it. | You are seen. |
+| Hero | Street level, the eye filling the sky over the canyon. "EVERY AGENT. EVERY ACTION. WATCHED." | Nothing gets through unseen. |
+| 01 Identify | The eye reads the agent's pass, which hangs crisp in the glyph city. | Identity first. |
+| 02 Decide | Calls stream through the scan ring and get verdicts. MAGI vote panel. | One verdict per call. |
+| 03 Prove | The ledger runs toward the eye. | Every verdict is a block. |
 | 04 Contain | The city goes red; the eye narrows; the ring's aperture closes. | Revoke once, closed everywhere. |
-| Lower sections | The approach: the eye grows behind every chapter. | The product, in detail. |
-| Finale | At the pupil: the iris rings the screen, "KNOW YOUR AGENT." sits in the dark of the pupil. | Inside the watch. |
+| Lower sections | The approach, the eye looming over every chapter. | The product, in detail. |
+| Finale | Risen to the eye: the iris rings the screen, "KNOW YOUR AGENT." sits in the dark of the pupil. | Inside the watch. |
+
+## Motion
+The cursor turns the head a touch (under a degree); it never swings the camera around the subject. Scroll velocity is eased. Phones get a wider lens rather than a camera pushed behind the city.
 
 ## The mark
 An eye cut from the interface's own chamfered shape: heavy upper lid, detached lower lid, a hexagonal iris, and a pupil that is a terminal cursor (it blinks). The eye watches machines.

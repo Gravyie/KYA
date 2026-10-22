@@ -77,12 +77,25 @@ function useWorld(canvasRef, frameApi, handlers) {
   return {mode, worldRef};
 }
 
-/** Covers the page while the world loads, then frames the opening, which the 3D eye plays itself. */
+const BOOT = [
+  ['見張り MIHARI', 'watch kernel 0.2 · tty0'],
+  ['ok', 'registry mounted'],
+  ['ok', 'policy engine · default deny'],
+  ['ok', 'audit chain verified · sha-256'],
+  ['..', 'opening the eye'],
+];
+
+/** The opening, part one: a terminal boots while the world loads. Part two (the city decoding out of
+ *  glyphs, the eye opening in the sky) is played by the world itself. */
 function Opening({phase}) {
   return (
     <div className={`opening op-${phase}`} aria-hidden="true">
-      <div className="op-mark"><Mark size={92} live /></div>
-      <p className="op-cap"><span lang="ja">見張り</span> MIHARI<em>{phase === 'loading' ? 'waking the watch' : 'click to skip'}</em></p>
+      <div className="op-term">
+        <Mark size={44} live />
+        {BOOT.map(([k, v], i) => <p key={v} style={{'--d': `${0.15 + i * 0.26}s`}}><b className={k === 'ok' ? 'ok' : k === '..' ? 'wait' : ''}>{k === 'ok' || k === '..' ? `[ ${k} ]` : k}</b> {v}</p>)}
+        <i className="op-cursor" />
+      </div>
+      <p className="op-cap"><span lang="ja">見張り</span> MIHARI<em>{phase === 'loading' ? 'booting' : 'click to skip'}</em></p>
     </div>
   );
 }
@@ -169,16 +182,18 @@ export default function Landing() {
   useEffect(() => { document.title = 'Mihari 見張り — Know your agent'; }, []);
   const done = useCallback(() => { setBooted(true); try { sessionStorage.setItem('mihari.boot', '1'); } catch { /* private mode */ } }, []);
   useEffect(() => { if (beat !== 4) { setRevoked(false); worldRef.current?.setIris(null); } }, [beat, worldRef]);
-  // the opening plays once per session: the eye wakes in close-up, then the camera pulls back down the canyon
+  // the opening plays once per session: a terminal boots, the city decodes out of glyphs, the eye in the sky opens
   const [opening, setOpening] = useState(() => (booted ? 'off' : 'loading'));
+  const [bootRead, setBootRead] = useState(false);   // the boot lines get time to be read, however fast the world loads
+  useEffect(() => { const t = setTimeout(() => setBootRead(true), 1700); return () => clearTimeout(t); }, []);
   useEffect(() => {
     if (opening !== 'loading') return;
     if (mode === 'static') { setOpening('off'); done(); return; }
-    if (mode !== 'ready') return;
+    if (mode !== 'ready' || !bootRead) return;
     scrollTo(0, 0); window.__lenis?.stop();
     setOpening('playing');
     worldRef.current.intro(() => { window.__lenis?.start(); setOpening('off'); done(); });
-  }, [mode, opening, worldRef, done]);
+  }, [mode, opening, worldRef, done, bootRead]);
   useEffect(() => {
     if (opening !== 'playing') return undefined;
     const skip = () => worldRef.current?.skipIntro();

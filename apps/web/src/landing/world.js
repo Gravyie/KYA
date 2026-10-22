@@ -1,11 +1,11 @@
 import * as THREE from 'three';
 import {EffectComposer} from 'three/examples/jsm/postprocessing/EffectComposer.js';
-import {RenderPass} from 'three/examples/jsm/postprocessing/RenderPass.js';
 import {UnrealBloomPass} from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import {ShaderPass} from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import {OutputPass} from 'three/examples/jsm/postprocessing/OutputPass.js';
 
-import {createWatcher} from './watcher.js';
+import {createSkyEye} from './skyeye.js';
+import {AsciiPass} from './ascii.js';
 
 /*
  * 見張り · THE WATCH. One WebGL world for the whole page.
@@ -28,8 +28,7 @@ const HOT = {neutral: COL.ash.clone().multiplyScalar(1.2), allow: COL.jade.clone
 const STAMP = {neutral: new THREE.Color(0x10131f), allow: COL.cyan.clone().multiplyScalar(1.6), deny: COL.shu.clone().multiplyScalar(2)};
 
 const FLOOR_Y = -2.2;
-const ER = 18, EYE = [0, 25, -128];
-const IRIS_Z = EYE[2] + ER * 0.84;      // the iris plane: close-ups frame this, not the eyeball's centre
+const EYE = [0, 46, -260];              // the eye in the sky: a vast plane far beyond the end of the canyon
 const HIDDEN = {p: [-3.4, 0.2, 2.6], tilt: 0.4, rx: 0, s: 0.7, o: 0};
 const Z = (cx, cy, w, h) => ({cx, cy, w, h});
 // open: lid openness · pupil: fraction of the iris · slit: alert pupil · scan: iris sweep · beam: scan beam · gaze: 0 the viewer, 1 the scan ring
@@ -38,10 +37,9 @@ const S = o => ({az: 0, el: 0.08, r: 4, lx: 0, ly: 0, lz: 0, closed: 0, alert: 0
 // Each stage frames a bounding radius `r` around `look`, fitted into a screen `zone`. The page owns the other side.
 const FULL = Z(0.5, 0.5, 1, 1);
 const fly = (lz, az, el, dim = 0.55, extra = {}) => S({az, el, r: 3.6, lx: az * 4, ly: 1.6, lz, zone: FULL, dim, ledger: 1, mix: [0.8, 0.1, 0.1], ...extra});
-const eyeShot = (r, zone, extra = {}) => S({az: 0, el: 0, r, lx: EYE[0], ly: EYE[1], lz: IRIS_Z, zone, ledger: 1, ...extra});
-const INTRO = eyeShot(12.5, FULL, {open: 0, pupil: 0.42, dim: 0.2});
+const eyeShot = (r, zone, extra = {}) => S({az: 0, el: 0, r, lx: EYE[0], ly: EYE[1], lz: EYE[2], zone, ledger: 1, ...extra});
 const STAGES = [
-  /* 0 watch     */ S({az: 0.0, el: -0.148, r: 42.5, lx: EYE[0], ly: EYE[1], lz: EYE[2], zone: Z(0.66, 0.42, 1, 1), dim: 0.2, ledger: 1, pupil: 0.3}),
+  /* 0 watch     */ S({az: 0.0, el: -0.153, r: 81, lx: EYE[0], ly: EYE[1], lz: EYE[2], zone: Z(0.7, 0.33, 1, 1), dim: 0.2, ledger: 1, pupil: 0.32}),
   /* 1 identify  */ S({az: -0.42, el: 0.05, r: 2.1, lx: 0.2, ly: 0.35, lz: 2.0, zone: Z(0.72, 0.5, 0.5, 0.8), mix: [0.5, 0.2, 0.3], card: {p: [0.3, 0.35, 2.6], tilt: -0.3, rx: 0.04, s: 1.45, o: 1}, scan: 1, beam: 1, gaze: 1, pupil: 0.24}),
   /* 2 decide    */ S({az: 0.0, el: 0.16, r: 4.6, lx: 0, ly: 0.9, lz: 0, zone: FULL, dim: 0.55, mix: [0.45, 0.25, 0.3], beam: 1, gaze: 1, scan: 0.6, pupil: 0.26}),
   /* 3 prove     */ S({az: 0.06, el: 0.12, r: 3.2, lx: 0.6, ly: 0.2, lz: -16, zone: Z(0.7, 0.55, 0.56, 0.8), ledger: 1, mix: [0.75, 0.05, 0.2], gaze: 1}),
@@ -51,8 +49,8 @@ const STAGES = [
   /* 7 integrate */ fly(-63, 0.1, -0.1),
   /* 8 cases     */ fly(-73, -0.1, -0.14),
   /* 9 stack     */ fly(-82, 0.06, -0.18),
-  /* 10 finale   */ eyeShot(6.6, Z(0.5, 0.45, 1, 1), {dim: 0.3, pupil: 0.68, mix: [0.9, 0.05, 0.05]}),
-  /* 11 hold     */ eyeShot(6.6, Z(0.5, 0.45, 1, 1), {dim: 0.3, pupil: 0.68, mix: [0.9, 0.05, 0.05]}),
+  /* 10 finale   */ eyeShot(20.5, Z(0.5, 0.45, 1, 1), {dim: 0.3, pupil: 0.6, mix: [0.9, 0.05, 0.05]}),
+  /* 11 hold     */ eyeShot(20.5, Z(0.5, 0.45, 1, 1), {dim: 0.3, pupil: 0.6, mix: [0.9, 0.05, 0.05]}),
 ];
 const NUM = ['az', 'el', 'r', 'lx', 'ly', 'lz', 'closed', 'alert', 'dim', 'ledger', 'open', 'pupil', 'slit', 'scan', 'beam', 'gaze'];
 const ZONE = ['cx', 'cy', 'w', 'h'];
@@ -85,7 +83,8 @@ const TOWER_FRAG = `
     float h = hash(cell.yx + vSeed * 9.0);
     vec3 wc = h < 0.4 ? vec3(0.1, 0.9, 1.0) : h < 0.7 ? vec3(1.0, 0.2, 0.75) : h < 0.9 ? vec3(1.0, 0.7, 0.2) : vec3(0.85, 0.95, 1.0);
     wc = mix(wc, vec3(1.0, 0.12, 0.2), uAlert * 0.85);
-    vec3 base = vec3(0.012, 0.016, 0.04) + vec3(0.02, 0.06, 0.1) * smoothstep(0.0, 1.0, v / vDim.y) * 0.4;
+    // bodies are lit just enough to register as sparse glyphs in the text-vision, so the skyline has mass
+    vec3 base = vec3(0.035, 0.04, 0.085) + vec3(0.03, 0.08, 0.14) * smoothstep(0.0, 1.0, v / vDim.y) * 0.6;
     // rim light on the top and sides facing the corridor
     float rim = step(vDim.y - 0.12, v) * step(0.5, abs(vN.y));
     float hw = (side ? vDim.z : vDim.x) * 0.5;
@@ -384,7 +383,8 @@ export function createWorld(canvas, {onDecision, onFrame, reduced = false, small
   const towers = new THREE.InstancedMesh(towerGeo, towerMat, towerCount);
   const signSpots = [];
   for (let i = 0; i < towerCount; i++) {
-    const side = i % 2 ? 1 : -1, w = rand(2, 4.2), dd = rand(2, 4.2), h = rand(4, 11) * (i > towerCount * 0.5 ? rand(1.3, 2.6) : 1);
+    const far = i / towerCount > 0.45;   // the far canyon stays low, so the eye is always above the skyline
+    const side = i % 2 ? 1 : -1, w = rand(2, 4.2), dd = rand(2, 4.2), h = far ? rand(4, 13) : rand(4, 11) * (i > towerCount * 0.3 ? rand(1.2, 2.2) : 1);
     const z = 10 - (i / towerCount) * 128 + rand(-2, 2), x = side * (z < -88 ? rand(16, 26) : rand(7.5, 10.5) + (i % 4 === 0 ? rand(2, 8) : 0));
     dm.rotation.set(0, 0, 0); dm.position.set(x, FLOOR_Y + h / 2, z); dm.scale.set(w, h, dd); dm.updateMatrix(); towers.setMatrixAt(i, dm.matrix);
     dims[i * 3] = w; dims[i * 3 + 1] = h; dims[i * 3 + 2] = dd; seeds[i] = Math.random();
@@ -436,10 +436,10 @@ export function createWorld(canvas, {onDecision, onFrame, reduced = false, small
   const cars = Array.from({length: LANES}, (_, i) => ({x: (i % 2 ? 1 : -1) * rand(5.3, 6.6), y: FLOOR_Y + rand(0.25, 2.6), z: rand(-112, 8), v: rand(8, 22) * (i % 4 < 2 ? 1 : -1), len: rand(1, 3.4), c: [COL.cyan, COL.mag, COL.amber, COL.bone][i % 4]}));
   world.add(lanes);
 
-  /* The watcher, and its reflection in the flood */
-  const watcher = createWatcher({ER, small});
-  watcher.root.position.set(...EYE); real.add(watcher.root);
-  const watcherMirror = watcher.mirrorCopy(); watcherMirror.position.set(...EYE); mirror.add(watcherMirror);
+  /* The eye in the sky, and its reflection in the flood */
+  const eye = createSkyEye();
+  eye.mesh.position.set(...EYE); real.add(eye.mesh);
+  eye.mirror.position.set(...EYE); mirror.add(eye.mirror);
 
   /* The scan beam: a cone of light from the pupil down to whatever the eye is reading */
   const beamGeo = new THREE.CylinderGeometry(0.05, 1, 1, 64, 1, true); beamGeo.translate(0, -0.5, 0);
@@ -471,7 +471,7 @@ export function createWorld(canvas, {onDecision, onFrame, reduced = false, small
   const scan = new THREE.Mesh(new THREE.PlaneGeometry(CW * 1.1, 0.012), scanMat);
   cardGroup.add(new THREE.Mesh(cardGeo, cardMat), new THREE.Mesh(cardGeo, cardBackMat), scan);
   cardGroup.traverse(o => { if (o.material) { o.material.depthTest = false; o.renderOrder = 50; } });
-  real.add(cardGroup);
+  const overlay = new THREE.Scene(); overlay.add(cardGroup);   // drawn crisp over the text-vision (see AsciiPass)
   fontsReady().then(() => { cardMat.map = drawPassport(); cardMat.needsUpdate = true; });
 
   /* Calls: light trails arriving through the rain */
@@ -502,14 +502,17 @@ export function createWorld(canvas, {onDecision, onFrame, reduced = false, small
   let pulse = 0, flash = 0, glitch = 0, shake = 0, alertNow = 0;
   const pushLedger = kind => { ledger.unshift(kind); ledger.pop(); pulse = 1; };
   const resolveCall = (p, kind) => {
-    p.kind = kind; flash = 1; onDecision?.(kind); watcher.flash(kind);
+    p.kind = kind; flash = 1; onDecision?.(kind); eye.flash(kind);
     if (kind === 'deny' && glitch < 0.05 && (alertNow > 0.4 || Math.random() < 0.05)) { glitch = 0.7; shake = 0.3; }
   };
 
   /* Post */
   const rt = new THREE.WebGLRenderTarget(4, 4, {type: THREE.HalfFloatType, samples: small ? 0 : 4});
   const composer = new EffectComposer(renderer, rt);
-  composer.addPass(new RenderPass(scene, camera));
+  const ascii = new AsciiPass(scene, camera, {cell: small ? [7, 12] : [8, 14]});
+  ascii.overlay = overlay;
+  composer.addPass(ascii);
+  fontsReady().then(() => ascii.build());
   const bloom = new UnrealBloomPass(new THREE.Vector2(4, 4), 0.42, 0.45, 0.9);
   // bloom at half resolution: it is a soft glow, extra pixels buy nothing
   const bloomSetSize = bloom.setSize.bind(bloom); bloom.setSize = (w, h) => bloomSetSize(Math.ceil(w / 2), Math.ceil(h / 2));
@@ -523,8 +526,8 @@ export function createWorld(canvas, {onDecision, onFrame, reduced = false, small
   const cur = clone(STAGES[0]), target = clone(STAGES[0]), view = clone(STAGES[0]);
   const pointer = {x: 0, y: 0, sx: 0, sy: 0};
   let override = null, stage = 0, velocity = 0, velTarget = 0, portrait = false;
-  // the opening: the eye wakes up in close-up, looks at you, and the camera pulls back down the canyon
-  const OPEN = {wake: [0.5, 1.5], blink: [2.15, 2.4], pull: [2.9, 5.6]};
+  // the opening: the city decodes out of scrambled glyphs, then the eye in the sky opens, blinks, and finds you
+  const OPEN = {decode: [0, 1.6], wake: [1.4, 2.5], blink: [2.75, 3.0], look: [3.05, 3.7], end: 3.9};
   let intro = null;
 
   function aim(f) {
@@ -544,10 +547,12 @@ export function createWorld(canvas, {onDecision, onFrame, reduced = false, small
     if (w === width && h === height && renderer.domElement.width) return;
     width = w; height = h;
     const dpr = renderer.getPixelRatio();
+    ascii.pixelRatio = dpr;
     renderer.setSize(w, h, false); composer.setSize(w, h); composer.setPixelRatio(dpr);
+    portrait = w / h < 0.85;
+    camera.fov = portrait ? 46 : 32;   // a phone gets a wider lens instead of a camera pushed back behind the city
     camera.aspect = w / h; camera.updateProjectionMatrix();
     finalPass.uniforms.uRes.value.set(w * dpr, h * dpr);
-    portrait = w / h < 0.85;
   }
 
   const sph = new THREE.Spherical(), cp = new THREE.Vector3(), tmp = new THREE.Vector3(), look = new THREE.Vector3();
@@ -558,8 +563,10 @@ export function createWorld(canvas, {onDecision, onFrame, reduced = false, small
     // portrait: wide stages keep the full frame; side-panel stages put the subject in the top band
     if (portrait) z = v.zone.w > 0.9 ? Z(0.5, v.zone.cy, 1, 1) : Z(0.5, 0.3, 0.94, 0.42);
     dist = Math.max(v.r / (z.h * t), v.r / (z.w * aspect * t));
+    // a phone is too narrow to fit wide subjects by width: meet halfway, and let the edges crop
+    if (portrait && v.zone.w > 0.9) dist = Math.sqrt((v.r / (z.h * t)) * (v.r / (z.w * aspect * t)));
     look.set(v.lx, v.ly, v.lz);
-    sph.set(dist, PI / 2 - v.el - pointer.sy * 0.03, v.az + pointer.sx * 0.06);
+    sph.set(dist, PI / 2 - v.el, v.az);
     cp.setFromSpherical(sph).add(look);
     if (cp.y < FLOOR_Y + 0.25) cp.y = FLOOR_Y + 0.25;
     cp.x += Math.sin(time * 41) * shake * 0.03; cp.y += Math.cos(time * 53) * shake * 0.03;
@@ -568,6 +575,8 @@ export function createWorld(canvas, {onDecision, onFrame, reduced = false, small
     const dx = cp.x - prevCamX; prevCamX = cp.x;
     bank += (Math.max(-0.08, Math.min(0.08, -dx * 1.4)) - bank) * 0.08;
     camera.rotateZ(bank);
+    // the cursor turns the head a touch; it never swings the camera around the subject
+    camera.rotateY(-pointer.sx * 0.012); camera.rotateX(-pointer.sy * 0.008);
     camera.setViewOffset(width, height, -(z.cx - 0.5) * width, -(z.cy - 0.5) * height, width, height);
   }
 
@@ -582,16 +591,8 @@ export function createWorld(canvas, {onDecision, onFrame, reduced = false, small
   const ease3 = t => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
   const span = (t, [a, b]) => Math.min(1, Math.max(0, (t - a) / (b - a)));
 
-  /** The view the camera uses: the scroll-driven pose, or during the opening a blend from the close-up to it. */
-  function blendView() {
-    if (!intro) { Object.assign(view, cur); return 1; }
-    const p = ease3(span(intro.t, OPEN.pull));
-    for (const k of NUM) view[k] = lerp(INTRO[k], cur[k], p);
-    view.r = Math.exp(lerp(Math.log(INTRO.r), Math.log(cur.r), p));     // a dolly feels even in log distance
-    view.zone = {}; for (const k of ZONE) view.zone[k] = lerp(INTRO.zone[k], cur.zone[k], p);
-    view.card = cur.card; view.mix = cur.mix; view.open = cur.open;
-    return p;
-  }
+  /** The view the camera uses: the scroll-driven pose. */
+  function blendView() { Object.assign(view, cur); }
 
   function step(dt) {
     time += dt;
@@ -610,10 +611,12 @@ export function createWorld(canvas, {onDecision, onFrame, reduced = false, small
     pulse = Math.max(0, pulse - dt * 2.4); flash = Math.max(0, flash - dt * 3); glitch = Math.max(0, glitch - dt * 4.5); shake = Math.max(0, shake - dt * 4);
     if (intro) {
       intro.t += dt * intro.speed;
-      if (intro.t >= OPEN.pull[1]) { const done = intro.done; intro = null; done?.(); }
+      if (intro.t >= OPEN.end) { const done = intro.done; intro = null; done?.(); }
     }
-    const pull = blendView();
-    reveal = intro ? smooth(Math.max(0, pull - 0.5) * 2) : Math.min(1, reveal + dt);
+    blendView();
+    reveal = intro ? smooth(span(intro.t, [1.0, 2.4])) : Math.min(1, reveal + dt);
+    ascii.material.uniforms.uDecode.value = intro ? smooth(span(intro.t, OPEN.decode)) : 1;
+    ascii.material.uniforms.uTime.value = time;
     const closed = cur.closed;
     const alert = Math.max(cur.alert * (override === 'open' ? 0 : 1), closed > 0.5 ? (closed - 0.5) * 2 : 0); alertNow = alert;
 
@@ -649,32 +652,25 @@ export function createWorld(canvas, {onDecision, onFrame, reduced = false, small
     irisBack.material.opacity = smooth(Math.max(0, (closed - 0.5) / 0.5));
     sealMirror.traverse(o => { const src = o.userData.src; if (src) { o.rotation.copy(src.rotation); o.visible = src.visible; o.scale.copy(src.scale); } });
 
-    // the eye: what it looks at, how open it is, what the pupil does
+    // the eye: how open it is, where it looks, what the pupil does
     const it = intro ? intro.t : 99;
     const wake = intro ? smooth(span(it, OPEN.wake)) : 1;
     let open = view.open * wake;
-    if (intro && it > OPEN.blink[0] && it < OPEN.blink[1]) open *= 1 - Math.sin(span(it, OPEN.blink) * PI) * 0.96;
-    // gaze: the scan ring (or the pass) when it is reading; otherwise you, wherever your cursor is
+    if (intro && it > OPEN.blink[0] && it < OPEN.blink[1]) open *= 1 - Math.sin(span(it, OPEN.blink) * PI);
+    // gaze: down at the scan ring (or the pass) when it is reading; otherwise toward your cursor
     const reading = cur.card.o > 0.5 ? cardGroup.position : seal.position;
-    gazeAt.copy(camera.position).add(tmp.set(pointer.sx * 9, -pointer.sy * 6, 0));
-    gazeAt.lerp(reading, smooth(Math.min(1, view.gaze)));
-    let glance = 0;
-    if (intro && it > OPEN.wake[1] && it < OPEN.pull[0]) {
-      // the first look around: left, right, then straight at you
-      const g = it - OPEN.wake[1];
-      gazeAt.copy(camera.position).add(tmp.set(g < 0.35 ? -26 : g < 0.7 ? 22 : pointer.sx * 9, g < 0.7 ? 4 : -pointer.sy * 6, 0));
-      glance = 0;
-    }
-    tmp.copy(eyeWorld).sub(camera.position);
-    const eyeOpen = watcher.update(dt, time, {dist: tmp.length(), open, gaze: gazeAt, pupil: view.pupil + (1 - wake) * 0.3, slit: override === 'open' ? 0 : override === 'closed' ? 1 : view.slit, scan: view.scan, alert, autoBlink: !intro, glance});
+    const gz = smooth(Math.min(1, view.gaze));
+    const look2 = {x: lerp(pointer.sx * 0.7, cur.card.o > 0.5 ? 0.1 : 0, gz), y: lerp(-pointer.sy * 0.6, -1, gz)};
+    if (intro && it > OPEN.look[0] && it < OPEN.look[1]) { const g = span(it, OPEN.look); look2.x = g < 0.33 ? -0.85 : g < 0.66 ? 0.85 : 0; look2.y = g < 0.66 ? -0.3 : 0; }
+    const eyeOpen = eye.update(dt, time, {open, look: look2, pupil: view.pupil + (1 - wake) * 0.25, slit: override === 'open' ? 0 : override === 'closed' ? 1 : view.slit, scan: view.scan, alert, autoBlink: !intro});
     // the sky around the eye
     tmp.copy(eyeWorld).sub(camera.position); const eyeDist = tmp.length();
-    skyMat.uniforms.uEyeDir.value.copy(tmp).normalize(); skyMat.uniforms.uEyeAng.value = Math.asin(Math.min(0.99, ER / eyeDist)); skyMat.uniforms.uEyeOpen.value = eyeOpen;
+    skyMat.uniforms.uEyeDir.value.copy(tmp).normalize(); skyMat.uniforms.uEyeAng.value = Math.atan(eye.unit * 0.55 / eyeDist); skyMat.uniforms.uEyeOpen.value = eyeOpen;
     // the beam from the pupil to whatever it is reading
     const beamOn = view.beam * reveal * Math.min(1, eyeOpen * 1.5);
     beam.visible = beamOn > 0.01;
     if (beam.visible) {
-      beamFrom.set(0, 0, ER * 1.02).applyQuaternion(watcher.ball.quaternion).add(eyeWorld);
+      eye.pupilLocal(beamFrom).add(eyeWorld);
       beamTo.copy(reading);
       tmp.copy(beamTo).sub(beamFrom); const len = tmp.length();
       beam.position.copy(beamFrom); beam.quaternion.setFromUnitVectors(yAxis, tmp.normalize().negate()); beam.scale.set(R * 0.9, len, R * 0.9);
@@ -808,7 +804,7 @@ export function createWorld(canvas, {onDecision, onFrame, reduced = false, small
     /** Play the opening (eye wakes in close-up, then the camera pulls back to the page's first frame). */
     intro(done) { if (reduced) { done?.(); return; } intro = {t: 0, speed: 1, done}; reveal = 0; },
     /** Hurry the opening along: jump to the pull-back and run it faster. */
-    skipIntro() { if (!intro) return; intro.t = Math.max(intro.t, OPEN.pull[0]); intro.speed = 1.8; },
+    skipIntro() { if (!intro) return; intro.speed = 3; },
     /** Debug: jump the opening to time t (seconds) and draw. */
     seek(t) { if (intro) { intro.t = t; for (let i = 0; i < 30; i++) step(0.016); draw(); } },
     setVelocity(v) { velTarget = Math.max(velTarget, Math.min(1, v)); },
