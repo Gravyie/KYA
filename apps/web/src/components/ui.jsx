@@ -1,18 +1,19 @@
 import {useState} from 'react';
 import {Link} from '../lib/router.jsx';
 
-/** The Shuin mark: a vermilion seal (hanko) carrying a gate, 門, with an aperture where a visitor is seen. */
+/**
+ * The Shuin mark: a neon torii (the checkpoint) inside a chamfered seal frame, with a single magenta dot in the
+ * gateway: the verdict. Reads as a hanko stamp at small sizes and as a sign at large ones.
+ */
 export function Mark({size = 24, className = ''}) {
   return (
     <svg className={`mark ${className}`} width={size} height={size} viewBox="0 0 64 64" aria-hidden="true">
-      <rect x="3" y="3" width="58" height="58" rx="9" fill="var(--shu, #e8321e)" />
-      <rect x="8.5" y="8.5" width="47" height="47" rx="5" fill="none" stroke="var(--seal-ink, #f4ece0)" strokeWidth="1.6" />
-      <path d="M13 18.5 Q32 14.6 51 18.5 L51 23 Q32 19.6 13 23 Z" fill="var(--seal-ink, #f4ece0)" />
-      <rect x="18" y="27" width="28" height="3" fill="var(--seal-ink, #f4ece0)" />
-      <rect x="20.2" y="21" width="4.6" height="30" fill="var(--seal-ink, #f4ece0)" />
-      <rect x="39.2" y="21" width="4.6" height="30" fill="var(--seal-ink, #f4ece0)" />
-      <circle cx="32" cy="40.5" r="5.2" fill="none" stroke="var(--seal-ink, #f4ece0)" strokeWidth="2.4" />
-      <circle cx="32" cy="40.5" r="1.7" fill="var(--seal-ink, #f4ece0)" />
+      <path d="M14 4H50L60 14V50L50 60H14L4 50V14Z" fill="#0a0d1c" stroke="#19e6ff" strokeWidth="3" strokeLinejoin="round" />
+      <path d="M11 19.5Q32 14 53 19.5L52 24.5Q32 20 12 24.5Z" fill="#ff2fa6" />
+      <rect x="17" y="29" width="30" height="3.4" fill="#19e6ff" />
+      <rect x="20" y="23" width="5" height="29" fill="#eaf7ff" />
+      <rect x="39" y="23" width="5" height="29" fill="#eaf7ff" />
+      <circle cx="32" cy="43" r="4.2" fill="#ff2fa6" />
     </svg>
   );
 }

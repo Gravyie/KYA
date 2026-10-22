@@ -31,24 +31,21 @@ function blur(src, W, H, sigma) {
 const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a)); return t * t * (3 - 2 * t); };
 
 function env(rx, ry) {
-  // Facing the viewer: bright silver. Tilting up: white-hot sky. Tilting down: a thin pink horizon reflection,
-  // then saturated violet-blue and navy on the underside, like Horizons' chrome.
+  // Neon studio: icy cyan-white sky, a white-hot horizon, hot magenta just below it, deep indigo underneath.
   let c;
   if (ry > 0) {
-    const t = smooth(0, 0.8, ry);
-    c = [mix(0.93, 1.1, t), mix(0.94, 1.1, t), mix(1, 1.12, t)];
+    const t = smooth(0, 0.85, ry);
+    c = [mix(0.92, 0.55, t), mix(0.97, 0.9, t), mix(1, 1.05, t)];
   } else {
-    const t = smooth(0.05, 0.9, -ry);
-    c = [mix(0.9, 0.12, t), mix(0.9, 0.1, t), mix(1, 0.62, t)];
-    const blue = Math.exp(-Math.pow((-ry - 0.5) * 4, 2));
-    c[0] = mix(c[0], 0.3, blue * 0.7); c[1] = mix(c[1], 0.32, blue * 0.7); c[2] = mix(c[2], 1, blue * 0.7);
+    const t = smooth(0.02, 0.9, -ry);
+    c = [mix(1, 0.14, t), mix(0.4, 0.04, t), mix(0.9, 0.42, t)];
   }
-  const pink = Math.exp(-Math.pow((ry + 0.22) * 9, 2));            // pink-violet horizon reflection
-  c[0] = mix(c[0], 1, pink * 0.6); c[1] = mix(c[1], 0.55, pink * 0.6); c[2] = mix(c[2], 1, pink * 0.6);
-  const dark = Math.exp(-Math.pow((ry + 0.06) * 22, 2));          // the hard horizon line every chrome needs
-  c[0] = mix(c[0], 0.12, dark * 0.85); c[1] = mix(c[1], 0.12, dark * 0.85); c[2] = mix(c[2], 0.45, dark * 0.8);
-  const side = smooth(0.35, 1, Math.abs(rx));
-  c[0] = mix(c[0], 0.36, side * 0.6); c[1] = mix(c[1], 0.42, side * 0.6); c[2] = mix(c[2], 1, side * 0.5);
+  const hot = Math.exp(-Math.pow((ry + 0.02) * 16, 2));             // white-hot horizon line
+  c[0] = mix(c[0], 1.15, hot); c[1] = mix(c[1], 1.1, hot); c[2] = mix(c[2], 1.15, hot);
+  const dark = Math.exp(-Math.pow((ry + 0.13) * 20, 2));            // hard dark band under it
+  c[0] = mix(c[0], 0.2, dark * 0.75); c[1] = mix(c[1], 0.05, dark * 0.75); c[2] = mix(c[2], 0.4, dark * 0.7);
+  const side = smooth(0.35, 1, Math.abs(rx));                       // electric-blue sides
+  c[0] = mix(c[0], 0.18, side * 0.6); c[1] = mix(c[1], 0.45, side * 0.6); c[2] = mix(c[2], 1, side * 0.6);
   return c;
 }
 
@@ -57,14 +54,14 @@ function env(rx, ry) {
  * @param {{font: string, size: number, tube: number, slant?: number, padding?: number}} o
  * @returns {Promise<{url: string, width: number, height: number}>}
  */
-export async function renderChrome(text, {font = 'Sacramento', size = 300, tube = 30, slant = -0.08, padding = 0.18} = {}) {
+export async function renderChrome(text, {font = 'Sacramento', size = 300, tube = 30, slant = -0.08, padding = 0.18, profile} = {}) {
   await document.fonts?.load(`400 ${size}px "${font}"`).catch(() => {});
   const probe = document.createElement('canvas').getContext('2d');
   probe.font = `400 ${size}px "${font}"`;
   const lines = text.split('\n'), lh = size * 0.98;
   const mw = Math.max(...lines.map(l => probe.measureText(l).width));
   const pad = Math.round(size * padding);
-  const W = Math.ceil(mw + pad * 2 + tube * 2), H = Math.ceil(size * 1.35 + pad + lh * (lines.length - 1));
+  const W = Math.ceil(mw * 1.08 + pad * 2 + tube * 2), H = Math.ceil(size * 1.35 + pad + lh * (lines.length - 1));
 
   const mk = () => { const c = document.createElement('canvas'); c.width = W; c.height = H; return c; };
   const mask = mk(), g = mask.getContext('2d');
@@ -74,7 +71,7 @@ export async function renderChrome(text, {font = 'Sacramento', size = 300, tube 
   lines.forEach((l, i) => { g.strokeText(l, 0, i * lh); g.fillText(l, 0, i * lh); });
 
   // height field: a blur of about a third of the tube width gives a rounded profile with no flat plateau
-  const sigma = Math.max(2, tube * 0.33);
+  const sigma = profile ?? Math.max(2, tube * 0.33);
   const A = g.getImageData(0, 0, W, H).data;
   const alpha = new Float32Array(W * H);
   for (let i = 0; i < W * H; i++) alpha[i] = A[i * 4] / 255;

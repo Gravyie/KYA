@@ -169,8 +169,6 @@ function useScrollBar(rootRef) {
 export default function Landing() {
   const canvasRef = useRef(null), frameApi = useRef(null), countApi = useRef(null), rootRef = useRef(null), tickRef = useRef(null);
   const [tab, setTab] = useState('mcp');
-  const [narrow, setNarrow] = useState(() => matchMedia('(max-width: 760px)').matches);
-  useEffect(() => { const q = matchMedia('(max-width: 760px)'); const on = () => setNarrow(q.matches); q.addEventListener('change', on); return () => q.removeEventListener('change', on); }, []);
   const [beat, setBeat] = useState(0);
   const [revoked, setRevoked] = useState(false);
   const [alert, setAlert] = useState(false);
@@ -212,7 +210,7 @@ export default function Landing() {
       <section className="hero hz" data-stage="0">
         <div className="wrap hz-in">
           <p className="hz-kicker rise">The open-source permission layer for AI agents</p>
-          <h1 className="hz-title"><ChromeWord text={narrow ? 'Know your\nagent.' : 'Know your agent.'} /></h1>
+          <h1 className="hz-title hz-lockup" aria-label="Know your agent."><span className="hz-block" aria-hidden="true"><Words>KNOW YOUR</Words></span><ChromeWord text="agent." className="hz-script" /></h1>
           <div className="hz-stack rise" aria-label="What Shuin does">
             <p><small>Give every</small> AI agent <small>its own</small> identity</p>
             <p><small>Allow,</small> ask <small>or</small> block <small>every</small> tool call</p>
@@ -223,8 +221,7 @@ export default function Landing() {
             <Link to="/app" className="btn magnetic">Open the console <ArrowRight size={16} /></Link>
             <Link to="/docs" className="btn ghost magnetic">Read the quickstart</Link>
           </div>
-          <div className="hz-emblem rise" aria-hidden="true"><Mark size={30} /><span lang="ja">朱印</span></div>
-        </div>
+                  </div>
         <div className="ticker" ref={tickRef} data-kind="allow" aria-hidden="true"><b>可決 ALLOW</b><code>read_file workspace/q3-report.md</code><em>live sim</em></div>
       </section>
 
@@ -350,7 +347,7 @@ export default function Landing() {
       <section className="finale hz" data-stage="10">
         <div className="wrap hz-in fin-in">
           <p className="hz-kicker rise">Know your agent</p>
-          <h2 className="hz-title fin-word"><ChromeWord text="Shuin" tube={19} /></h2>
+          <h2 className="hz-title fin-word"><ChromeWord text="Shuin" /></h2>
           <div className="hz-stack rise">
             <p><small>Self-hosted</small> in a minute</p>
             <p>One process <small>·</small> one folder <small>·</small> free</p>

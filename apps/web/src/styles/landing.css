@@ -623,3 +623,28 @@
 @media (prefers-reduced-motion: reduce) { .chrome-word .cw-sheen { animation: none; opacity: 0; } .chrome-word .cw-img { animation: none; } }
 .chrome-word .cw-text { flex-direction: column; display: flex; justify-content: center; align-items: center; }
 @media (max-width: 760px) { .hz-kicker { font-size: 15px; max-width: 30ch; line-height: 1.15; } .hz-title { margin: 6px 0 14px; } }
+
+/* ════ v14 lockup: block + chrome script ════ */
+.mark { filter: drop-shadow(0 0 6px rgba(25, 230, 255, 0.55)) drop-shadow(0 0 14px rgba(255, 47, 166, 0.35)); }
+.logo-word small { color: var(--mag) !important; }
+.hz-lockup { position: relative; width: min(92vw, 1080px); margin: 10px 0 22px; display: grid; justify-items: center; }
+.hz-block { display: block; font: 400 clamp(84px, 12.5vw, 200px)/0.84 var(--poster); letter-spacing: 0.01em; color: #f3eaff; text-transform: uppercase;
+  text-shadow: 4px 4px 0 rgba(25, 230, 255, 0.85), -3px -2px 0 rgba(255, 47, 166, 0.8), 0 0 50px rgba(160, 90, 255, 0.45); }
+.hz-block .w > span { text-shadow: inherit; }
+.hz-script.chrome-word { width: min(66vw, 720px); margin-top: clamp(-90px, -6.5vw, -40px); margin-left: 18%; transform: rotate(-7deg); z-index: 2; aspect-ratio: 2.4 / 1; }
+.hz-script .cw-text, .fin-word .cw-text { font-family: 'Mr Dafoe', cursive !important; transform: none; }
+.hz-script .cw-img, .fin-word .cw-img { filter: drop-shadow(0 8px 10px rgba(5, 0, 30, 0.9)) drop-shadow(0 0 28px rgba(255, 47, 166, 0.45)) drop-shadow(0 0 60px rgba(25, 230, 255, 0.2)); }
+.landing .hero.hz .hz-kicker { margin-bottom: 4px; }
+.fin-word { width: min(62vw, 700px) !important; transform: rotate(-5deg); margin: 6px 0 14px !important; }
+@media (max-width: 760px) {
+  .hz-block { font-size: clamp(64px, 19vw, 96px); }
+  .hz-script.chrome-word { width: 82vw; margin-left: 10%; margin-top: -30px; }
+  .fin-word { width: 84vw !important; }
+}
+@media (min-width: 761px) {
+  .hz-block { font-size: clamp(72px, min(10vw, 17vh), 170px); }
+  .hz-script.chrome-word { width: min(48vw, 600px, 78vh); margin-top: clamp(-80px, -5vw, -36px); }
+  .hz-stack p { font-size: clamp(20px, min(2.3vw, 3.7vh), 34px); }
+  .hz-lockup { margin: 6px 0 14px; }
+  .hz-cta { margin-top: 22px; }
+}
