@@ -1,6 +1,6 @@
 @import '@fontsource-variable/geist';
 @import '@fontsource-variable/geist-mono';
-@import '@fontsource-variable/noto-serif-jp';
+@import '@fontsource-variable/noto-sans-jp';
 
 
 :root {
@@ -27,8 +27,8 @@
 
   --sans: 'Geist Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
   --mono: 'Geist Mono Variable', ui-monospace, 'SF Mono', Menlo, monospace;
-  --serif: 'Noto Serif JP Variable', 'Hiragino Mincho ProN', serif;
-  --jp: 'Noto Serif JP Variable', 'Hiragino Mincho ProN', serif;
+  --serif: 'Noto Sans JP Variable', 'Hiragino Sans', sans-serif;
+  --jp: 'Noto Sans JP Variable', 'Hiragino Sans', sans-serif;
   --shu: #e8321e; --shu-2: #ff5a3a; --bone: #f1e9dc; --seal-ink: #f4ece0;
 
   --radius: 2px;

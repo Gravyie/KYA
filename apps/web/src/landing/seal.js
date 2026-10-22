@@ -4,7 +4,6 @@ import {RenderPass} from 'three/examples/jsm/postprocessing/RenderPass.js';
 import {UnrealBloomPass} from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import {ShaderPass} from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import {OutputPass} from 'three/examples/jsm/postprocessing/OutputPass.js';
-import {createChrome} from './chrome.js';
 
 /*
  * 関門 · THE CHECKPOINT. One WebGL world for the whole page.
@@ -37,7 +36,7 @@ const S = o => ({az: 0, el: 0.08, r: 4, lx: 0, ly: 0, lz: 0, closed: 0, alert: 0
 const FULL = Z(0.5, 0.5, 1, 1);
 const fly = (lz, az, dim = 0.55, extra = {}) => S({az, el: 0.08, r: 3.6, lx: az * 4, ly: 1.1, lz, zone: FULL, dim, ledger: 1, mix: [0.8, 0.1, 0.1], ...extra});
 const STAGES = [
-  /* 0 hero      */ S({az: 0.0, el: 0.06, r: 4.4, lx: 0, ly: 1.15, lz: -1, zone: Z(0.5, 0.55, 1, 0.98), dim: 0.4, ledger: 1}),
+  /* 0 hero      */ S({az: -0.2, el: 0.05, r: 4.3, lx: 0, ly: 1.0, lz: -1, zone: Z(0.69, 0.5, 0.56, 0.86), ledger: 1}),
   /* 1 identify  */ S({az: -0.5, el: 0.06, r: 2.0, lx: 0.1, ly: 0.25, lz: 1.9, zone: Z(0.7, 0.5, 0.48, 0.74), mix: [0.5, 0.2, 0.3], card: {p: [0.15, 0.3, 2.0], tilt: -0.35, rx: 0.05, s: 1.0, o: 1}}),
   /* 2 decide    */ S({az: 0.0, el: 0.16, r: 4.6, lx: 0, ly: 0.9, lz: 0, zone: FULL, dim: 0.55, mix: [0.45, 0.25, 0.3]}),
   /* 3 prove     */ S({az: 0.06, el: 0.14, r: 3.2, lx: 0.6, ly: 0.2, lz: -16, zone: Z(0.7, 0.55, 0.56, 0.8), ledger: 1, mix: [0.75, 0.05, 0.2]}),
@@ -110,20 +109,20 @@ float fbm(vec2 p){ float v = 0.0, a = 0.5; for (int i = 0; i < 4; i++){ v += a *
 
 vec3 sky(vec3 d, float wet){
   float e = d.y;
-  vec3 top = vec3(0.02, 0.012, 0.09), mid = vec3(0.13, 0.03, 0.27), hor = vec3(0.7, 0.1, 0.55);
+  vec3 top = vec3(0.006, 0.01, 0.03), mid = vec3(0.03, 0.06, 0.11), hor = vec3(0.32, 0.07, 0.22);
   vec3 col = mix(hor, mid, smoothstep(0.0, 0.16, e));
   col = mix(col, top, smoothstep(0.12, 0.62, e));
   // smog and cloud bands lit from below by the city
   float cl = fbm(vec2(d.x / (e + 0.25) * 2.2 + uTime * 0.012, e * 9.0));
-  col += vec3(0.35, 0.05, 0.42) * smoothstep(0.5, 0.95, cl) * smoothstep(0.35, 0.02, e);
+  col += vec3(0.05, 0.22, 0.3) * smoothstep(0.5, 0.95, cl) * smoothstep(0.35, 0.02, e);
   // milky way band and a synthwave cloud bank sitting on the skyline
   float mw = exp(-pow(dot(d, normalize(vec3(0.35, 0.45, 0.82))) * 4.0, 2.0)) * smoothstep(0.08, 0.5, e);
-  col += vec3(0.3, 0.26, 0.75) * mw * (0.35 + 0.65 * fbm(d.xy * 7.0 + d.z * 3.0)) * 0.55;
+
   float azc = atan(d.x, -d.z);
   float cb = fbm(vec2(azc * 3.2 + uTime * 0.008, e * 13.0));
   float bank = smoothstep(0.42, 0.82, cb) * smoothstep(0.3, 0.03, e) * step(-0.001, e);
-  vec3 cloud = mix(vec3(0.95, 0.3, 0.85), vec3(0.42, 0.18, 0.85), smoothstep(0.0, 0.22, e)) * (0.45 + 0.7 * cb);
-  col = mix(col, cloud, bank * 0.8);
+  vec3 cloud = mix(vec3(0.42, 0.08, 0.3), vec3(0.04, 0.14, 0.2), smoothstep(0.0, 0.22, e)) * (0.45 + 0.7 * cb);   // smog lit by the city
+  col = mix(col, cloud, bank * 0.55);
   // stars
   vec3 sd3 = d * 170.0; vec3 id = floor(sd3); vec3 fd = fract(sd3) - 0.5;
   float sh = hash(id.xy + id.z * 7.0);
@@ -137,7 +136,7 @@ vec3 sky(vec3 d, float wet){
   float disc = smoothstep(0.13, 0.126, r) * facing;
   float gapW = smoothstep(0.03, -0.12, sp.y) * 0.62;
   float slit = mix(1.0, step(gapW, fract(sp.y * 44.0)), step(sp.y, 0.03));
-  vec3 sunCol = mix(vec3(1.0, 0.78, 0.16), vec3(1.0, 0.1, 0.6), smoothstep(0.12, -0.12, sp.y));
+  vec3 sunCol = mix(vec3(1.0, 0.55, 0.12), vec3(1.0, 0.08, 0.2), smoothstep(0.12, -0.12, sp.y));
   col = mix(col, sunCol * 1.35, disc * slit);
   col += vec3(1.0, 0.16, 0.55) * exp(-r * r * 36.0) * 0.42 * facing;
   // skyline with neon windows
@@ -206,7 +205,7 @@ const FINAL = {
 
 /* ── Textures ────────────────────────────────────────────── */
 
-const fontsReady = () => Promise.all([document.fonts?.load('900 100px "Noto Serif JP Variable"'), document.fonts?.load('700 100px "Chakra Petch"'), document.fonts?.load('500 40px "Geist Mono Variable"'), document.fonts?.ready]).catch(() => {});
+const fontsReady = () => Promise.all([document.fonts?.load('900 100px "Noto Sans JP Variable"'), document.fonts?.load('700 100px "Chakra Petch"'), document.fonts?.load('500 40px "Geist Mono Variable"'), document.fonts?.ready]).catch(() => {});
 
 function drawPassport() {
   const W = 1280, H = 806;
@@ -261,7 +260,6 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 400);
   scene.add(camera);
-  const chrome = createChrome(camera);
 
   const skyMat = new THREE.ShaderMaterial({
     vertexShader: SKY_VERT, fragmentShader: SKY_FRAG, depthTest: false, depthWrite: false,
@@ -329,7 +327,7 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
   const plaqueFace = new THREE.Mesh(new THREE.PlaneGeometry(0.46, 0.68), plaqueMat); plaqueFace.position.set(0, top - 0.62, 0.265); gate.add(plaqueFace);
   fontsReady().then(() => {
     const c = document.createElement('canvas'); c.width = 128; c.height = 190; const g = c.getContext('2d');
-    g.fillStyle = '#06061a'; g.fillRect(0, 0, 128, 190); g.strokeStyle = '#ff2fa6'; g.lineWidth = 6; g.strokeRect(5, 5, 118, 180); g.fillStyle = '#7ff4ff'; g.shadowColor = '#19e6ff'; g.shadowBlur = 14; g.font = '900 72px "Noto Serif JP Variable", serif'; g.textAlign = 'center';
+    g.fillStyle = '#06061a'; g.fillRect(0, 0, 128, 190); g.strokeStyle = '#ff2fa6'; g.lineWidth = 6; g.strokeRect(5, 5, 118, 180); g.fillStyle = '#7ff4ff'; g.shadowColor = '#19e6ff'; g.shadowBlur = 14; g.font = '900 72px "Noto Sans JP Variable", serif'; g.textAlign = 'center';
     g.fillText('関', 64, 82); g.fillText('門', 64, 166);
     plaqueMat.map = new THREE.CanvasTexture(c); plaqueMat.map.colorSpace = THREE.SRGBColorSpace; plaqueMat.needsUpdate = true;
   });
@@ -367,7 +365,7 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
   fontsReady().then(() => {
     const c = document.createElement('canvas'); c.width = 256; c.height = 256; const g = c.getContext('2d');
     g.strokeStyle = '#ff3a22'; g.lineWidth = 14; g.strokeRect(22, 22, 212, 212);
-    g.fillStyle = '#ff3a22'; g.font = '900 92px "Noto Serif JP Variable", serif'; g.textAlign = 'center'; g.fillText('封', 128, 120); g.fillText('鎖', 128, 214);
+    g.fillStyle = '#ff3a22'; g.font = '900 92px "Noto Sans JP Variable", serif'; g.textAlign = 'center'; g.fillText('封', 128, 120); g.fillText('鎖', 128, 214);
     stampMat.map = new THREE.CanvasTexture(c); stampMat.map.colorSpace = THREE.SRGBColorSpace; stampMat.needsUpdate = true;
   });
 
@@ -438,7 +436,7 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
       if (vertical) { c.width = 128; c.height = 128 * word.length + 40; } else { c.width = 120 * word.length + 60; c.height = 160; }
       g.fillStyle = 'rgba(6, 6, 20, 0.55)'; g.fillRect(0, 0, c.width, c.height);
       g.strokeStyle = colr; g.lineWidth = 5; g.shadowColor = colr; g.shadowBlur = 18; g.strokeRect(8, 8, c.width - 16, c.height - 16);
-      g.fillStyle = '#ffffff'; g.font = `900 ${/[A-Z]/.test(word) ? 92 : 100}px "Noto Serif JP Variable", "Chakra Petch", serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.fillStyle = '#ffffff'; g.font = `900 ${/[A-Z]/.test(word) ? 92 : 100}px "Noto Sans JP Variable", "Chakra Petch", serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
       g.shadowBlur = 26;
       if (vertical) [...word].forEach((ch, k) => g.fillText(ch, 64, 84 + k * 128)); else g.fillText(word, c.width / 2, 86);
       const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
@@ -532,7 +530,7 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
   const rt = new THREE.WebGLRenderTarget(4, 4, {type: THREE.HalfFloatType, samples: small ? 0 : 4});
   const composer = new EffectComposer(renderer, rt);
   composer.addPass(new RenderPass(scene, camera));
-  const bloom = new UnrealBloomPass(new THREE.Vector2(4, 4), 0.7, 0.6, 0.85);
+  const bloom = new UnrealBloomPass(new THREE.Vector2(4, 4), 0.42, 0.45, 0.9);
   // bloom at half resolution: it is a soft glow, extra pixels buy nothing
   const bloomSetSize = bloom.setSize.bind(bloom); bloom.setSize = (w, h) => bloomSetSize(Math.ceil(w / 2), Math.ceil(h / 2));
   composer.addPass(bloom);
@@ -544,7 +542,7 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
   const clone = o => JSON.parse(JSON.stringify(o));
   const cur = clone(STAGES[0]), target = clone(STAGES[0]);
   const pointer = {x: 0, y: 0, sx: 0, sy: 0};
-  let override = null, stage = 0, velocity = 0, introT = 1, introOn = false, portrait = false;
+  let override = null, stage = 0, velocity = 0, velTarget = 0, introT = 1, introOn = false, portrait = false;
 
   function aim(f) {
     const i = Math.min(Math.max(Math.floor(f), 0), STAGES.length - 2);
@@ -608,7 +606,8 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
     cur.closed += (wantClosed - cur.closed) * (1 - Math.pow(0.003, dt));
     pointer.sx += (pointer.x - pointer.sx) * (1 - Math.pow(0.004, dt));
     pointer.sy += (pointer.y - pointer.sy) * (1 - Math.pow(0.004, dt));
-    velocity *= Math.pow(0.02, dt);
+    velTarget *= Math.pow(0.04, dt);
+    velocity += (velTarget - velocity) * (1 - Math.pow(0.02, dt));   // eased: a flick of the wheel never jolts the scene
     pulse = Math.max(0, pulse - dt * 2.4); flash = Math.max(0, flash - dt * 3); glitch = Math.max(0, glitch - dt * 4.5); shake = Math.max(0, shake - dt * 4);
     const closed = cur.closed;
     const alert = Math.max(cur.alert * (override === 'open' ? 0 : 1), closed > 0.5 ? (closed - 0.5) * 2 : 0); alertNow = alert;
@@ -726,21 +725,18 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
     cardMat.opacity = c.o; cardBackMat.opacity = c.o;
     scan.position.y = (((time * 0.5) % 1) - 0.5) * CH; scan.position.z = 0.005; scanMat.opacity = c.o * 0.9;
 
-    bloom.strength = 0.7 + flash * 0.15 + alert * 0.3;
+    bloom.strength = 0.42 + flash * 0.1 + alert * 0.25;
     finalPass.uniforms.uTime.value = time; finalPass.uniforms.uGlitch.value = glitch * (0.3 + alert * 0.7);
-    finalPass.uniforms.uAb.value = 0.0004 + Math.min(1, velocity) * 0.003 + glitch * 0.003;
-    camera.fov = 32 + Math.min(1, velocity) * 9; camera.updateProjectionMatrix();
+    finalPass.uniforms.uAb.value = 0.0004 + glitch * 0.003;
+    
   }
 
   function draw() {
     placeCamera(time);
     skyMat.uniforms.uInvProj.value.copy(camera.projectionMatrixInverse); skyMat.uniforms.uCamWorld.value.copy(camera.matrixWorld);
     if (usePost) composer.render(); else renderer.render(scene, camera);
-    chrome.render(renderer);
     camera.updateMatrixWorld();
     project('card', cardGroup.position, real); project('seal', sealAnchor, seal); project('ledger', slots[4], real); project('plaque', plaqueAnchor, gate);
-    const pt = width / height < 0.85;
-    chrome.update({time, stage, intro: smooth(introT), alert: alertNow, px: pointer.sx, py: pointer.sy, cy: pt ? 0.29 : 0.345, w: pt ? 1.05 : 0.84, maxH: pt ? 0.6 : 0.56, aspectView: width / height});
     onFrame?.(anchors, {stage, closed: cur.closed, alert: alertNow});
   }
 
@@ -753,7 +749,7 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
   function downgrade() {
     quality -= 1; settleUntil = frames + 60;
     if (quality === 1) renderer.setPixelRatio(1);
-    else { usePost = false; rainGeo.instanceCount = Math.floor(RAIN / 3); }
+    else { renderer.setPixelRatio(0.8); rainGeo.instanceCount = Math.floor(RAIN / 3); }
     width = 0; resize();
   }
   function frame() {
@@ -781,13 +777,13 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
       if (reduced) { for (const key of NUM) cur[key] = target[key]; for (const key of ZONE) cur.zone[key] = target.zone[key]; cur.card = clone(target.card); step(0.016); draw(); }
     },
     intro() { introT = 0; introOn = true; },
-    setVelocity(v) { velocity = Math.max(velocity, Math.min(1.5, v)); },
+    setVelocity(v) { velTarget = Math.max(velTarget, Math.min(1, v)); },
     settle(n = 60) { for (let i = 0; i < n; i++) step(0.05); introT = 1; draw(); },
     setIris(mode) { override = mode; },
     destroy() {
       stop(); ro.disconnect(); document.removeEventListener('visibilitychange', onVisibility); removeEventListener('pointermove', onPointer);
       scene.traverse(o => { o.geometry?.dispose?.(); const m = o.material; (Array.isArray(m) ? m : m ? [m] : []).forEach(x => { x.map?.dispose?.(); x.dispose(); }); });
-      chrome.dispose(); composer.dispose(); renderer.dispose();
+      composer.dispose(); renderer.dispose();
     },
   };
 }

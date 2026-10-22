@@ -2,12 +2,11 @@ import {useCallback, useEffect, useRef, useState} from 'react';
 import Lenis from 'lenis';
 import {ArrowRight, ShieldCheck} from 'lucide-react';
 import {Link} from '../lib/router.jsx';
-import {Logo, Mark, Code} from '../components/ui.jsx';
+import {Logo, Mark, Code, CopyButton} from '../components/ui.jsx';
 import {SNIPPETS, DECISIONS} from './snippets.js';
 import {Words, useReveal, Counter} from './bits.jsx';
 import SectionHead from './SectionHead.jsx';
 import Hud from './Hud.jsx';
-import Chapter from './Chapter.jsx';
 import Magi from './Magi.jsx';
 import Chain from './Chain.jsx';
 import ProductWindow from './ProductWindow.jsx';
@@ -199,7 +198,7 @@ export default function Landing() {
   const snip = SNIPPETS[tab];
 
   return (
-    <div className={`landing w-${mode} ${booted ? 'booted' : ''} ${alert ? 'is-alert' : ''}`} ref={rootRef}>
+    <div className={`landing w-${mode} ${booted ? 'booted' : ''} ${alert ? 'is-alert' : ''}`} ref={rootRef} data-end={beat >= 5 ? '1' : '0'}>
       {!booted && <Opening ready={mode !== 'loading'} onDone={done} />}
       <a className="skip" href="#console">Skip to content</a>
       <div className="scrollbar" aria-hidden="true"><i /></div>
@@ -209,22 +208,22 @@ export default function Landing() {
       {/* ── Scene 1: the gate ── */}
       <section className="hero" data-stage="0">
         <div className="wrap hero-in">
-          <p className="kicker rise"><span className="dot" />The permission layer for AI agents<span className="kj" lang="ja">朱印</span></p>
-          <h1 className="hero-word"><span className="chrome-script">Shuin</span></h1>
-          <div className="stack" aria-label="What Shuin does">
-            <p className="rise"><small>Give every</small> AI agent <small>its own</small> identity</p>
-            <p className="rise"><small>Allow,</small> ask <small>or</small> block <small>every</small> tool call</p>
-            <p className="rise">Spend limits <small>and</small> human approvals</p>
-            <p className="rise"><small>A</small> tamper-evident audit trail <small>on</small> ERC-8004</p>
-          </div>
+          <p className="kicker rise"><span className="dot" />Shuin <span lang="ja">朱印</span> · open-source permission layer for AI agents</p>
+          <h1 className="hero-title" aria-label="Know your agent."><span className="ht"><Words>KNOW YOUR</Words></span><span className="ht ht-red"><Words>AGENT.</Words></span></h1>
+          <p className="lede rise">Give every AI agent its own identity. Check every tool call before it runs: allow it, ask a human, or block it. Keep a record nobody can quietly edit.</p>
+          <ol className="pillars rise" aria-label="What Shuin does" onClick={e => { const a = e.target.closest('a'); const el = a && document.querySelector(a.getAttribute('href')); if (!el) return; e.preventDefault(); window.__lenis ? window.__lenis.scrollTo(el, {offset: -40}) : el.scrollIntoView({behavior: 'smooth'}); }}>
+            <li><a href="#identify"><b>01</b>Identity</a></li>
+            <li><a href="#decide"><b>02</b>Policy</a></li>
+            <li><a href="#prove"><b>03</b>Audit</a></li>
+            <li><a href="#contain"><b>04</b>Revoke</a></li>
+          </ol>
           <div className="hero-cta rise">
             <Link to="/app" className="btn magnetic">Open the console <ArrowRight size={16} /></Link>
             <Link to="/docs" className="btn ghost magnetic">Read the quickstart</Link>
           </div>
-          <p className="meta rise">Open source · self-hosted · one folder · free</p>
         </div>
         <p className="vert" lang="ja" aria-hidden="true">汝の代理人を知れ</p>
-        <div className="ticker" ref={tickRef} data-kind="allow" aria-hidden="true"><b>可決 ALLOW</b><code>read_file workspace/q3-report.md</code><em>simulated</em></div>
+        <div className="ticker" ref={tickRef} data-kind="allow" aria-hidden="true"><b>可決 ALLOW</b><code>read_file workspace/q3-report.md</code><em>live sim</em></div>
       </section>
 
       <div className="tapes" aria-hidden="true">
@@ -232,53 +231,52 @@ export default function Landing() {
         <div className="tape t2"><div>{'CAUTION // AGENTS AT WORK // 注意 // SCOPED KEYS ONLY // HUMAN IN THE LOOP // '.repeat(4)}</div></div>
       </div>
 
-      <Chapter no="一" jp="識別" title="IDENTIFY" line="No more ten agents behind one shared key." />
       <section id="identify" className="scene" data-stage="1">
+        <span className="scene-kanji" lang="ja" aria-hidden="true">識別</span>
         <div className="wrap"><div className="sheet rise">
-          <p className="eyebrow"><b>01</b><i />識別 · Identity</p>
+          <p className="eyebrow"><b>01</b><i />第一話 · Identity</p>
           <h2 className="big"><Words>Every agent carries a pass.</Words></h2>
-          <p className="sub">Its own key, a signed identity card, and the name of the person who answers for it. Publish it to the ERC-8004 registry and any service on the internet can check it, without trusting your server.</p>
-          <ul className="specs"><li><b>Ed25519</b> signed card</li><li><b>256-bit</b> key, hash-only storage</li><li><b>ERC-8004</b> on-chain identity</li></ul>
+          <p className="sub">No more ten agents behind one shared API key. Each agent gets its own key, a signed identity card, and the name of the person who answers for it. Publish the pass to the ERC-8004 registry and any service can check it without trusting your server.</p>
+          <ul className="specs"><li><b>Ed25519</b> signed card</li><li><b>256-bit</b> keys, stored as hashes</li><li><b>ERC-8004</b> on-chain identity</li></ul>
         </div></div>
       </section>
 
-      <Chapter no="二" jp="審判" title="DECIDE" line="Three checks. One verdict. Before the tool ever runs." />
       <section id="decide" className="scene scene-wide" data-stage="2">
+        <span className="scene-kanji" lang="ja" aria-hidden="true">審判</span>
         <div className="wrap">
           <div className="decide-head rise">
-            <p className="eyebrow"><b>02</b><i />審判 · Decision</p>
+            <p className="eyebrow"><b>02</b><i />第二話 · Policy</p>
             <h2 className="big"><Words>Every call meets the gate.</Words></h2>
-            <p className="sub">Identity, policy and limits each cast a vote. Allow, refer to a human, or reject. This is the same decision code the server runs. Try to get something past it.</p>
+            <p className="sub">Three checks run before any tool does: is the agent still who it says, does a rule allow this action on this resource, and is it within budget and rate. The answer is allow, ask a human, or block. This panel runs the same decision code as the server.</p>
           </div>
           <div className="rise has-sticker"><span className="sticker s-a">Live engine · try me</span><Magi /></div>
         </div>
       </section>
 
-      <Chapter no="三" jp="記録" title="PROVE" line="A record that tells you when it has been touched." />
       <section id="prove" className="scene" data-stage="3">
+        <span className="scene-kanji" lang="ja" aria-hidden="true">記録</span>
         <div className="wrap"><div className="sheet sheet-wide rise">
-          <p className="eyebrow"><b>03</b><i />記録 · Evidence</p>
+          <p className="eyebrow"><b>03</b><i />第三話 · Audit</p>
           <h2 className="big"><Words>Every verdict joins the ledger.</Words></h2>
-          <p className="sub">Each event carries the hash of the one before it. Export the log and verify it offline against your registry key. Below is a real SHA-256 chain, running in your browser.</p>
+          <p className="sub">Each event carries the hash of the one before it, so editing the past breaks every link after it. Export the log and verify it offline against your registry key. Below is a real SHA-256 chain running in your browser.</p>
           <span className="sticker s-b">Tamper with it</span>
           <Chain />
         </div></div>
       </section>
 
-      <Chapter no="四" jp="封鎖" title="CONTAIN" line="When an agent goes wrong, one switch closes every door." tone="red" />
       <section id="contain" className="scene" data-stage="4">
+        <span className="scene-kanji red" lang="ja" aria-hidden="true">封鎖</span>
         <div className="wrap"><div className={`sheet sheet-alert rise ${revoked ? 'on' : ''}`}>
           <div className="hazard" aria-hidden="true" />
-          <p className="eyebrow"><b>04</b><i />封鎖 · Containment</p>
+          <p className="eyebrow"><b>04</b><i />第四話 · Revoke</p>
           <h2 className="big"><Words>Revoke once. Closed everywhere.</Words></h2>
-          <p className="sub">Pending approvals are cancelled, the next call is refused, and every service that checks status stops trusting the agent. Rotate a leaked key without losing its history.</p>
+          <p className="sub">One switch: pending approvals are cancelled, the next call is refused, and every service that checks the agent's status stops trusting it. A leaked key can be rotated without losing the agent's history.</p>
           <div className="rv-actions"><span className="sticker s-c">Pull the plug</span>
             <button className={`btn magnetic ${revoked ? 'ghost' : 'danger'}`} onClick={toggleIris}>{revoked ? 'Re-issue research-bot' : 'Revoke research-bot'}</button>
             <span className={`rv-state ${revoked ? 'off' : 'on'}`}><i />{revoked ? 'REVOKED · 封鎖' : 'ACTIVE · 稼働'}</span>
           </div>
         </div></div>
       </section>
-
 
       <div className="lower">
         <section id="console" className="sec" data-stage="5">
@@ -349,25 +347,23 @@ export default function Landing() {
 
       <section className="finale" data-stage="10">
         <div className="wrap fin-in">
-          <div className="fin-seal rise"><Mark size={96} /></div>
-          <h2 className="fin-title" aria-label="Know your agent."><span><Words>KNOW YOUR</Words></span><span className="chrome-script fin-script">agent.</span></h2>
-          <p className="sub rise">One process, one folder. No account, no database, no paid service.</p>
-          <div className="cta-code rise"><Code title="terminal" plain>{`git clone https://github.com/shuin-dev/shuin && cd shuin
-npm --prefix apps/web install && npm run build
-npm start      # → http://127.0.0.1:5055`}</Code></div>
-          <div className="hero-cta rise"><Link to="/app" className="btn magnetic">Open the console <ArrowRight size={16} /></Link><Link to="/verify" className="btn ghost magnetic">Verify an agent</Link></div>
+          <Mark size={56} />
+          <h2 className="fin-title" aria-label="Know your agent."><Words>KNOW YOUR</Words> <span className="ht-red"><Words>AGENT.</Words></span></h2>
+          <p className="sub rise">Self-hosted in a minute. One process, one folder, no account and no paid service.</p>
+          <div className="fin-actions rise">
+            <Link to="/app" className="btn magnetic">Open the console <ArrowRight size={16} /></Link>
+            <Link to="/docs" className="btn ghost magnetic">Read the quickstart</Link>
+          </div>
+          <div className="install rise"><span>$</span><code>git clone https://github.com/shuin-dev/shuin && cd shuin && npm start</code><CopyButton text="git clone https://github.com/shuin-dev/shuin && cd shuin && npm --prefix apps/web install && npm run build && npm start" /></div>
         </div>
+        <footer className="foot">
+          <div className="wrap foot-in">
+            <Logo />
+            <span className="foot-tag">Know your agent · MIT licensed</span>
+            <nav aria-label="Footer"><Link to="/docs">Docs</Link><Link to="/verify">Verify an agent</Link><Link to="/app">Console</Link><a href="/llms.txt">llms.txt</a></nav>
+          </div>
+        </footer>
       </section>
-      <div className="drift drift-end" data-stage="11" aria-hidden="true" />
-
-      <footer className="foot">
-        <div className="wrap foot-in">
-          <Logo />
-          <span className="pill" aria-label="Good for agents, bad for rogue tools"><b>GOOD FOR AGENTS</b><i>BAD FOR ROGUE TOOLS</i></span>
-          <nav aria-label="Footer"><Link to="/docs">Docs</Link><Link to="/verify">Verify</Link><Link to="/app">Console</Link><a href="/llms.txt">llms.txt</a></nav>
-        </div>
-        <div className="wrap next"><span lang="ja">次回予告</span> Next episode: your agents, with receipts.</div>
-      </footer>
     </div>
   );
 }
