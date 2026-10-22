@@ -46,5 +46,5 @@ agents/runtime/browser-agent/*.png
 agents/runtime/research-agent/.runs/
 
 # documentation & development reports
-docs/
+/docs/
 
