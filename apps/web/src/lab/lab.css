@@ -3,7 +3,7 @@
 .lab { position: fixed; inset: 0; background: #05050c; color: #eef2ff; overflow: hidden; font-family: var(--sans, 'Geist Variable', sans-serif); }
 .lab-stage, .lab-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .lab-top { position: absolute; top: 0; left: 0; right: 0; z-index: 5; display: flex; align-items: center; gap: 22px; padding: 16px 24px; background: linear-gradient(rgba(4, 4, 10, 0.85), transparent); }
-.lab-tabs { display: flex; gap: 4px; margin: 0 auto; flex-wrap: wrap; justify-content: center; }
+
 .lab-tabs button { display: flex; align-items: baseline; gap: 8px; padding: 8px 12px; background: rgba(8, 8, 18, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); color: #9fb0c8; font: 600 11px 'Geist Mono Variable', monospace; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px)); }
 .lab-tabs button b { color: #ff2fa6; } .lab-tabs button span { font: 900 11px 'Noto Sans JP Variable', serif; color: #5f6f88; letter-spacing: 0.1em; }
 .lab-tabs button.on { background: #19e6ff; color: #031017; border-color: #19e6ff; } .lab-tabs button.on b, .lab-tabs button.on span { color: #031017; }
@@ -34,3 +34,20 @@
   .lab-hero.pos-left, .lab-hero.pos-right, .lab-hero.pos-center { left: 18px; right: 18px; top: auto; bottom: 30vh; transform: none; text-align: left; } .lab-hero h1 { justify-items: start !important; } .lh-cta { justify-content: flex-start !important; }
   .lab-hero.pos-bottom { left: 18px; bottom: 30vh; } .lab-notes { left: 12px; right: 12px; bottom: 12px; width: auto; font-size: 12px; }
 }
+
+/* seventeen directions: a title, and a filmstrip of thumbnails along the bottom */
+.lab-title { margin: 0 auto; font: 700 13px 'Chakra Petch', sans-serif; letter-spacing: 0.16em; text-transform: uppercase; color: #fff; display: flex; gap: 10px; align-items: baseline; }
+.lab-title b { color: #ff2fa6; } .lab-title span { font: 900 12px 'Noto Sans JP Variable', serif; color: #7f8ea8; } .lab-title em { font: 500 11px 'Geist Mono Variable', monospace; font-style: normal; color: #5f6f88; }
+.lab-strip { position: absolute; z-index: 5; left: 0; right: 0; bottom: 0; display: flex; gap: 6px; padding: 10px 16px 12px; overflow-x: auto; scrollbar-width: none; background: linear-gradient(transparent, rgba(3, 3, 8, 0.9) 40%); }
+.lab-strip button { position: relative; flex: none; width: 112px; height: 64px; padding: 0; border: 1px solid rgba(255, 255, 255, 0.1); background: #0b0b16; cursor: pointer; overflow: hidden; opacity: 0.62; transition: opacity 0.2s, transform 0.2s, border-color 0.2s; }
+.lab-strip button:hover { opacity: 1; transform: translateY(-2px); }
+.lab-strip button.on { opacity: 1; border-color: #19e6ff; box-shadow: 0 0 0 1px #19e6ff, 0 0 18px rgba(25, 230, 255, 0.4); }
+.lab-strip img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.lab-strip b, .lab-strip span { position: absolute; left: 6px; font: 600 10px 'Geist Mono Variable', monospace; letter-spacing: 0.08em; text-shadow: 0 1px 4px #000; }
+.lab-strip b { top: 4px; color: #ff2fa6; } .lab-strip span { bottom: 4px; right: 4px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase; }
+.lab-notes { bottom: 96px; } .lab-hero.pos-bottom { bottom: calc(8vh + 80px); }
+.tone-cyan .lab-hero h1 .hot { color: #19e6ff; text-shadow: 3px 0 0 rgba(255, 47, 166, 0.8), 0 0 40px rgba(25, 230, 255, 0.5); }
+.tone-amber .lab-hero h1 .hot { color: #ff8a14; text-shadow: 3px 0 0 rgba(255, 30, 40, 0.8), 0 0 40px rgba(255, 138, 20, 0.5); }
+.tone-green .lab-hero h1 .hot { color: #2dff9a; text-shadow: 3px 0 0 rgba(25, 230, 255, 0.7), 0 0 40px rgba(45, 255, 154, 0.5); }
+.tone-red .lab-hero h1 .hot { color: #ff3b2a; text-shadow: 3px 0 0 rgba(255, 178, 31, 0.7), 0 0 40px rgba(255, 59, 42, 0.5); }
+@media (max-width: 760px) { .lab-strip button { width: 84px; height: 50px; } .lab-notes { bottom: 74px; max-height: 26vh; overflow: auto; } .lab-title em { display: none; } }

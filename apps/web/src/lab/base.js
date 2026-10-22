@@ -175,3 +175,42 @@ export function sky(frag) {
   const mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), mat); mesh.frustumCulled = false; mesh.renderOrder = -1000;
   return {mesh, mat, update(camera, t) { mat.uniforms.uInvProj.value.copy(camera.projectionMatrixInverse); mat.uniforms.uCamWorld.value.copy(camera.matrixWorld); mat.uniforms.uTime.value = t; }};
 }
+
+/** A row of glyphs drawn white on black, for shaders that write in text. Returns {tex, count}. */
+export function glyphAtlas(chars = 'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ0123456789ABCDEF', {w = 48, h = 64} = {}) {
+  const list = [...chars], c = document.createElement('canvas'); c.width = w * list.length; c.height = h;
+  const g = c.getContext('2d'); g.fillStyle = '#000'; g.fillRect(0, 0, c.width, h);
+  g.fillStyle = '#fff'; g.font = `700 ${Math.round(h * 0.7)}px "Noto Sans JP Variable", "Geist Mono Variable", monospace`; g.textAlign = 'center'; g.textBaseline = 'middle';
+  list.forEach((ch, i) => g.fillText(ch, i * w + w / 2, h * 0.54));
+  const tex = new THREE.CanvasTexture(c); tex.minFilter = THREE.LinearFilter; tex.generateMipmaps = false;
+  return {tex, count: list.length};
+}
+
+/** Studio reflections for shiny things. */
+export async function studioEnv(renderer, scene, intensity = 0.04) {
+  const {RoomEnvironment} = await import('three/examples/jsm/environments/RoomEnvironment.js');
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(new RoomEnvironment(), intensity).texture;
+}
+
+/** A flood: everything added to `real` is mirrored below y = floor, under a dark glossy veil. */
+export function flood(scene, {floor = 0, size = [300, 400], z = -150, opacity = 0.55, color = 0x05030a} = {}) {
+  const real = new THREE.Group(), mirror = new THREE.Group(); mirror.scale.y = -1; mirror.position.y = 2 * floor; scene.add(real, mirror);
+  const veil = new THREE.Mesh(new THREE.PlaneGeometry(...size), new THREE.MeshBasicMaterial({color, transparent: true, opacity, depthWrite: false}));
+  veil.rotation.x = -PI / 2; veil.position.set(0, floor + 0.002, z); veil.renderOrder = -10; scene.add(veil);
+  return {real, mirror, add(...objs) { real.add(...objs); mirror.add(...objs.map(o => o.clone())); }};
+}
+
+/** Soft additive points (embers, dust, bokeh). positions: Float32Array; colors optional. */
+export function softPoints(positions, {colors = null, size = 6, color = 0xffffff, opacity = 1} = {}) {
+  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  const n = positions.length / 3;
+  geo.setAttribute('aCol', new THREE.BufferAttribute(colors || new Float32Array(n * 3).fill(1), 3));
+  const mat = new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    uniforms: {uSize: {value: size}, uColor: {value: new THREE.Color(color)}, uOpacity: {value: opacity}},
+    vertexShader: 'attribute vec3 aCol; varying vec3 vCol; uniform float uSize; void main(){ vCol = aCol; vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_PointSize = uSize * 60.0 / -mv.z; gl_Position = projectionMatrix * mv; }',
+    fragmentShader: 'varying vec3 vCol; uniform vec3 uColor; uniform float uOpacity; void main(){ float r = length(gl_PointCoord - 0.5) * 2.0; float a = smoothstep(1.0, 0.0, r); gl_FragColor = vec4(vCol * uColor * a * a * uOpacity, 1.0); }',
+  });
+  return new THREE.Points(geo, mat);
+}
