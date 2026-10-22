@@ -65,11 +65,52 @@ function useWorld(canvasRef, frameApi, handlers) {
         lenis.on('scroll', e => { world.setVelocity(Math.abs(e.velocity) / 40); queue(); });
         window.__lenis = lenis;
       }
+      // Story chapters move one at a time, like a sequence of scenes: one gesture glides to the next chapter while
+      // the camera flies there. Chapters taller than the screen scroll normally until their edge. The product
+      // sections in the middle scroll freely. Touch keeps native scrolling.
+      if (!reduced) {
+        const ease = t => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+        let busyUntil = 0, lastWheel = 0, settledAt = 0;
+        const busy = () => performance.now() < busyUntil;
+        const snaps = () => [...document.querySelectorAll('[data-snap]')].map(el => { const r = el.getBoundingClientRect(); return {top: r.top + scrollY, bottom: r.bottom + scrollY, h: r.height}; });
+        const place = (sec, dir) => (sec.h <= innerHeight + 2 ? sec.top - (innerHeight - sec.h) / 2 : dir > 0 ? sec.top : sec.bottom - innerHeight);
+        // while a glide runs, Lenis is stopped so no stray wheel event can redirect it
+        const go = y => { busyUntil = performance.now() + 1400; lenis.stop(); lenis.scrollTo(Math.max(0, y), {duration: 1.35, easing: ease, force: true, onComplete: () => { lenis.start(); settledAt = performance.now(); busyUntil = 0; }}); setTimeout(() => { if (lenis.isStopped) { lenis.start(); settledAt = performance.now(); } }, 1500); };
+        const step = dir => {
+          const list = snaps(), y = Math.round(lenis.targetScroll ?? scrollY), mid = y + innerHeight / 2;   // where Lenis is heading, not where it is
+          const i = list.findIndex(sec => mid >= sec.top - 1 && mid < sec.bottom + 1);
+          if (i < 0) {                                                    // in the free part: snap only when a chapter is on screen
+            const near = list.find(sec => dir > 0 ? sec.top > y && sec.top < y + innerHeight * 0.6 : sec.bottom < y + innerHeight && sec.bottom > y + innerHeight * 0.4);
+            if (!near) return false; go(place(near, dir)); return true;
+          }
+          const sec = list[i];
+          if (sec.h > innerHeight + 2 && (dir > 0 ? y + innerHeight < sec.bottom - 4 : y > sec.top + 4)) return false;   // tall chapter: read it first
+          const next = list[i + dir];
+          if (!next || (dir > 0 ? next.top - sec.bottom : sec.top - next.bottom) > 240) return false;                     // the free part begins: scroll on
+          go(place(next, dir)); return true;
+        };
+        const onWheel = e => {
+          const now = performance.now(), gap = now - lastWheel; lastWheel = now;
+          if (Math.abs(e.deltaY) < 2 || e.ctrlKey) return;
+          if (busy() || (now - settledAt < 450 && gap < 120)) { e.preventDefault(); e.stopImmediatePropagation(); return; }   // a gesture's tail, not a new one
+          if (step(Math.sign(e.deltaY))) { e.preventDefault(); e.stopImmediatePropagation(); }
+        };
+        const onKey = e => {
+          if (e.target.closest?.('input, textarea, select, [contenteditable]')) return;
+          const dir = ['ArrowDown', 'PageDown', ' '].includes(e.key) ? (e.shiftKey && e.key === ' ' ? -1 : 1) : ['ArrowUp', 'PageUp'].includes(e.key) ? -1 : 0;
+          if (!dir) return;
+          if (busy()) { e.preventDefault(); return; }
+          if (step(dir)) e.preventDefault();
+        };
+        addEventListener('wheel', onWheel, {passive: false, capture: true});
+        addEventListener('keydown', onKey);
+        world.snapCleanup = () => { removeEventListener('wheel', onWheel, {capture: true}); removeEventListener('keydown', onKey); };
+      }
       const remeasure = () => { measure(); queue(); };
       const ro = new ResizeObserver(remeasure); ro.observe(document.body);
       addEventListener('scroll', queue, {passive: true});
       measure(); update();
-      world.cleanup = () => { removeEventListener('scroll', queue); ro.disconnect(); };
+      world.cleanup = () => { removeEventListener('scroll', queue); ro.disconnect(); world.snapCleanup?.(); };
     }).catch(e => { console.error(e); setMode('static'); });
 
     return () => { cancelled = true; cancelAnimationFrame(raf); cancelAnimationFrame(rafLenis); lenis?.destroy(); window.__lenis = null; world?.cleanup?.(); world?.destroy(); };
@@ -227,7 +268,7 @@ export default function Landing() {
       <Nav alert={alert} />
 
       {/* ── Scene 1: the city from the air ── */}
-      <section className="hero mh" data-stage="0">
+      <section className="hero mh" data-snap data-stage="0">
         <div className="wrap mh-in">
           <p className="mh-kicker rise"><span className="dot" /><span lang="ja">見張り</span> MIHARI — the open-source lookout for AI agents</p>
           <h1 className="mh-title" aria-label="A million agents. One watch.">
@@ -253,7 +294,7 @@ export default function Landing() {
         <div className="tape t2"><div>{'CAUTION // AGENTS AT WORK // 注意 // SCOPED KEYS ONLY // HUMAN IN THE LOOP // '.repeat(4)}</div></div>
       </div>
 
-      <section id="identify" className="scene scene-right" data-stage="1">
+      <section id="identify" className="scene scene-right" data-snap data-stage="1">
         <span className="scene-kanji" lang="ja" aria-hidden="true">識別</span>
         <PassStage worldRef={worldRef} />
         <div className="wrap"><div className="sheet rise">
@@ -265,14 +306,14 @@ export default function Landing() {
       </section>
 
       {/* ── the great gate: no panels, nothing in the way ── */}
-      <section id="gate" className="scene scene-gate" data-stage="2">
+      <section id="gate" className="scene scene-gate" data-snap data-stage="2">
         <div className="wrap gate-card rise">
           <p className="eyebrow"><b>02</b><i />大鳥居 · The gate</p>
           <p className="gate-line"><span lang="ja">関門</span> Every call walks this path. Nothing reaches a tool without passing the gates.</p>
         </div>
       </section>
 
-      <section id="decide" className="scene scene-wide" data-stage="3">
+      <section id="decide" className="scene scene-wide" data-snap data-stage="3">
         <span className="scene-kanji" lang="ja" aria-hidden="true">審判</span>
         <div className="wrap">
           <div className="decide-head rise">
@@ -284,7 +325,7 @@ export default function Landing() {
         </div>
       </section>
 
-      <section id="prove" className="scene" data-stage="4">
+      <section id="prove" className="scene" data-snap data-stage="4">
         <span className="scene-kanji" lang="ja" aria-hidden="true">記録</span>
         <div className="wrap"><div className="sheet sheet-wide rise">
           <p className="eyebrow"><b>03</b><i />第三話 · Audit</p>
@@ -295,7 +336,7 @@ export default function Landing() {
         </div></div>
       </section>
 
-      <section id="contain" className="scene" data-stage="5">
+      <section id="contain" className="scene" data-snap data-stage="5">
         <span className="scene-kanji red" lang="ja" aria-hidden="true">封鎖</span>
         <div className="wrap"><div className={`sheet sheet-alert rise ${revoked ? 'on' : ''}`}>
           <div className="hazard" aria-hidden="true" />
@@ -376,7 +417,7 @@ export default function Landing() {
         </section>
       </div>
 
-      <section className="finale mh-fin" data-stage="11">
+      <section className="finale mh-fin" data-snap data-stage="11">
         <div className="wrap fin-in">
           <p className="mh-kicker rise"><span lang="ja">見張り</span> Know your agent</p>
           <h2 className="mh-title fin-t" aria-label="Straight through the gate."><span className="mh-l"><Words>STRAIGHT THROUGH</Words></span><span className="mh-l mh-w" data-text="THE GATE."><Words>THE GATE.</Words></span></h2>

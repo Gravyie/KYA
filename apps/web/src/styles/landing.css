@@ -674,3 +674,5 @@
   .pass-hint { bottom: 4vh; }
   .scene-gate { padding: 70vh 0 8vh; }
 }
+/* story chapters are scenes: each fills the screen */
+@media (min-width: 961px) { .landing [data-snap].scene { min-height: 100vh; min-height: 100svh; } .landing .scene-gate { min-height: 100vh; } }

@@ -17,8 +17,8 @@ import {buildPassport, animatePassport, printTexture} from '../lab/artifact.js';
  * wormhole. Revoke throws every one of them back.
  *
  *   z   90 … -280   the megacity from the air (hero); a checkpoint hovers at z -125 where the passport is held
- *   z -292          the great entrance torii; then the Senbon Torii path over a flooded street
- *   z -524          the great exit torii, onto a flooded plaza
+ *   z -292          the great entrance torii; then the Senbon Torii path, wet stone under neon
+ *   z -524          the great exit torii, onto the portal's stone dais
  *   z -600          the swarm portal, standing on the water
  *   z -600 … -1320  the wormhole: the swarm's walls, a set piece for every chapter, the last iris, light
  *
@@ -82,7 +82,7 @@ vec3 sky(vec3 d){
   col = mix(col, vec3(0.42, 0.14, 0.32), smoothstep(0.55, 0.9, cl) * smoothstep(0.32, 0.02, e) * 0.5);
   float toward = max(0.0, dot(d, uPortalDir));
   vec3 glow = mix(vec3(0.15, 0.6, 1.0), vec3(1.0, 0.1, 0.2), uAlert);
-  col += glow * (pow(toward, 60.0) * 0.6 + pow(toward, 8.0) * 0.12) * (0.6 + 0.6 * cl);
+  col += glow * (pow(toward, 80.0) * 0.25 + pow(toward, 10.0) * 0.06) * (0.6 + 0.6 * cl);
   vec2 st = floor(d.xz / max(e, 0.05) * 80.0); col += step(0.997, hash(st)) * smoothstep(0.15, 0.4, e) * 0.8;
   return mix(col, vec3(0.25, 0.0, 0.03) * (0.5 + col.r), uAlert * 0.55);
 }
@@ -90,8 +90,7 @@ void main(){
   vec4 v = uInvProj * vec4(vNdc, 1.0, 1.0); vec3 d = normalize((uCamWorld * vec4(normalize(v.xyz / v.w), 0.0)).xyz);
   vec3 col;
   if (d.y >= 0.0) col = sky(d);
-  else { vec2 g = d.xz / max(-d.y, 0.02); float rip = fbm(g * 0.8 + vec2(0.0, uTime * 0.4)) - 0.5;
-    col = sky(normalize(vec3(d.x + rip * 0.03, -d.y * 0.8, d.z))) * (0.32 + 0.25 * fbm(g * 2.0)); }
+  else col = mix(vec3(0.07, 0.02, 0.07), vec3(0.008, 0.006, 0.014), smoothstep(0.0, 0.25, -d.y));   // ground haze, no mirror
   gl_FragColor = vec4(col, 1.0);
 }`;
 
@@ -99,7 +98,7 @@ void main(){
    (a cubic bezier ending at the portal, widening into the portal's ring), the second half is the wormhole wall. */
 const SWARM_FN = `
 uniform float uTime, uLock, uInside, uPx;
-const vec3 A = vec3(70.0, 86.0, -30.0), B = vec3(34.0, 62.0, -170.0), C = vec3(4.0, 44.0, -400.0), D = vec3(0.0, ${PORTAL.y.toFixed(1)}, ${PORTAL.z.toFixed(1)});
+const vec3 A = vec3(30.0, 54.0, 52.0), B = vec3(30.0, 50.0, -90.0), C = vec3(4.0, 42.0, -400.0), D = vec3(0.0, ${PORTAL.y.toFixed(1)}, ${PORTAL.z.toFixed(1)});
 vec3 bez(float u){ float v = 1.0 - u; return v*v*v*A + 3.0*v*v*u*B + 3.0*v*u*u*C + u*u*u*D; }
 vec3 swarmAt(vec4 seed, float s, out vec3 col, out float a){
   float twist = seed.y * 6.2831853;
@@ -111,11 +110,11 @@ vec3 swarmAt(vec4 seed, float s, out vec3 col, out float a){
     vec3 c = bez(u);
     float k = smoothstep(0.72, 1.0, u);                         // near the portal the river opens into its ring
     float ang = twist + u * 7.0 + uTime * 0.05;
-    float rr = mix(mix(30.0, 12.0, u) * sqrt(seed.z) * (0.6 + 0.4 * sin(u * 9.0 + seed.w * 6.0)), ${PORTAL.r.toFixed(1)} * (0.92 + 0.16 * seed.z), k);
+    float rr = mix(mix(16.0, 9.0, u) * sqrt(seed.z) * (0.6 + 0.4 * sin(u * 9.0 + seed.w * 6.0)), ${PORTAL.r.toFixed(1)} * (0.92 + 0.16 * seed.z), k);
     vec3 off = vec3(cos(ang) * rr, sin(ang) * rr * mix(0.35, 1.0, k), 0.0);
     off.x += sin(u * 21.0 + seed.w * 6.0 + uTime * 0.6) * 3.0 * (1.0 - k);
     off.y += cos(u * 17.0 + seed.y * 6.0 + uTime * 0.5) * 2.0 * (1.0 - k);
-    a *= smoothstep(0.0, 0.06, u) * mix(1.0, 0.45, k);
+    a *= smoothstep(0.0, 0.03, u) * mix(1.0, 0.45, k) * mix(1.0, 0.35, smoothstep(0.3, 0.9, u));   // dense up close, thinner far away
     if (seed.w > 0.93) col = vec3(1.0, 0.3, 0.75);
     return c + off;
   }
@@ -235,7 +234,6 @@ export function createWorld(canvas, {onDecision, onFrame, reduced = false, small
 
   /* ── SENBON TORII ─────────────────────────────────────── */
   const torii = new THREE.Group(); scene.add(torii);
-  const toriiMirror = new THREE.Group(); toriiMirror.scale.y = -1; scene.add(toriiMirror);
   const N = Math.floor((TORII.z0 - TORII.z1) / TORII.gap) + 1;
   const lacquer = new THREE.MeshStandardMaterial({color: 0x3a0806, metalness: 0.3, roughness: 0.35, emissive: 0x6a0c06, emissiveIntensity: 0.9});
   const neonMat = new THREE.MeshBasicMaterial({toneMapped: false});
@@ -280,10 +278,52 @@ export function createWorld(canvas, {onDecision, onFrame, reduced = false, small
   fontsReady().then(() => {
     for (let i = 0; i < N; i += 9) { const m = signMesh(['識別', '審判', '記録', '封鎖', '見張り', '認証', '中枢', '通行証', '関門'][(i / 9) % 9], '#ffb21f', 0.62, true); m.position.set(0, 3.15, gateZ[i] + 0.15); torii.add(m); }
     great.forEach((g, k) => { const m = signMesh(k ? '中枢' : '見張り', '#ffb21f', 1.9, true); m.position.set(0, 6.9, 0.35); g.add(m); });
-    toriiParts.concat(great).forEach(m => { const c = m.clone(); if (m.instanceColor) c.instanceColor = m.instanceColor; toriiMirror.add(c); });
   });
-  const floodVeil = new THREE.Mesh(new THREE.PlaneGeometry(120, 380), new THREE.MeshBasicMaterial({color: 0x05030a, transparent: true, opacity: 0.5, depthWrite: false}));
-  floodVeil.rotation.x = -PI / 2; floodVeil.position.set(0, 0.01, -470); floodVeil.renderOrder = -10; scene.add(floodVeil);
+  // the ground of the path and the plaza: wet stone, lit by what stands on it (no mirrors: light pools and smears)
+  const floorMat = new THREE.ShaderMaterial({uniforms: {uTime: shared.uTime, uAlert: shared.uAlert, uFog: {value: new THREE.Color(0x120822)}},
+    vertexShader: 'varying vec3 vW; varying float vDepth; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; vec4 mv = viewMatrix * w; vDepth = -mv.z; gl_Position = projectionMatrix * mv; }',
+    fragmentShader: `varying vec3 vW; varying float vDepth; uniform float uTime, uAlert; uniform vec3 uFog;
+      float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+      float noise(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(hash(i), hash(i + vec2(1, 0)), f.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), f.x), f.y); }
+      void main(){
+        vec2 p = vW.xz; float x = abs(p.x);
+        // paving: long slabs along the path, staggered; a few darker, seams that hold water
+        vec2 q = vec2(p.x / 1.1, p.y / 0.9); q.x += step(0.5, fract(floor(q.y) * 0.5)) * 0.5;
+        vec2 cell = floor(q), f = fract(q);
+        float seam = 1.0 - smoothstep(0.0, 0.05, min(min(f.x, 1.0 - f.x), min(f.y, 1.0 - f.y)));
+        float tone = 0.7 + 0.3 * hash(cell);
+        float wet = smoothstep(0.45, 0.75, noise(p * 0.35)) ;                         // puddled patches shine more
+        vec3 col = vec3(0.022, 0.02, 0.032) * tone * (1.0 - seam * 0.5);
+        vec3 warm = vec3(1.0, 0.5, 0.2), neon = mix(vec3(1.0, 0.16, 0.2), vec3(1.0, 0.1, 0.15), uAlert);
+        float onPath = step(${TORII.exit.toFixed(1)}, p.y) * step(p.y, ${(TORII.entry + 6).toFixed(1)});
+        if (p.y > ${(TORII.exit - 2).toFixed(1)}) {
+          // lantern pools: every gate has a lantern on alternating sides
+          float k = (${TORII.z0.toFixed(1)} - p.y) / ${TORII.gap.toFixed(2)} - 0.5;
+          float dz = (fract(k) - 0.5) * ${TORII.gap.toFixed(2)};
+          float side = mod(floor(k), 2.0) < 0.5 ? -1.0 : 1.0;
+          float pool = exp(-(pow(p.x - side * 2.5, 2.0) + dz * dz) * 1.3);
+          // pillar neon smears: long glows on the wet stone beneath each pillar line
+          float gz = (fract((${TORII.z0.toFixed(1)} - p.y) / ${TORII.gap.toFixed(2)} + 0.5) - 0.5) * ${TORII.gap.toFixed(2)};
+          float smear = exp(-pow(x - 1.65, 2.0) * 30.0) * exp(-gz * gz * 0.9);
+          float lane = exp(-p.x * p.x * 1.4) * 0.35;                                   // the walked middle, polished
+          col += warm * pool * (0.22 + 0.3 * wet) * onPath;
+          col += neon * (smear * (0.25 + 0.35 * wet) + lane * 0.04) * onPath;
+          col += (seam * 0.04) * warm * pool * onPath;
+        }
+        // the dais: engraved rings and spokes lit from the portal, pulses running outward
+        vec2 d = p - vec2(0.0, ${PORTAL.z.toFixed(1)}); float r = length(d), a = atan(d.y, d.x);
+        float dais = smoothstep(46.0, 40.0, r) * step(p.y, ${(TORII.exit + 4).toFixed(1)});
+        float rings = smoothstep(0.07, 0.0, abs(fract(r / 3.0) - 0.5) - 0.44);
+        float spokes = smoothstep(0.012, 0.0, abs(fract(a / 6.2831853 * 36.0) - 0.5) - 0.48) * step(16.0, r);
+        float pulse = exp(-pow(fract(r * 0.03 - uTime * 0.25) - 0.5, 2.0) * 60.0);
+        vec3 cyan = mix(vec3(0.15, 0.75, 1.0), vec3(1.0, 0.12, 0.18), uAlert);
+        col = mix(col, vec3(0.018, 0.02, 0.03) * tone, dais * 0.6);
+        col += cyan * (rings * 0.12 + spokes * 0.08) * (0.3 + pulse) * dais * exp(-r * 0.03);
+        col += cyan * exp(-r * 0.09) * 0.25 * dais;                                     // the portal's light falling on it
+        float fog = 1.0 - exp(-vDepth * 0.006);
+        gl_FragColor = vec4(mix(col, uFog * 0.6, fog), 1.0);
+      }`});
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(110, 440), floorMat); floor.rotation.x = -PI / 2; floor.position.set(0, 0.01, -500); scene.add(floor);
   const C = 30, comets = new THREE.InstancedMesh(new THREE.CapsuleGeometry(0.03, 0.7, 4, 8).rotateX(PI / 2), new THREE.MeshBasicMaterial({toneMapped: false}), C);
   comets.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(C * 3), 3); torii.add(comets);
   const KIND = {allow: new THREE.Color(NEON.jade).multiplyScalar(3), ask: new THREE.Color(NEON.amber).multiplyScalar(3), deny: new THREE.Color(NEON.red).multiplyScalar(3.5), neutral: new THREE.Color(NEON.bone).multiplyScalar(2.2)};
@@ -348,19 +388,7 @@ export function createWorld(canvas, {onDecision, onFrame, reduced = false, small
   const accretion = new THREE.Points(acGeo, acMat); accretion.frustumCulled = false; portal.add(accretion);
   // lightning crawling along the rim
   const arcs = Array.from({length: 3}, () => { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(26 * 3), 3)); const l = new THREE.Line(g, new THREE.LineBasicMaterial({color: new THREE.Color(0.7, 0.95, 1).multiplyScalar(3), transparent: true, blending: THREE.AdditiveBlending, toneMapped: false})); l.frustumCulled = false; portal.add(l); return {l, t: 0}; });
-  const portalMirror = new THREE.Group(); portalMirror.position.set(0, -PORTAL.y, PORTAL.z); portalMirror.scale.y = -1; scene.add(portalMirror);
-  portal.children.filter(c => c !== accretion && !c.isLine && c !== aura).forEach(c => portalMirror.add(c.clone()));
   const portalLight = new THREE.PointLight(NEON.cyan, 30, 80, 1.5); portalLight.position.set(0, PORTAL.y, PORTAL.z + 8); scene.add(portalLight);
-  // the plaza's water, glowing with the portal
-  const plazaMat = new THREE.ShaderMaterial({transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, uniforms: {uTime: shared.uTime, uAlert: shared.uAlert},
-    vertexShader: 'varying vec3 vW; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }',
-    fragmentShader: `varying vec3 vW; uniform float uTime, uAlert;
-      void main(){ vec2 d = vW.xz - vec2(0.0, ${PORTAL.z.toFixed(1)}); float r = length(d);
-        float ripples = 0.5 + 0.5 * sin(r * 1.4 - uTime * 2.0);
-        vec3 c = mix(vec3(0.1, 0.6, 1.0), vec3(1.0, 0.1, 0.15), uAlert);
-        gl_FragColor = vec4(c * exp(-r * 0.05) * (0.15 + ripples * 0.12), 1.0); }`});
-  const plaza = new THREE.Mesh(new THREE.PlaneGeometry(140, 140), plazaMat); plaza.rotation.x = -PI / 2; plaza.position.set(0, 0.02, PORTAL.z); scene.add(plaza);
-
   /* ── THE SWARM: one stream from the sky, through the portal, into the walls of the wormhole ── */
   const SN = small ? 22000 : 56000, seeds = new Float32Array(SN * 4);
   for (let i = 0; i < SN; i++) seeds.set([Math.random(), Math.random(), Math.random(), Math.random()], i * 4);
@@ -528,10 +556,11 @@ export function createWorld(canvas, {onDecision, onFrame, reduced = false, small
     skyMat.uniforms.uPortalDir.value.set(0, PORTAL.y, PORTAL.z).sub(camera.position).normalize();
 
     city.visible = skyMesh.visible = cz > PORTAL.z - 25; rn.mesh.visible = !inTube;
-    torii.visible = toriiMirror.visible = floodVeil.visible = cz < -170 && cz > PORTAL.z - 25;
+    torii.visible = floor.visible = cz < -170 && cz > PORTAL.z - 25;
     tunnel.visible = cz < PORTAL.z + 40;
     vortexMat.uniforms.uOn.value = smooth(clamp01((cz - PORTAL.z - 1) / 40));
-    aura.visible = !inTube; plaza.visible = cz > PORTAL.z - 25 && cz < -300;
+    // the portal's glow layers only exist up close; from the city it is a crisp ring on the horizon
+    aura.visible = vortex.visible = !inTube && cz < -330;
     checkpoint.visible = cz > -240;
     swarmU.uInside.value = inTube ? 1 : smooth(span(-cz, -PORTAL.z - 20, -PORTAL.z - 1));
     swarmU.uLock.value = lock; swarmU.uPx.value = acMat.uniforms.uPx.value = renderer.getPixelRatio();
