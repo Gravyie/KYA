@@ -1,0 +1,36 @@
+@import '@fontsource/anton/400.css';
+@import '@fontsource/chakra-petch/latin-700.css';
+.lab { position: fixed; inset: 0; background: #05050c; color: #eef2ff; overflow: hidden; font-family: var(--sans, 'Geist Variable', sans-serif); }
+.lab-stage, .lab-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.lab-top { position: absolute; top: 0; left: 0; right: 0; z-index: 5; display: flex; align-items: center; gap: 22px; padding: 16px 24px; background: linear-gradient(rgba(4, 4, 10, 0.85), transparent); }
+.lab-tabs { display: flex; gap: 4px; margin: 0 auto; flex-wrap: wrap; justify-content: center; }
+.lab-tabs button { display: flex; align-items: baseline; gap: 8px; padding: 8px 12px; background: rgba(8, 8, 18, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); color: #9fb0c8; font: 600 11px 'Geist Mono Variable', monospace; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px)); }
+.lab-tabs button b { color: #ff2fa6; } .lab-tabs button span { font: 900 11px 'Noto Sans JP Variable', serif; color: #5f6f88; letter-spacing: 0.1em; }
+.lab-tabs button.on { background: #19e6ff; color: #031017; border-color: #19e6ff; } .lab-tabs button.on b, .lab-tabs button.on span { color: #031017; }
+.lab-back { font: 600 11px 'Geist Mono Variable', monospace; letter-spacing: 0.16em; text-transform: uppercase; color: #9fb0c8; }
+.lab-hero { position: absolute; z-index: 3; pointer-events: none; max-width: 760px; animation: lh-in 0.9s cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes lh-in { from { opacity: 0; transform: translateY(16px); } }
+.lab-hero.pos-left { left: clamp(20px, 7vw, 120px); top: 50%; transform: translateY(-46%); }
+.lab-hero.pos-right { right: clamp(20px, 6vw, 110px); top: 50%; transform: translateY(-46%); text-align: right; }
+.lab-hero.pos-center { left: 50%; top: 52%; transform: translate(-50%, -50%); text-align: center; }
+.lab-hero.pos-bottom { left: clamp(20px, 7vw, 120px); bottom: 8vh; }
+.lab-hero.pos-left, .lab-hero.pos-right, .lab-hero.pos-center { animation-name: lh-fade; } @keyframes lh-fade { from { opacity: 0; } }
+.lh-kicker { margin: 0 0 16px; font: 500 12px 'Geist Mono Variable', monospace; letter-spacing: 0.2em; text-transform: uppercase; color: #c3cfe4; text-shadow: 0 2px 16px #000; }
+.lab-hero h1 { margin: 0 0 24px; display: grid; font: 400 clamp(50px, min(8vw, 13vh), 136px)/0.88 'Anton', sans-serif; text-transform: uppercase; letter-spacing: 0.005em; text-shadow: 0 4px 40px rgba(0, 0, 0, 0.75); }
+.lab-hero.pos-center h1 { justify-items: center; } .lab-hero.pos-right h1 { justify-items: end; }
+.lab-hero h1 .hot { color: #ff2fa6; text-shadow: 3px 0 0 rgba(25, 230, 255, 0.85), 0 0 40px rgba(255, 47, 166, 0.5); }
+.lab-ice .lab-hero h1 .hot { color: #19e6ff; text-shadow: 3px 0 0 rgba(255, 47, 166, 0.8), 0 0 40px rgba(25, 230, 255, 0.5); }
+.lh-cta { display: flex; gap: 10px; } .pos-center .lh-cta { justify-content: center; } .pos-right .lh-cta { justify-content: flex-end; }
+.lh-btn { padding: 13px 20px; background: #19e6ff; color: #031017; font: 700 12px 'Chakra Petch', sans-serif; letter-spacing: 0.14em; text-transform: uppercase; clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px)); }
+.lh-btn.ghost { background: rgba(6, 8, 18, 0.75); color: #eef2ff; outline: 1px solid rgba(255, 255, 255, 0.18); outline-offset: -1px; }
+.lh-board { display: grid; grid-template-columns: auto 1fr auto; gap: 6px 18px; margin: 0 0 22px; padding: 14px 18px; width: min(460px, 86vw); background: rgba(3, 4, 10, 0.82); border: 1px solid rgba(255, 178, 31, 0.3); font: 600 13px 'Geist Mono Variable', monospace; }
+.lh-board span { font-family: 'Noto Sans JP Variable', serif; color: #ffb21f; } .lh-board b { font-weight: 600; letter-spacing: 0.1em; } .lh-board em { font-style: normal; color: #ffb21f; }
+.lab-notes { position: absolute; z-index: 4; right: 20px; bottom: 20px; width: min(360px, calc(100vw - 40px)); padding: 16px 18px; background: rgba(4, 5, 12, 0.82); backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.08); font-size: 13px; line-height: 1.55; color: #c6d0e2; animation: lh-fade 0.6s both; }
+.lab-notes p { margin: 0 0 8px; } .ln-n { font: 700 14px 'Chakra Petch', sans-serif; letter-spacing: 0.1em; text-transform: uppercase; color: #fff; } .ln-n b { color: #ff2fa6; margin-right: 6px; } .ln-n span { font-family: 'Noto Sans JP Variable', serif; color: #7f8ea8; margin-left: 6px; }
+.ln-refs { font: 500 11.5px 'Geist Mono Variable', monospace; color: #19e6ff; } .ln-why { color: #e7ecf7; } .ln-keys { margin: 0; font: 500 10.5px 'Geist Mono Variable', monospace; letter-spacing: 0.12em; color: #5f6f88; text-transform: uppercase; }
+.lab-artifact .lab-notes { left: 20px; right: auto; }
+@media (max-width: 760px) {
+  .lab-top { flex-wrap: wrap; gap: 10px; padding: 10px 14px; } .lab-tabs button { padding: 6px 8px; font-size: 10px; } .lab-tabs button span { display: none; } .lab-back { display: none; }
+  .lab-hero.pos-left, .lab-hero.pos-right, .lab-hero.pos-center { left: 18px; right: 18px; top: auto; bottom: 30vh; transform: none; text-align: left; } .lab-hero h1 { justify-items: start !important; } .lh-cta { justify-content: flex-start !important; }
+  .lab-hero.pos-bottom { left: 18px; bottom: 30vh; } .lab-notes { left: 12px; right: 12px; bottom: 12px; width: auto; font-size: 12px; }
+}
