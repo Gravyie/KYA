@@ -36,8 +36,8 @@ const S = o => ({az: 0, el: 0.08, r: 4, lx: 0, ly: 0, lz: 0, closed: 0, alert: 0
 const FULL = Z(0.5, 0.5, 1, 1);
 const fly = (lz, az, dim = 0.55, extra = {}) => S({az, el: 0.08, r: 3.6, lx: az * 4, ly: 1.1, lz, zone: FULL, dim, ledger: 1, mix: [0.8, 0.1, 0.1], ...extra});
 const STAGES = [
-  /* 0 hero      */ S({az: -0.2, el: 0.05, r: 4.3, lx: 0, ly: 1.0, lz: -1, zone: Z(0.69, 0.5, 0.56, 0.86), ledger: 1}),
-  /* 1 identify  */ S({az: -0.5, el: 0.06, r: 2.0, lx: 0.1, ly: 0.25, lz: 1.9, zone: Z(0.7, 0.5, 0.48, 0.74), mix: [0.5, 0.2, 0.3], card: {p: [0.15, 0.3, 2.0], tilt: -0.35, rx: 0.05, s: 1.0, o: 1}}),
+  /* 0 hero      */ S({az: 0.0, el: 0.05, r: 4.6, lx: 0, ly: 1.1, lz: -1, zone: Z(0.5, 0.6, 1, 1), dim: 0.25, ledger: 1}),
+  /* 1 identify  */ S({az: -0.42, el: 0.05, r: 2.1, lx: 0.2, ly: 0.35, lz: 2.0, zone: Z(0.72, 0.5, 0.5, 0.8), mix: [0.5, 0.2, 0.3], card: {p: [0.3, 0.35, 2.6], tilt: -0.3, rx: 0.04, s: 1.45, o: 1}}),
   /* 2 decide    */ S({az: 0.0, el: 0.16, r: 4.6, lx: 0, ly: 0.9, lz: 0, zone: FULL, dim: 0.55, mix: [0.45, 0.25, 0.3]}),
   /* 3 prove     */ S({az: 0.06, el: 0.14, r: 3.2, lx: 0.6, ly: 0.2, lz: -16, zone: Z(0.7, 0.55, 0.56, 0.8), ledger: 1, mix: [0.75, 0.05, 0.2]}),
   /* 4 contain   */ S({az: -0.05, el: 0.06, r: 3.0, lx: 0, ly: 1.4, lz: -30, zone: Z(0.68, 0.5, 0.56, 0.8), closed: 1, alert: 1, ledger: 1, mix: [0, 0, 1]}),
@@ -226,7 +226,7 @@ function drawPassport() {
   g.fillStyle = '#2dff9a'; g.beginPath(); g.arc(W - 190, 190, 22, 0, PI * 2); g.fill();
   const mono = (px, w = 500) => `${w} ${px}px "Geist Mono Variable", ui-monospace, monospace`;
   g.textBaseline = 'alphabetic';
-  g.fillStyle = '#62e8ff'; g.font = mono(27); g.fillText('SIGILANT // AGENT PASSPORT', 84, 118);
+  g.fillStyle = '#62e8ff'; g.font = mono(27); g.fillText('SHUIN // AGENT PASSPORT', 84, 118);
   g.fillStyle = '#f2fbff'; g.font = '700 112px "Chakra Petch", sans-serif'; g.fillText('RESEARCH-BOT', 80, 290);
   g.font = mono(33); g.fillStyle = '#9db8cc';
   g.fillText('OPERATOR   ACME INC.', 84, 390); g.fillText('SCOPES     read_file · web.search', 84, 438); g.fillText('ERC-8004   eip155:84532 · #10353', 84, 486);
@@ -462,10 +462,11 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
   const echoIrisMat = new THREE.MeshBasicMaterial({color: COL.shu.clone().multiplyScalar(0.9), transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide});
   for (let i = 0; i < ECHO; i++) {
     const g = new THREE.Group(); g.position.set(0, FLOOR_Y + 4.0, -12 - i * 12.5);
-    g.add(new THREE.Mesh(new THREE.TorusGeometry(4.3, 0.06, 8, 160), echoRingMat[i % 2]));
+    const own = echoRingMat[i % 2].clone();
+    g.add(new THREE.Mesh(new THREE.TorusGeometry(4.3, 0.06, 8, 160), own));
     const ticks2 = new THREE.Mesh(new THREE.TorusGeometry(4.65, 0.012, 4, 160), echoRingMat[(i + 1) % 2]); g.add(ticks2);
     const iris = new THREE.Mesh(new THREE.RingGeometry(0.001, 4.3, 64), echoIrisMat); g.add(iris);
-    g.userData = {iris, spin: (i % 2 ? 1 : -1) * (0.1 + i * 0.01)};
+    g.userData = {iris, own, base: i % 2 ? COL.mag : COL.cyan, spin: (i % 2 ? 1 : -1) * (0.1 + i * 0.01)};
     real.add(g); echoes.push(g);
   }
   const RUN = small ? 50 : 80;
@@ -491,6 +492,7 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
   const scanMat = new THREE.MeshBasicMaterial({color: COL.cyan.clone().multiplyScalar(3), transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending});
   const scan = new THREE.Mesh(new THREE.PlaneGeometry(CW * 1.1, 0.012), scanMat);
   cardGroup.add(new THREE.Mesh(cardGeo, cardMat), new THREE.Mesh(cardGeo, cardBackMat), scan);
+  cardGroup.traverse(o => { if (o.material) { o.material.depthTest = false; o.renderOrder = 50; } });
   real.add(cardGroup);
   fontsReady().then(() => { cardMat.map = drawPassport(); cardMat.needsUpdate = true; });
 
@@ -568,7 +570,7 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
   }
 
   const sph = new THREE.Spherical(), cp = new THREE.Vector3(), tmp = new THREE.Vector3(), look = new THREE.Vector3();
-  let dist = 8;
+  let dist = 8, prevCamX = 0, bank = 0;
   function placeCamera(time) {
     const half = THREE.MathUtils.degToRad(camera.fov / 2), t = Math.tan(half), aspect = width / height;
     let z = cur.zone;
@@ -580,6 +582,10 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
     if (cp.y < FLOOR_Y + 0.25) cp.y = FLOOR_Y + 0.25;
     cp.x += Math.sin(time * 41) * shake * 0.03; cp.y += Math.cos(time * 53) * shake * 0.03;
     camera.position.copy(cp); camera.lookAt(look);
+    // bank into lateral moves, like a craft turning, eased so it never snaps
+    const dx = cp.x - prevCamX; prevCamX = cp.x;
+    bank += (Math.max(-0.08, Math.min(0.08, -dx * 1.4)) - bank) * 0.08;
+    camera.rotateZ(bank);
     camera.setViewOffset(width, height, -(z.cx - 0.5) * width, -(z.cy - 0.5) * height, width, height);
   }
 
@@ -653,6 +659,11 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
       const shut = smooth(Math.min(1, Math.max(0, closed * 1.6 - i * 0.06)));
       g.userData.iris.scale.setScalar(1); g.userData.iris.material.opacity = shut * 0.55;
       g.userData.iris.visible = shut > 0.01;
+      // flare as the camera flies through: brightest just before the ring passes overhead
+      const ahead = g.position.z - cz;
+      const prox = Math.exp(-Math.pow((ahead + 4) / 5, 2));
+      g.userData.own.color.copy(g.userData.base).lerp(COL.shu, alert).multiplyScalar(1.6 + prox * 2.6);
+      g.scale.setScalar(1 + prox * 0.05);
     });
     echoRingMat[0].color.copy(COL.cyan).lerp(COL.shu, alert).multiplyScalar(1.6 + flash * 0.4);
     echoRingMat[1].color.copy(COL.mag).lerp(COL.shu, alert).multiplyScalar(1.6);

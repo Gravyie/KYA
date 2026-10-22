@@ -8,6 +8,7 @@ import {Words, useReveal, Counter} from './bits.jsx';
 import SectionHead from './SectionHead.jsx';
 import Hud from './Hud.jsx';
 import Magi from './Magi.jsx';
+import ChromeWord from './ChromeWord.jsx';
 import Chain from './Chain.jsx';
 import ProductWindow from './ProductWindow.jsx';
 import Cases from './Cases.jsx';
@@ -168,6 +169,8 @@ function useScrollBar(rootRef) {
 export default function Landing() {
   const canvasRef = useRef(null), frameApi = useRef(null), countApi = useRef(null), rootRef = useRef(null), tickRef = useRef(null);
   const [tab, setTab] = useState('mcp');
+  const [narrow, setNarrow] = useState(() => matchMedia('(max-width: 760px)').matches);
+  useEffect(() => { const q = matchMedia('(max-width: 760px)'); const on = () => setNarrow(q.matches); q.addEventListener('change', on); return () => q.removeEventListener('change', on); }, []);
   const [beat, setBeat] = useState(0);
   const [revoked, setRevoked] = useState(false);
   const [alert, setAlert] = useState(false);
@@ -206,23 +209,22 @@ export default function Landing() {
       <Nav alert={alert} />
 
       {/* ── Scene 1: the gate ── */}
-      <section className="hero" data-stage="0">
-        <div className="wrap hero-in">
-          <p className="kicker rise"><span className="dot" />Shuin <span lang="ja">朱印</span> · open-source permission layer for AI agents</p>
-          <h1 className="hero-title" aria-label="Know your agent."><span className="ht"><Words>KNOW YOUR</Words></span><span className="ht ht-red"><Words>AGENT.</Words></span></h1>
-          <p className="lede rise">Give every AI agent its own identity. Check every tool call before it runs: allow it, ask a human, or block it. Keep a record nobody can quietly edit.</p>
-          <ol className="pillars rise" aria-label="What Shuin does" onClick={e => { const a = e.target.closest('a'); const el = a && document.querySelector(a.getAttribute('href')); if (!el) return; e.preventDefault(); window.__lenis ? window.__lenis.scrollTo(el, {offset: -40}) : el.scrollIntoView({behavior: 'smooth'}); }}>
-            <li><a href="#identify"><b>01</b>Identity</a></li>
-            <li><a href="#decide"><b>02</b>Policy</a></li>
-            <li><a href="#prove"><b>03</b>Audit</a></li>
-            <li><a href="#contain"><b>04</b>Revoke</a></li>
-          </ol>
-          <div className="hero-cta rise">
+      <section className="hero hz" data-stage="0">
+        <div className="wrap hz-in">
+          <p className="hz-kicker rise">The open-source permission layer for AI agents</p>
+          <h1 className="hz-title"><ChromeWord text={narrow ? 'Know your\nagent.' : 'Know your agent.'} /></h1>
+          <div className="hz-stack rise" aria-label="What Shuin does">
+            <p><small>Give every</small> AI agent <small>its own</small> identity</p>
+            <p><small>Allow,</small> ask <small>or</small> block <small>every</small> tool call</p>
+            <p>Spend limits <small>and</small> human approvals</p>
+            <p><small>A</small> tamper-evident audit trail <small>on</small> ERC-8004</p>
+          </div>
+          <div className="hz-cta rise">
             <Link to="/app" className="btn magnetic">Open the console <ArrowRight size={16} /></Link>
             <Link to="/docs" className="btn ghost magnetic">Read the quickstart</Link>
           </div>
+          <div className="hz-emblem rise" aria-hidden="true"><Mark size={30} /><span lang="ja">朱印</span></div>
         </div>
-        <p className="vert" lang="ja" aria-hidden="true">汝の代理人を知れ</p>
         <div className="ticker" ref={tickRef} data-kind="allow" aria-hidden="true"><b>可決 ALLOW</b><code>read_file workspace/q3-report.md</code><em>live sim</em></div>
       </section>
 
@@ -345,12 +347,15 @@ export default function Landing() {
         </section>
       </div>
 
-      <section className="finale" data-stage="10">
-        <div className="wrap fin-in">
-          <Mark size={56} />
-          <h2 className="fin-title" aria-label="Know your agent."><Words>KNOW YOUR</Words> <span className="ht-red"><Words>AGENT.</Words></span></h2>
-          <p className="sub rise">Self-hosted in a minute. One process, one folder, no account and no paid service.</p>
-          <div className="fin-actions rise">
+      <section className="finale hz" data-stage="10">
+        <div className="wrap hz-in fin-in">
+          <p className="hz-kicker rise">Know your agent</p>
+          <h2 className="hz-title fin-word"><ChromeWord text="Shuin" tube={19} /></h2>
+          <div className="hz-stack rise">
+            <p><small>Self-hosted</small> in a minute</p>
+            <p>One process <small>·</small> one folder <small>·</small> free</p>
+          </div>
+          <div className="hz-cta rise">
             <Link to="/app" className="btn magnetic">Open the console <ArrowRight size={16} /></Link>
             <Link to="/docs" className="btn ghost magnetic">Read the quickstart</Link>
           </div>
