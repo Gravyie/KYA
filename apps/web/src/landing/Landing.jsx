@@ -30,7 +30,7 @@ function useWorld(canvasRef, frameApi, handlers) {
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
     let world, lenis, cancelled = false, raf = 0, rafLenis = 0;
 
-    import('./world.js').then(({createWorld}) => {
+    import('./director.js').then(({createWorld}) => {
       if (cancelled || !canvasRef.current) return;
       try {
         world = createWorld(canvasRef.current, {reduced, small: innerWidth < 760, onDecision: k => cb.current.onDecision?.(k), onFrame: (a, info) => { frameApi.current?.(a, info); cb.current.onFrame?.(info); }});
@@ -77,25 +77,16 @@ function useWorld(canvasRef, frameApi, handlers) {
   return {mode, worldRef};
 }
 
-const BOOT = [
-  ['見張り MIHARI', 'watch kernel 0.2 · tty0'],
-  ['ok', 'registry mounted'],
-  ['ok', 'policy engine · default deny'],
-  ['ok', 'audit chain verified · sha-256'],
-  ['..', 'opening the eye'],
-];
-
-/** The opening, part one: a terminal boots while the world loads. Part two (the city decoding out of
- *  glyphs, the eye opening in the sky) is played by the world itself. */
+/** Covers the page while the world loads; then the stack powers up behind it, floor by floor. */
 function Opening({phase}) {
   return (
     <div className={`opening op-${phase}`} aria-hidden="true">
-      <div className="op-term">
-        <Mark size={44} live />
-        {BOOT.map(([k, v], i) => <p key={v} style={{'--d': `${0.15 + i * 0.26}s`}}><b className={k === 'ok' ? 'ok' : k === '..' ? 'wait' : ''}>{k === 'ok' || k === '..' ? `[ ${k} ]` : k}</b> {v}</p>)}
-        <i className="op-cursor" />
+      <div className="op-load">
+        <Mark size={56} live />
+        <p><span lang="ja">見張り</span> MIHARI</p>
+        <i className="op-bar"><b /></i>
+        <em>{phase === 'loading' ? 'Waking the city' : 'Click to skip'}</em>
       </div>
-      <p className="op-cap"><span lang="ja">見張り</span> MIHARI<em>{phase === 'loading' ? 'booting' : 'click to skip'}</em></p>
     </div>
   );
 }
@@ -182,10 +173,10 @@ export default function Landing() {
   useEffect(() => { document.title = 'Mihari 見張り — Know your agent'; }, []);
   const done = useCallback(() => { setBooted(true); try { sessionStorage.setItem('mihari.boot', '1'); } catch { /* private mode */ } }, []);
   useEffect(() => { if (beat !== 4) { setRevoked(false); worldRef.current?.setIris(null); } }, [beat, worldRef]);
-  // the opening plays once per session: a terminal boots, the city decodes out of glyphs, the eye in the sky opens
+  // the opening plays once per session: the city fades up out of the dark
   const [opening, setOpening] = useState(() => (booted ? 'off' : 'loading'));
   const [bootRead, setBootRead] = useState(false);   // the boot lines get time to be read, however fast the world loads
-  useEffect(() => { const t = setTimeout(() => setBootRead(true), 1700); return () => clearTimeout(t); }, []);
+  useEffect(() => { const t = setTimeout(() => setBootRead(true), 900); return () => clearTimeout(t); }, []);
   useEffect(() => {
     if (opening !== 'loading') return;
     if (mode === 'static') { setOpening('off'); done(); return; }
@@ -215,14 +206,14 @@ export default function Landing() {
       {mode === 'static' ? <div className="hud static" aria-hidden="true"><div className="static-sun" /></div> : <Hud canvasRef={canvasRef} beat={beat} countApi={countApi} frameApi={frameApi} onJump={jump} alert={alert} />}
       <Nav alert={alert} />
 
-      {/* ── Scene 1: the watch ── */}
+      {/* ── Scene 1: the city from the air ── */}
       <section className="hero mh" data-stage="0">
         <div className="wrap mh-in">
           <p className="mh-kicker rise"><span className="dot" /><span lang="ja">見張り</span> MIHARI — the open-source lookout for AI agents</p>
-          <h1 className="mh-title" aria-label="Every agent. Every action. Watched.">
-            <span className="mh-l"><Words>EVERY AGENT.</Words></span>
-            <span className="mh-l"><Words>EVERY ACTION.</Words></span>
-            <span className="mh-l mh-w" data-text="WATCHED."><Words>WATCHED.</Words></span>
+          <h1 className="mh-title" aria-label="A million agents. One watch.">
+            <span className="mh-l"><Words>A MILLION</Words></span>
+            <span className="mh-l"><Words>AGENTS.</Words></span>
+            <span className="mh-l mh-w" data-text="ONE WATCH."><Words>ONE WATCH.</Words></span>
           </h1>
           <p className="mh-sub rise">Mihari gives each AI agent a verifiable identity, checks every tool call before it runs — allow it, ask a human, or block it — and keeps a record nobody can quietly edit.</p>
           <div className="mh-cta rise">
@@ -257,7 +248,7 @@ export default function Landing() {
         <div className="wrap">
           <div className="decide-head rise">
             <p className="eyebrow"><b>02</b><i />第二話 · Policy</p>
-            <h2 className="big"><Words>Every call meets the eye.</Words></h2>
+            <h2 className="big"><Words>Every call passes the gate.</Words></h2>
             <p className="sub">Three checks run before any tool does: is the agent still who it says, does a rule allow this action on this resource, and is it within budget and rate. The answer is allow, ask a human, or block. This panel runs the same decision code as the server.</p>
           </div>
           <div className="rise has-sticker"><span className="sticker s-a">Live engine · try me</span><Magi /></div>
@@ -268,7 +259,7 @@ export default function Landing() {
         <span className="scene-kanji" lang="ja" aria-hidden="true">記録</span>
         <div className="wrap"><div className="sheet sheet-wide rise">
           <p className="eyebrow"><b>03</b><i />第三話 · Audit</p>
-          <h2 className="big"><Words>Every verdict joins the ledger.</Words></h2>
+          <h2 className="big"><Words>Every action, on the record.</Words></h2>
           <p className="sub">Each event carries the hash of the one before it, so editing the past breaks every link after it. Export the log and verify it offline against your registry key. Below is a real SHA-256 chain running in your browser.</p>
           <span className="sticker s-b">Tamper with it</span>
           <Chain />
@@ -358,8 +349,8 @@ export default function Landing() {
 
       <section className="finale mh-fin" data-stage="10">
         <div className="wrap fin-in">
-          <p className="mh-kicker rise"><span lang="ja">見張り</span> You are inside the watch now</p>
-          <h2 className="mh-title fin-t" aria-label="Know your agent."><span className="mh-l"><Words>KNOW YOUR</Words></span><span className="mh-l mh-w" data-text="AGENT."><Words>AGENT.</Words></span></h2>
+          <p className="mh-kicker rise"><span lang="ja">見張り</span> Know your agent</p>
+          <h2 className="mh-title fin-t" aria-label="Straight through the gate."><span className="mh-l"><Words>STRAIGHT THROUGH</Words></span><span className="mh-l mh-w" data-text="THE GATE."><Words>THE GATE.</Words></span></h2>
           <p className="mh-sub rise">Self-hosted in a minute. One process, one folder, no account and no paid service.</p>
           <div className="mh-cta rise">
             <Link to="/app" className="btn magnetic">Open the console <ArrowRight size={16} /></Link>

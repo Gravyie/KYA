@@ -118,7 +118,7 @@ export function create(canvas) {
     // breathe apart every few seconds, or while the pointer is held
     const cycle = (t % 8) / 8;
     const auto = cycle < 0.35 ? 0 : cycle < 0.5 ? smooth((cycle - 0.35) / 0.15) : cycle < 0.85 ? 1 : 1 - smooth((cycle - 0.85) / 0.15);
-    const open = st.pointer.down ? 1 : auto;
+    const open = st.pointer.down ? 1 : st.ctx?.open ?? auto;
     card.userData.open = (card.userData.open ?? 0) + (open - (card.userData.open ?? 0)) * (1 - Math.pow(0.02, dt));
     const o = card.userData.open;
     layers.forEach((l, i) => {
@@ -128,7 +128,7 @@ export function create(canvas) {
     });
     card.rotation.y = -0.55 * o + st.pointer.sx * 0.35 + Math.sin(t * 0.4) * 0.08;
     card.rotation.x = 0.12 * o - st.pointer.sy * 0.25 + Math.sin(t * 0.3) * 0.05;
-    card.position.x = -1.35 - 0.5 * o; card.position.y = Math.sin(t * 0.8) * 0.05;
+    card.position.x = (st.ctx?.x ?? -1.35) - 0.5 * o; card.position.y = Math.sin(t * 0.8) * 0.05;
     circuit.material.uniforms.uTime.value = t; foil.material.uniforms.uTime.value = t; bokeh.material.uniforms.uTime.value = t;
     key.position.x = -4 + Math.sin(t * 0.5) * 2;
   });

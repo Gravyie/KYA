@@ -594,14 +594,14 @@
 .opening.op-loading { background: #05050f; pointer-events: auto; }
 .opening.op-playing { background: transparent; animation: op-out 0.5s ease both; }
 @keyframes op-out { from { background: #05050f; } to { background: rgba(5, 5, 15, 0); } }
-.op-term { width: min(520px, calc(100vw - 48px)); font: 500 13px/1.9 var(--mono); color: #c9d4ea; transition: opacity 0.45s, transform 0.6s var(--ease); }
-.op-term .mark { display: block; margin: 0 0 18px; }
-.op-term p { margin: 0; white-space: nowrap; overflow: hidden; opacity: 0; animation: op-line 0.32s steps(16) var(--d) forwards; }
-.op-term p:first-of-type { color: #fff; letter-spacing: 0.08em; }
-.op-term b { font-weight: 600; color: var(--mag); margin-right: 6px; } .op-term b.ok { color: var(--jade, #2dff9a); } .op-term b.wait { color: var(--cyan); animation: mk-cur 0.8s steps(1) infinite; }
-.op-cursor { display: inline-block; width: 9px; height: 16px; background: var(--cyan); vertical-align: middle; animation: mk-cur 1s steps(1) infinite; }
-@keyframes op-line { from { opacity: 1; clip-path: inset(0 100% 0 0); } to { opacity: 1; clip-path: inset(0 0 0 0); } }
-.op-playing .op-term { opacity: 0; transform: translateY(-8px); }
+.op-load { display: grid; justify-items: center; gap: 14px; transition: opacity 0.5s, transform 0.7s var(--ease); }
+.op-load p { margin: 6px 0 0; font: 700 15px var(--hud); letter-spacing: 0.42em; color: #eef2ff; }
+.op-load p span { font: 900 15px var(--kanji); color: var(--mag); letter-spacing: 0.2em; margin-right: 10px; }
+.op-bar { display: block; width: 180px; height: 2px; background: rgba(25, 230, 255, 0.15); overflow: hidden; }
+.op-bar b { display: block; height: 100%; width: 40%; background: var(--cyan); box-shadow: 0 0 12px var(--cyan); animation: op-bar 1.1s cubic-bezier(.6, 0, .4, 1) infinite; }
+@keyframes op-bar { from { transform: translateX(-100%); } to { transform: translateX(260%); } }
+.op-load em { font: 500 10.5px var(--mono); font-style: normal; letter-spacing: 0.28em; text-transform: uppercase; color: rgba(225, 232, 255, 0.45); }
+.op-playing .op-load { opacity: 0; transform: translateY(-10px); }
 .op-cap { position: absolute; left: 50%; bottom: 32px; transform: translateX(-50%); margin: 0; display: flex; gap: 14px; align-items: baseline; font: 600 11px var(--mono); letter-spacing: 0.3em; color: rgba(225, 232, 255, 0.75); white-space: nowrap; }
 .op-cap span { font: 900 12px var(--kanji); letter-spacing: 0.2em; color: var(--mag); }
 .op-cap em { font-style: normal; font-weight: 500; letter-spacing: 0.2em; color: rgba(225, 232, 255, 0.4); text-transform: uppercase; }
@@ -641,8 +641,8 @@
 .mh-fin .fin-eye .mark { width: clamp(76px, 10vh, 120px); height: auto; }
 .mh-fin .mh-kicker { justify-content: center; }
 .landing .mh-fin .fin-t { display: block; font-size: clamp(54px, min(9vw, 15vh), 160px); }
-.mh-fin .fin-t .mh-l { display: inline-block; }
-.mh-fin .mh-w { display: inline-block; margin-left: 0.04em; }
+.mh-fin .fin-t .mh-l { display: block; }
+.mh-fin .mh-w { display: block; margin: 0 auto; }
 .mh-fin .mh-sub { margin: 0 auto 26px; }
 .mh-fin .mh-cta { justify-content: center; }
 .mh-fin .install { margin-top: 20px; }

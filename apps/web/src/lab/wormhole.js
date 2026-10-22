@@ -70,7 +70,7 @@ export function create(canvas) {
   const dm = new THREE.Object3D();
   let scroll = 0;
   st.run((dt, t) => {
-    const speed = 45 + Math.pow(Math.max(0, Math.sin(t * 0.35)), 4) * 120;
+    const speed = 45 + Math.pow(Math.max(0, Math.sin(t * 0.35)), 4) * 120 + (st.ctx?.vel ?? 0) * 140;
     scroll += speed * dt;
     tube.material.uniforms.uScroll.value = scroll; tube.material.uniforms.uTime.value = t;
     const ahead = bendJS(-30, scroll);

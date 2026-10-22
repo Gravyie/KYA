@@ -1,21 +1,16 @@
 import {useEffect, useRef} from 'react';
 
 export const BEATS = [
-  {key: 'watch', label: 'Watch', jp: '見張り'},
-  {key: 'identify', label: 'Identify', jp: '識別'},
-  {key: 'decide', label: 'Decide', jp: '審判'},
-  {key: 'prove', label: 'Prove', jp: '記録'},
-  {key: 'contain', label: 'Contain', jp: '封鎖'},
-  {key: 'approach', label: 'Approach', jp: '接近'},
+  {key: 'city', label: 'City', jp: '都市'},
+  {key: 'identify', label: 'Passport', jp: '通行証'},
+  {key: 'decide', label: 'Gate', jp: '鳥居'},
+  {key: 'prove', label: 'Record', jp: '記録'},
+  {key: 'contain', label: 'Swarm', jp: '群れ'},
+  {key: 'journey', label: 'Journey', jp: '旅路'},
 ];
 
 // Tags hang off their 3D anchor at (dx, dy) and are clamped to the scene's side of the screen.
-const TAGS = {
-  0: [],
-  1: [{id: 'card', n: '01', title: 'PASS', text: 'Key · operator · scopes', dx: 40, dy: 170}],
-  3: [{id: 'ledger', n: '03', title: 'LEDGER', text: 'Each block seals the last', dx: -40, dy: -150}],
-  4: [],
-};
+const TAGS = {};
 
 /** The fixed layer: canvas, viewfinder corners, readouts, the chapter rail, and tags pinned to 3D anchors. */
 export default function Hud({canvasRef, beat, countApi, frameApi, onJump, alert}) {

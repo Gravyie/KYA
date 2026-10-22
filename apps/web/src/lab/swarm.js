@@ -17,8 +17,8 @@ export function create(canvas) {
   geo.setAttribute('aSeed', new THREE.BufferAttribute(seeds, 4));
   const mat = new THREE.ShaderMaterial({
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
-    uniforms: {uTime: {value: 0}, uPx: {value: 1}},
-    vertexShader: `attribute vec4 aSeed; uniform float uTime, uPx; varying vec3 vCol; varying float vA;
+    uniforms: {uTime: {value: 0}, uPx: {value: 1}, uLock: {value: 0}},
+    vertexShader: `attribute vec4 aSeed; uniform float uTime, uPx, uLock; varying vec3 vCol; varying float vA;
       void main(){
         float s = fract(aSeed.x + uTime * (0.05 + 0.02 * aSeed.w));   // 0 far upstream → 1 far downstream
         float z = mix(90.0, -90.0, s);
@@ -32,10 +32,10 @@ export function create(canvas) {
         float verdict = aSeed.z * 7.0 - floor(aSeed.z * 7.0);
         if (z < 0.0) {
           float k = -z;
-          if (verdict < 0.13) {                       // denied: thrown back out of the gate, scattering red
+          if (verdict < 0.13 + uLock) {                       // denied: thrown back out of the gate, scattering red
             p.z = k * 0.6; p.xy += normalize(vec2(cos(a), sin(a))) * k * (0.6 + aSeed.w); p.y += k * k * 0.004;
             col = vec3(1.0, 0.12, 0.2) * 1.4;
-          } else if (verdict < 0.25) {                // held for a human: orbiting the ring in amber
+          } else if (verdict < 0.25 + uLock) {                // held for a human: orbiting the ring in amber
             float o = a + uTime * (0.6 + aSeed.w) + k * 0.05;
             p = vec3(cos(o) * (8.5 + aSeed.w), sin(o) * (8.5 + aSeed.w), -mod(k, 6.0) * 0.4);
             col = vec3(1.0, 0.65, 0.15) * 1.2;
@@ -56,7 +56,8 @@ export function create(canvas) {
 
   // the gate: a heavy ring with ticks and a faint field
   const gate = new THREE.Group(); scene.add(gate);
-  gate.add(new THREE.Mesh(new THREE.TorusGeometry(7.6, 0.18, 12, 200), new THREE.MeshBasicMaterial({color: new THREE.Color(NEON.cyan).multiplyScalar(2.2), toneMapped: false})));
+  const gateMat = new THREE.MeshBasicMaterial({color: new THREE.Color(NEON.cyan).multiplyScalar(2.2), toneMapped: false});
+  gate.add(new THREE.Mesh(new THREE.TorusGeometry(7.6, 0.18, 12, 200), gateMat));
   gate.add(new THREE.Mesh(new THREE.TorusGeometry(8.4, 0.04, 6, 200), new THREE.MeshBasicMaterial({color: new THREE.Color(NEON.mag).multiplyScalar(2), toneMapped: false})));
   const ticks = new THREE.InstancedMesh(new THREE.BoxGeometry(0.06, 0.6, 0.06), new THREE.MeshBasicMaterial({color: new THREE.Color(NEON.cyan).multiplyScalar(1.6), toneMapped: false}), 120), dm = new THREE.Object3D();
   for (let i = 0; i < 120; i++) { const a = (i / 120) * TAU; dm.position.set(Math.cos(a) * 9.2, Math.sin(a) * 9.2, 0); dm.rotation.set(0, 0, a - PI / 2); dm.scale.set(1, i % 10 === 0 ? 2 : 1, 1); dm.updateMatrix(); ticks.setMatrixAt(i, dm.matrix); }
@@ -71,6 +72,8 @@ export function create(canvas) {
     camera.position.set(Math.sin(ang) * 58, 14 - st.pointer.sy * 10 + Math.sin(t * 0.1) * 4, Math.cos(ang) * 58);
     camera.lookAt(-8, 0, 10);
     mat.uniforms.uTime.value = t; mat.uniforms.uPx.value = st.renderer.getPixelRatio();
+    const lock = st.ctx?.lock ?? 0; mat.uniforms.uLock.value = lock;
+    gateMat.color.set(NEON.cyan).lerp(new THREE.Color(NEON.red), lock).multiplyScalar(2.2 + lock * Math.max(0, Math.sin(t * 9)) * 1.5);
     ticks.rotation.z = t * 0.1; gate.rotation.z = Math.sin(t * 0.3) * 0.05;
   });
   return st;

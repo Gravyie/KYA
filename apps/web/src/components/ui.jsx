@@ -5,14 +5,16 @@ import {Link} from '../lib/router.jsx';
  * The Mihari mark: a watching eye. Almond lids in ink-cyan, three manga lash strokes, a magenta iris whose pupil
  * is a portal (the dark centre with a cyan catchlight). It reads at 16px and scales to a sign.
  */
-/** The mark: an eye cut from the interface's own chamfered shape. The iris is a hexagon; the pupil is a cursor. */
+/** The mark: a security gate's iris seen from above, in the interface's chamfered frame; the pupil is a cursor. */
 export function Mark({size = 24, className = '', live = false}) {
   return (
     <svg className={`mark ${live ? 'live' : ''} ${className}`} width={size} height={size} viewBox="0 0 64 64" aria-hidden="true">
-      <path d="M1 32 L19 17 H45 L63 32 L45 47 H19 Z" fill="#0d0a24" />
-      <g className="mk-iris"><path d="M22 32 L27 21 H37 L42 32 L37 43 H27 Z" fill="#ff2fa6" /><rect x="29" y="24" width="6" height="16" fill="#05050f" /><rect className="mk-cur" x="29" y="24" width="6" height="2.4" fill="#19e6ff" /></g>
-      <path className="mk-up" d="M1 32 L19 17 H45 L63 32" fill="none" stroke="#19e6ff" strokeWidth="3" strokeLinejoin="bevel" />
-      <path className="mk-lo" d="M5 34.5 L19 46.5 H45 L59 34.5" fill="none" stroke="#19e6ff" strokeWidth="1.6" strokeLinejoin="bevel" />
+      <path d="M20 4 H44 L60 20 V44 L44 60 H20 L4 44 V20 Z" fill="#0d0a24" />
+      <circle cx="32" cy="32" r="17.5" fill="#2a0b2e" />
+      <g className="mk-iris"><path d="M32.0 25.8 L45.4 21.5 L37.4 28.9 Z" fill="#ff2fa6" /><path d="M37.4 28.9 L47.8 38.4 L37.4 35.1 Z" fill="#c41f86" /><path d="M37.4 35.1 L34.4 48.8 L32.0 38.2 Z" fill="#ff2fa6" /><path d="M32.0 38.2 L18.6 42.5 L26.6 35.1 Z" fill="#c41f86" /><path d="M26.6 35.1 L16.2 25.6 L26.6 28.9 Z" fill="#ff2fa6" /><path d="M26.6 28.9 L29.6 15.2 L32.0 25.8 Z" fill="#c41f86" /></g>
+      <polygon points="32.0,25.8 37.4,28.9 37.4,35.1 32.0,38.2 26.6,35.1 26.6,28.9" fill="#05050f" /><rect className="mk-cur" x="30.4" y="29.4" width="3.2" height="5.2" fill="#19e6ff" />
+      <path className="mk-up" d="M20 4 H44 L60 20 V44 L44 60 H20 L4 44 V20 Z" fill="none" stroke="#19e6ff" strokeWidth="2.6" strokeLinejoin="bevel" />
+      <path className="mk-lo" d="M24 9.5 H40 M54.5 24 V40 M40 54.5 H24 M9.5 40 V24" stroke="#19e6ff" strokeWidth="1.2" opacity=".55" />
     </svg>
   );
 }
