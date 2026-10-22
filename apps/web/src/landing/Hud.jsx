@@ -1,12 +1,12 @@
 import {useEffect, useRef} from 'react';
 
 export const BEATS = [
-  {key: 'gate', label: 'Gate', jp: '関門'},
+  {key: 'watch', label: 'Watch', jp: '見張り'},
   {key: 'identify', label: 'Identify', jp: '識別'},
   {key: 'decide', label: 'Decide', jp: '審判'},
   {key: 'prove', label: 'Prove', jp: '記録'},
   {key: 'contain', label: 'Contain', jp: '封鎖'},
-  {key: 'city', label: 'Corridor', jp: '回廊'},
+  {key: 'approach', label: 'Approach', jp: '接近'},
 ];
 
 // Tags hang off their 3D anchor at (dx, dy) and are clamped to the scene's side of the screen.

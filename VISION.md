@@ -1,23 +1,29 @@
-# Mihari 見張り — design vision (v15: "The Watch")
+# Mihari 見張り — design vision (v16: "Into the Eye")
 
 ## One sentence
-The city is watched. The site opens on a single inked eye that wakes, blinks, glances at you and lets you fall through its pupil into a neon city. The same eye hangs in the sky over the checkpoint gate for the rest of the page, blinking and following your cursor, reflected in the flooded street.
+The page is one flight down a flooded neon canyon toward a colossal eye hanging in storm cloud at its end. The site opens on that eye in close-up, waking; the camera pulls back to show the city it watches; scrolling travels back toward it; the finale ends at its pupil.
 
-## Why the eye
-- The name means "lookout". The product watches every agent call. The logo is that eye. Name, mark, opening and world are now one idea instead of four.
-- The pupil-as-portal opening (manga ink lashes, a magenta data-glyph iris) gives the first five seconds an arc: closed, awake, aware of you, then you are inside.
-- v10's corridor flight stays as the spine (scroll is forward motion through the checkpoint), and so does the story: identify, decide, prove, contain.
+## The eye (apps/web/src/landing/watcher.js)
+Built like a real eye so it holds up from a hundred metres and in close-up:
+- **Ball**: sclera with fibre-optic veins, an iris *disc* set inside the ball (true parallax), a clear cornea that only carries reflections (a window catchlight with mullions, the city's neon horizon), a retina lining the inside, seen through the pupil, which is a real hole.
+- **Iris**: layered radial fibres, collarette, crypts, contraction furrows, a dark limbal ring; a faint implant layer (segmented ring, tick scale, data-glyph band, scan sweep). Pupil breathes, narrows on verdicts, becomes a cursor-like slit on lockdown.
+- **Lids**: two hemispherical shells rotating about the eye's horizontal axis, so the opening is a true almond; lashes ride them. Lids and a backdrop share one planar storm-cloud shader, so no eyeball silhouette shows: only the opening, the wet margin and the lashes.
+- **Behaviour**: saccades (snaps, not pans), blinks (sometimes double), looks at your cursor, reads the agent pass and the scan ring, turns red on revocation. Its reflection sits in the flood.
 
 ## The story as space
 | Scroll | Where you are | What it means |
 |---|---|---|
-| Opening | A full-screen eye wakes and blinks, then you fall through the pupil. Once per session; any key or click skips. | You are now being watched over. |
-| Hero | At the gate, with the eye over it. "EVERY AGENT. EVERY ACTION. WATCHED." | Nothing gets through unseen. |
-| 01 Identify | The agent's pass is scanned at the gate. | Identity first. |
-| 02 Decide | Calls stream in and get verdicts. MAGI vote panel. | One verdict per call. |
-| 03 Prove | The ledger runway of blocks. | Every verdict is a block. |
-| 04 Contain | The world goes red, the eye's iris turns red, every ring seals. | Revoke once, closed everywhere. |
-| Finale | "KNOW YOUR AGENT." with the eye mark, then the footer on the same screen. | Arrival. |
+| Opening | Close on the eye, shut. It opens, looks left, right, at you; the camera pulls back down the canyon. Once per session; click, key or wheel hurries it. | You are seen. |
+| Hero | Street level, the eye over the end of the canyon. "EVERY AGENT. EVERY ACTION. WATCHED." | Nothing gets through unseen. |
+| 01 Identify | The eye's beam reads the agent's pass. | Identity first. |
+| 02 Decide | Calls stream through the eye's scan ring and get verdicts. MAGI vote panel. | One verdict per call. |
+| 03 Prove | The ledger runs toward the eye; its reflection in the flood. | Every verdict is a block. |
+| 04 Contain | The city goes red; the eye narrows; the ring's aperture closes. | Revoke once, closed everywhere. |
+| Lower sections | The approach: the eye grows behind every chapter. | The product, in detail. |
+| Finale | At the pupil: the iris rings the screen, "KNOW YOUR AGENT." sits in the dark of the pupil. | Inside the watch. |
+
+## The mark
+An eye cut from the interface's own chamfered shape: heavy upper lid, detached lower lid, a hexagonal iris, and a pupil that is a terminal cursor (it blinks). The eye watches machines.
 
 ## References and what each contributes
 - **Blade Runner / 2049**: rain, wet ground reflecting neon, smog-filtered light, the scale of towers.
@@ -25,7 +31,7 @@ The city is watched. The site opens on a single inked eye that wakes, blinks, gl
 - **Ghost in the Shell (1995)**: holographic kanji signage, a city that is information.
 - **Cyberpunk: Edgerunners / 2077**: cyan and hot-magenta palette, chamfered UI, HUD readouts, glitch as punctuation, not noise.
 - **Evangelion**: condensed title cards (第一話), the MAGI three-way vote, hazard stripes on lockdown.
-- **The eye in the sky (Blade Runner opening, Evangelion, manga inking)**: one giant watching eye replaces the sun at the vanishing point; the opening eye is inked like a manga panel, with a pink data-glyph iris.
+- **The eye in the sky (Blade Runner opening, Evangelion, Ergo Proxy, manga inking)**: one colossal watching eye at the vanishing point, opening in storm cloud over a rainy neon street; inked lashes and a hard lid crease from manga; a cornea catchlight shaped like a window.
 - **Lusion / Oryzo, Linear, Stripe**: restraint in the UI layer, one idea per screen, motion that explains cause and effect, legibility always wins.
 
 ## Rules

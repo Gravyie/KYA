@@ -30,10 +30,10 @@ function useWorld(canvasRef, frameApi, handlers) {
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
     let world, lenis, cancelled = false, raf = 0, rafLenis = 0;
 
-    import('./seal.js').then(({createSeal}) => {
+    import('./world.js').then(({createWorld}) => {
       if (cancelled || !canvasRef.current) return;
       try {
-        world = createSeal(canvasRef.current, {reduced, small: innerWidth < 760, onDecision: k => cb.current.onDecision?.(k), onFrame: (a, info) => { frameApi.current?.(a, info); cb.current.onFrame?.(info); }});
+        world = createWorld(canvasRef.current, {reduced, small: innerWidth < 760, onDecision: k => cb.current.onDecision?.(k), onFrame: (a, info) => { frameApi.current?.(a, info); cb.current.onFrame?.(info); }});
       } catch (e) { console.error(e); setMode('static'); return; }
       worldRef.current = world;
       if (location.search.includes('debug')) window.__world = world;
@@ -77,19 +77,12 @@ function useWorld(canvasRef, frameApi, handlers) {
   return {mode, worldRef};
 }
 
-/** Opening: the eye blinks awake, glances at you, and you fall through its pupil into the city. Once per session. */
-function EyeIntro({onReveal, onDone}) {
-  const ref = useRef(null), box = useRef(null);
-  useEffect(() => {
-    let stop = () => {}, live = true;
-    const onFall = () => box.current?.classList.add('falling');
-    import('./eye.js').then(({playEye}) => { if (live && ref.current) stop = playEye(ref.current, {onReveal, onDone, onFall}); });
-    return () => { live = false; stop(); };
-  }, [onReveal, onDone]);
+/** Covers the page while the world loads, then frames the opening, which the 3D eye plays itself. */
+function Opening({phase}) {
   return (
-    <div className="eye-intro" ref={box} aria-hidden="true">
-      <canvas ref={ref} />
-      <p className="ei-cap"><span lang="ja">見張り</span> MIHARI — <em>click to skip</em></p>
+    <div className={`opening op-${phase}`} aria-hidden="true">
+      <div className="op-mark"><Mark size={92} live /></div>
+      <p className="op-cap"><span lang="ja">見張り</span> MIHARI<em>{phase === 'loading' ? 'waking the watch' : 'click to skip'}</em></p>
     </div>
   );
 }
@@ -176,7 +169,23 @@ export default function Landing() {
   useEffect(() => { document.title = 'Mihari 見張り — Know your agent'; }, []);
   const done = useCallback(() => { setBooted(true); try { sessionStorage.setItem('mihari.boot', '1'); } catch { /* private mode */ } }, []);
   useEffect(() => { if (beat !== 4) { setRevoked(false); worldRef.current?.setIris(null); } }, [beat, worldRef]);
-  const reveal = useCallback(() => worldRef.current?.intro(), [worldRef]);
+  // the opening plays once per session: the eye wakes in close-up, then the camera pulls back down the canyon
+  const [opening, setOpening] = useState(() => (booted ? 'off' : 'loading'));
+  useEffect(() => {
+    if (opening !== 'loading') return;
+    if (mode === 'static') { setOpening('off'); done(); return; }
+    if (mode !== 'ready') return;
+    scrollTo(0, 0); window.__lenis?.stop();
+    setOpening('playing');
+    worldRef.current.intro(() => { window.__lenis?.start(); setOpening('off'); done(); });
+  }, [mode, opening, worldRef, done]);
+  useEffect(() => {
+    if (opening !== 'playing') return undefined;
+    const skip = () => worldRef.current?.skipIntro();
+    const evs = ['pointerdown', 'wheel', 'keydown', 'touchstart'];
+    evs.forEach(e => addEventListener(e, skip, {passive: true}));
+    return () => evs.forEach(e => removeEventListener(e, skip));
+  }, [opening, worldRef]);
   useMagnetic(rootRef); useTilt(rootRef); useScrollBar(rootRef);
 
   const jump = i => { const el = document.querySelector(`[data-stage="${i}"]`); if (el) window.__lenis ? window.__lenis.scrollTo(el, {offset: -(innerHeight - el.offsetHeight) / 2}) : el.scrollIntoView({behavior: 'smooth', block: 'center'}); };
@@ -184,14 +193,14 @@ export default function Landing() {
   const snip = SNIPPETS[tab];
 
   return (
-    <div className={`landing w-${mode} ${booted ? 'booted' : ''} ${alert ? 'is-alert' : ''}`} ref={rootRef} data-end={beat >= 5 ? '1' : '0'}>
-      {!booted && <EyeIntro onReveal={reveal} onDone={done} />}
+    <div className={`landing w-${mode} ${booted ? 'booted' : ''} ${alert ? 'is-alert' : ''} ${opening !== 'off' ? 'is-opening' : ''}`} ref={rootRef} data-end={beat >= 5 ? '1' : '0'}>
+      {opening !== 'off' && <Opening phase={opening} />}
       <a className="skip" href="#console">Skip to content</a>
       <div className="scrollbar" aria-hidden="true"><i /></div>
       {mode === 'static' ? <div className="hud static" aria-hidden="true"><div className="static-sun" /></div> : <Hud canvasRef={canvasRef} beat={beat} countApi={countApi} frameApi={frameApi} onJump={jump} alert={alert} />}
       <Nav alert={alert} />
 
-      {/* ── Scene 1: the gate ── */}
+      {/* ── Scene 1: the watch ── */}
       <section className="hero mh" data-stage="0">
         <div className="wrap mh-in">
           <p className="mh-kicker rise"><span className="dot" /><span lang="ja">見張り</span> MIHARI — the open-source lookout for AI agents</p>
@@ -233,7 +242,7 @@ export default function Landing() {
         <div className="wrap">
           <div className="decide-head rise">
             <p className="eyebrow"><b>02</b><i />第二話 · Policy</p>
-            <h2 className="big"><Words>Every call meets the gate.</Words></h2>
+            <h2 className="big"><Words>Every call meets the eye.</Words></h2>
             <p className="sub">Three checks run before any tool does: is the agent still who it says, does a rule allow this action on this resource, and is it within budget and rate. The answer is allow, ask a human, or block. This panel runs the same decision code as the server.</p>
           </div>
           <div className="rise has-sticker"><span className="sticker s-a">Live engine · try me</span><Magi /></div>
@@ -334,8 +343,7 @@ export default function Landing() {
 
       <section className="finale mh-fin" data-stage="10">
         <div className="wrap fin-in">
-          <div className="fin-eye" aria-hidden="true"><Mark size={120} /></div>
-          <p className="mh-kicker rise"><span lang="ja">見張り</span> The watch never sleeps</p>
+          <p className="mh-kicker rise"><span lang="ja">見張り</span> You are inside the watch now</p>
           <h2 className="mh-title fin-t" aria-label="Know your agent."><span className="mh-l"><Words>KNOW YOUR</Words></span><span className="mh-l mh-w" data-text="AGENT."><Words>AGENT.</Words></span></h2>
           <p className="mh-sub rise">Self-hosted in a minute. One process, one folder, no account and no paid service.</p>
           <div className="mh-cta rise">

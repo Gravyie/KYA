@@ -5,17 +5,18 @@ import {UnrealBloomPass} from 'three/examples/jsm/postprocessing/UnrealBloomPass
 import {ShaderPass} from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import {OutputPass} from 'three/examples/jsm/postprocessing/OutputPass.js';
 
+import {createWatcher} from './watcher.js';
+
 /*
- * 関門 · THE CHECKPOINT. One WebGL world for the whole page.
+ * 見張り · THE WATCH. One WebGL world for the whole page.
  *
- * A monumental gate stands on a flooded plaza at night. Behind it, a vermilion sun sinks into a skyline;
- * the wet ground mirrors everything (the sky shader reflects itself below the horizon, the gate is mirrored
- * geometry). Agent calls arrive as light trails, like tail lights through rain, and each gets a verdict at
- * the seal in the gate's heart: white passes, amber waits for a human, vermilion is thrown back. Every
- * verdict is stamped onto a ledger of blocks running away behind the gate. Revocation closes the iris and
- * the whole city goes to alarm red.
+ * A flooded neon canyon at night, and at the end of it, hanging in a vortex of lit cloud, a colossal eye.
+ * The page is a single flight toward it. Agent calls arrive as light trails and meet the eye's scan ring
+ * hovering over the street, where each gets a verdict: green passes, amber waits for a human, red is thrown
+ * back. Every verdict is stamped onto a ledger of blocks running toward the eye. Revocation narrows the eye
+ * to a slit and the city goes to alarm red. The finale ends inside the pupil.
  *
- * Convention: the camera sits on the +z side looking toward -z; the gate is at the origin.
+ * Convention: the camera sits on the +z side looking toward -z; the scan ring is at the origin.
  */
 
 const PI = Math.PI;
@@ -27,29 +28,33 @@ const HOT = {neutral: COL.ash.clone().multiplyScalar(1.2), allow: COL.jade.clone
 const STAMP = {neutral: new THREE.Color(0x10131f), allow: COL.cyan.clone().multiplyScalar(1.6), deny: COL.shu.clone().multiplyScalar(2)};
 
 const FLOOR_Y = -2.2;
-const GATE_H = 6.4, GATE_W = 4.6;
+const ER = 18, EYE = [0, 25, -128];
+const IRIS_Z = EYE[2] + ER * 0.84;      // the iris plane: close-ups frame this, not the eyeball's centre
 const HIDDEN = {p: [-3.4, 0.2, 2.6], tilt: 0.4, rx: 0, s: 0.7, o: 0};
 const Z = (cx, cy, w, h) => ({cx, cy, w, h});
-const S = o => ({az: 0, el: 0.08, r: 4, lx: 0, ly: 0, lz: 0, closed: 0, alert: 0, dim: 0, ledger: 0, zone: Z(0.66, 0.52, 0.5, 0.8), mix: [0.6, 0.2, 0.2], card: {...HIDDEN}, ...o});
+// open: lid openness · pupil: fraction of the iris · slit: alert pupil · scan: iris sweep · beam: scan beam · gaze: 0 the viewer, 1 the scan ring
+const S = o => ({az: 0, el: 0.08, r: 4, lx: 0, ly: 0, lz: 0, closed: 0, alert: 0, dim: 0, ledger: 0, open: 0.92, pupil: 0.3, slit: 0, scan: 0, beam: 0, gaze: 0, zone: Z(0.66, 0.52, 0.5, 0.8), mix: [0.6, 0.2, 0.2], card: {...HIDDEN}, ...o});
 
 // Each stage frames a bounding radius `r` around `look`, fitted into a screen `zone`. The page owns the other side.
 const FULL = Z(0.5, 0.5, 1, 1);
-const fly = (lz, az, dim = 0.55, extra = {}) => S({az, el: 0.08, r: 3.6, lx: az * 4, ly: 1.1, lz, zone: FULL, dim, ledger: 1, mix: [0.8, 0.1, 0.1], ...extra});
+const fly = (lz, az, el, dim = 0.55, extra = {}) => S({az, el, r: 3.6, lx: az * 4, ly: 1.6, lz, zone: FULL, dim, ledger: 1, mix: [0.8, 0.1, 0.1], ...extra});
+const eyeShot = (r, zone, extra = {}) => S({az: 0, el: 0, r, lx: EYE[0], ly: EYE[1], lz: IRIS_Z, zone, ledger: 1, ...extra});
+const INTRO = eyeShot(12.5, FULL, {open: 0, pupil: 0.42, dim: 0.2});
 const STAGES = [
-  /* 0 hero      */ S({az: 0.0, el: 0.05, r: 4.6, lx: 0, ly: 1.1, lz: -1, zone: Z(0.5, 0.6, 1, 1), dim: 0.25, ledger: 1}),
-  /* 1 identify  */ S({az: -0.42, el: 0.05, r: 2.1, lx: 0.2, ly: 0.35, lz: 2.0, zone: Z(0.72, 0.5, 0.5, 0.8), mix: [0.5, 0.2, 0.3], card: {p: [0.3, 0.35, 2.6], tilt: -0.3, rx: 0.04, s: 1.45, o: 1}}),
-  /* 2 decide    */ S({az: 0.0, el: 0.16, r: 4.6, lx: 0, ly: 0.9, lz: 0, zone: FULL, dim: 0.55, mix: [0.45, 0.25, 0.3]}),
-  /* 3 prove     */ S({az: 0.06, el: 0.14, r: 3.2, lx: 0.6, ly: 0.2, lz: -16, zone: Z(0.7, 0.55, 0.56, 0.8), ledger: 1, mix: [0.75, 0.05, 0.2]}),
-  /* 4 contain   */ S({az: -0.05, el: 0.06, r: 3.0, lx: 0, ly: 1.4, lz: -30, zone: Z(0.68, 0.5, 0.56, 0.8), closed: 1, alert: 1, ledger: 1, mix: [0, 0, 1]}),
-  /* 5 console   */ fly(-42, 0.1),
-  /* 6 passport  */ fly(-54, -0.1),
-  /* 7 integrate */ fly(-66, 0.1),
-  /* 8 cases     */ fly(-78, -0.1),
-  /* 9 stack     */ fly(-90, 0.08),
-  /* 10 finale   */ S({az: 0.0, el: 0.02, r: 6.5, lx: 0, ly: 2.2, lz: -128, zone: Z(0.5, 0.36, 1, 0.66), dim: 0.35, ledger: 1, mix: [0.9, 0.05, 0.05]}),
-  /* 11 hold     */ S({az: 0.0, el: 0.02, r: 6.5, lx: 0, ly: 2.2, lz: -128, zone: Z(0.5, 0.36, 1, 0.66), dim: 0.35, ledger: 1, mix: [0.9, 0.05, 0.05]}),
+  /* 0 watch     */ S({az: 0.0, el: -0.148, r: 42.5, lx: EYE[0], ly: EYE[1], lz: EYE[2], zone: Z(0.66, 0.42, 1, 1), dim: 0.2, ledger: 1, pupil: 0.3}),
+  /* 1 identify  */ S({az: -0.42, el: 0.05, r: 2.1, lx: 0.2, ly: 0.35, lz: 2.0, zone: Z(0.72, 0.5, 0.5, 0.8), mix: [0.5, 0.2, 0.3], card: {p: [0.3, 0.35, 2.6], tilt: -0.3, rx: 0.04, s: 1.45, o: 1}, scan: 1, beam: 1, gaze: 1, pupil: 0.24}),
+  /* 2 decide    */ S({az: 0.0, el: 0.16, r: 4.6, lx: 0, ly: 0.9, lz: 0, zone: FULL, dim: 0.55, mix: [0.45, 0.25, 0.3], beam: 1, gaze: 1, scan: 0.6, pupil: 0.26}),
+  /* 3 prove     */ S({az: 0.06, el: 0.12, r: 3.2, lx: 0.6, ly: 0.2, lz: -16, zone: Z(0.7, 0.55, 0.56, 0.8), ledger: 1, mix: [0.75, 0.05, 0.2], gaze: 1}),
+  /* 4 contain   */ S({az: -0.05, el: 0.04, r: 3.0, lx: 0, ly: 1.6, lz: -30, zone: Z(0.68, 0.5, 0.56, 0.8), closed: 1, alert: 1, ledger: 1, mix: [0, 0, 1], open: 0.5, slit: 1, pupil: 0.2}),
+  /* 5 console   */ fly(-40, 0.1, -0.02),
+  /* 6 passport  */ fly(-52, -0.1, -0.06),
+  /* 7 integrate */ fly(-63, 0.1, -0.1),
+  /* 8 cases     */ fly(-73, -0.1, -0.14),
+  /* 9 stack     */ fly(-82, 0.06, -0.18),
+  /* 10 finale   */ eyeShot(6.6, Z(0.5, 0.45, 1, 1), {dim: 0.3, pupil: 0.68, mix: [0.9, 0.05, 0.05]}),
+  /* 11 hold     */ eyeShot(6.6, Z(0.5, 0.45, 1, 1), {dim: 0.3, pupil: 0.68, mix: [0.9, 0.05, 0.05]}),
 ];
-const NUM = ['az', 'el', 'r', 'lx', 'ly', 'lz', 'closed', 'alert', 'dim', 'ledger'];
+const NUM = ['az', 'el', 'r', 'lx', 'ly', 'lz', 'closed', 'alert', 'dim', 'ledger', 'open', 'pupil', 'slit', 'scan', 'beam', 'gaze'];
 const ZONE = ['cx', 'cy', 'w', 'h'];
 
 const smooth = t => t * t * (3 - 2 * t);
@@ -101,8 +106,8 @@ const SKY_FRAG = `
 precision highp float;
 varying vec2 vNdc;
 uniform mat4 uInvProj, uCamWorld;
-uniform float uTime, uAlert, uDim, uOpen;
-uniform vec2 uLook;
+uniform float uTime, uAlert, uDim, uEyeAng, uEyeOpen;
+uniform vec3 uEyeDir;
 float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float noise(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
   return mix(mix(hash(i), hash(i + vec2(1, 0)), f.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), f.x), f.y); }
@@ -128,46 +133,21 @@ vec3 sky(vec3 d, float wet){
   vec3 sd3 = d * 170.0; vec3 id = floor(sd3); vec3 fd = fract(sd3) - 0.5;
   float sh = hash(id.xy + id.z * 7.0);
   col += vec3(0.75, 0.9, 1.0) * step(0.9968, sh) * smoothstep(0.3, 0.0, length(fd)) * (0.6 + 0.4 * sin(uTime * 2.0 + sh * 90.0)) * smoothstep(0.05, 0.3, e) * 1.5;
-  // 見張り: a giant eye hangs over the city where the sun would be. It blinks, and its pupil follows the cursor.
-  vec3 sd = normalize(vec3(0.0, 0.175, -1.0));
-  vec3 sr = normalize(cross(vec3(0.0, 1.0, 0.0), sd)), su = cross(sd, sr);
-  vec2 sp = vec2(dot(d, sr), dot(d, su)) / 0.5;
-  float facing = step(0.0, dot(d, sd));
-  float EW = 0.46, EU = 0.2 * uOpen, EL = 0.13 * uOpen;
-  float ex = clamp(1.0 - pow(sp.x / EW, 2.0), 0.0, 1.0);
-  float yu = EU * pow(ex, 0.8), yl = -EL * pow(ex, 0.9);
-  float inEye = step(yl, sp.y) * step(sp.y, yu) * step(abs(sp.x), EW) * facing;
-  vec2 ic = uLook * vec2(0.13, 0.05);
-  vec2 ip = sp - ic; float ir = length(ip);
-  float ang = atan(ip.y, ip.x);
-  float bolt = pow(1.0 - abs(fbm(vec2(ang * 6.0, ir * 14.0 - uTime * 0.3)) * 2.0 - 1.0), 8.0);
-  vec3 irisCol = mix(vec3(0.03, 0.1, 0.45), vec3(0.1, 0.5, 0.75), smoothstep(0.13, 0.04, ir));
-  irisCol = mix(irisCol, vec3(0.75, 0.12, 0.55), smoothstep(0.09, 0.13, ir) * 0.8);
-  irisCol += vec3(0.5, 0.75, 1.0) * bolt * 0.45;
-  irisCol = mix(irisCol, vec3(1.0, 0.1, 0.2) * (0.6 + bolt), uAlert);
-  float irisM = smoothstep(0.132, 0.126, ir);
-  float pupilM = smoothstep(0.052, 0.046, ir);
-  vec3 scl = mix(vec3(0.03, 0.015, 0.09), vec3(0.16, 0.06, 0.26), smoothstep(0.0, 0.4, EW - abs(sp.x)));
-  vec3 eyeC = mix(scl, irisCol, irisM);
-  eyeC = mix(eyeC, vec3(0.0), pupilM);
-  eyeC += vec3(0.8, 1.0, 1.0) * smoothstep(0.016, 0.0, length(ip - vec2(-0.035, 0.035))) * 1.4;
-  eyeC *= 1.0 - smoothstep(0.05, 0.0, yu - sp.y) * 0.6;
-  col = mix(col, eyeC, inEye);
-  // lid rims glow, lashes as dark spikes along the upper lid, a soft halo
-  float rimU = smoothstep(0.012, 0.0, abs(sp.y - yu)) * step(abs(sp.x), EW) * facing;
-  float rimL = smoothstep(0.008, 0.0, abs(sp.y - yl)) * step(abs(sp.x), EW) * facing;
-  col = mix(col, vec3(0.01, 0.0, 0.03), rimU);
-  col += mix(vec3(1.0, 0.25, 0.8), vec3(1.0, 0.1, 0.2), uAlert) * (rimL * 0.9 + smoothstep(0.02, 0.0, abs(sp.y - yu)) * step(abs(sp.x), EW) * facing * 0.35);
-  float lash = 0.0;
-  float lx = sp.x / EW;
-  float above = sp.y - yu;
-  float cell = floor((lx + 1.0) * 26.0);
-  float lf = fract((lx + 1.0) * 26.0) - 0.5;
-  float llen = (0.04 + 0.05 * hash(vec2(cell, 1.0))) * ex * uOpen;
-  lash = step(0.0, above) * step(above, llen) * smoothstep(0.22, 0.0, abs(lf + above * 6.0 * lx) - 0.08 * (1.0 - above / max(llen, 0.001)));
-  col = mix(col, vec3(0.01, 0.0, 0.03), lash * step(abs(lx), 1.0) * facing);
-  float halo = exp(-pow(length(sp * vec2(0.8, 1.6)) * 2.4, 2.0)) * facing;
-  col += mix(vec3(0.25, 0.3, 1.0), vec3(1.0, 0.1, 0.2), uAlert) * halo * 0.22;
+  // 見張り: the eye hangs in a slow vortex of cloud, lit from within by its iris
+  float ce = clamp(dot(d, uEyeDir), -1.0, 1.0);
+  float rr = acos(ce) / uEyeAng;                       // 1 at the eyeball's edge
+  vec3 ax = normalize(cross(uEyeDir, vec3(0.0, 1.0, 0.0))), ay = cross(ax, uEyeDir);
+  float th = atan(dot(d, ay), dot(d, ax));
+  float sw = th + 1.4 / (rr + 0.6) - uTime * 0.025;
+  vec2 cp = vec2(cos(sw), sin(sw));
+  float vort = fbm(cp * 2.2 + vec2(rr * 0.9, 0.0)) * 0.65 + fbm(cp * 5.0 - vec2(rr * 1.7, uTime * 0.01)) * 0.35;
+  float reach = smoothstep(6.0, 1.05, rr) * step(0.0, ce);
+  vec3 vlit = mix(vec3(0.95, 0.25, 0.85), vec3(0.15, 0.55, 1.0), smoothstep(1.2, 4.0, rr));
+  vlit = mix(vlit, vec3(1.0, 0.12, 0.18), uAlert);
+  float vcl = smoothstep(0.42, 0.8, vort) * reach;
+  col = mix(col, col * 0.35, smoothstep(0.3, 0.55, vort) * reach * 0.7);   // dark cloud masses
+  col += vlit * vcl * (0.12 + 0.3 * uEyeOpen) * smoothstep(5.0, 1.2, rr);
+  col += vlit * exp(-pow(max(rr - 1.0, 0.0) * 1.6, 2.0)) * 0.22 * uEyeOpen * reach;  // glow hugging the eye
   // skyline with neon windows
   float az = atan(d.x, -d.z);
   float h1 = 0.012 + 0.075 * pow(hash(vec2(floor(az * 22.0), 1.0)), 2.0) + 0.025 * hash(vec2(floor(az * 61.0), 4.0));
@@ -281,7 +261,7 @@ function roundedRect(w, h, r) {
 
 /* ── World ───────────────────────────────────────────────── */
 
-export function createSeal(canvas, {onDecision, onFrame, reduced = false, small = false} = {}) {
+export function createWorld(canvas, {onDecision, onFrame, reduced = false, small = false} = {}) {
   const renderer = new THREE.WebGLRenderer({canvas, antialias: false, powerPreference: 'high-performance'});
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, small ? 1.25 : 1.5));
   renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.0;
@@ -292,7 +272,7 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
 
   const skyMat = new THREE.ShaderMaterial({
     vertexShader: SKY_VERT, fragmentShader: SKY_FRAG, depthTest: false, depthWrite: false,
-    uniforms: {uInvProj: {value: new THREE.Matrix4()}, uCamWorld: {value: new THREE.Matrix4()}, uTime: {value: 0}, uAlert: {value: 0}, uDim: {value: 0}, uOpen: {value: 1}, uLook: {value: new THREE.Vector2()}},
+    uniforms: {uInvProj: {value: new THREE.Matrix4()}, uCamWorld: {value: new THREE.Matrix4()}, uTime: {value: 0}, uAlert: {value: 0}, uDim: {value: 0}, uEyeDir: {value: new THREE.Vector3(0, 0, -1)}, uEyeAng: {value: 0.1}, uEyeOpen: {value: 1}},
   });
   const sky = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), skyMat); sky.frustumCulled = false; sky.renderOrder = -1000;
   scene.add(sky);
@@ -301,13 +281,13 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
   const real = new THREE.Group(); world.add(real);                       // reflected objects
   const mirror = new THREE.Group(); mirror.scale.y = -1; mirror.position.y = 2 * FLOOR_Y; world.add(mirror);
 
-  // Lights: a cold bone key from the viewer, the sun as a vermilion rim from behind.
+  // Lights: a cold cyan key from the viewer, a magenta rim from the eye's side.
   scene.add(new THREE.HemisphereLight(0x5a4cff, 0x1a0630, 1.1));
   const key = new THREE.DirectionalLight(0x19e6ff, 1.6); key.position.set(-3, 4, 8); scene.add(key);
   const rim = new THREE.DirectionalLight(0xff2fa6, 4.5); rim.position.set(0, 2, -10); scene.add(rim);
   const sealLight = new THREE.PointLight(0xffffff, 18, 9, 1.8); sealLight.position.set(0, 0.6, 0.6); scene.add(sealLight);
 
-  /* Floor: a thin veil over the reflection, with chalk survey marks and a dark apron under the gate. */
+  /* Floor: a thin veil over the reflection, with survey marks and a ring under the scan ring. */
   const veilMat = new THREE.ShaderMaterial({
     transparent: true, depthWrite: false, extensions: {derivatives: true},
     uniforms: {uAlpha: {value: 0.55}, uLine: {value: COL.cyan.clone()}, uLine2: {value: COL.mag.clone()}, uTime: {value: 0}},
@@ -330,40 +310,12 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
   veil.rotation.x = -PI / 2; veil.position.set(0, FLOOR_Y + 0.002, -60); veil.renderOrder = -300;
   world.add(veil);
 
-  /* The gate: two pillars, a sweeping top beam and a tie beam, in black lacquer with vermilion edge inlays. */
   const lacquer = new THREE.MeshStandardMaterial({color: 0x0a0c18, metalness: 0.7, roughness: 0.28});
-  const inlayMat = new THREE.MeshBasicMaterial({color: COL.mag.clone().multiplyScalar(1.8)});
-  const cyanMat = new THREE.MeshBasicMaterial({color: COL.cyan.clone().multiplyScalar(1.8)});
-  const gate = new THREE.Group(); real.add(gate);
-  const pillarGeo = new THREE.BoxGeometry(0.5, GATE_H, 0.5);
-  const top = FLOOR_Y + GATE_H;
-  [-GATE_W / 2, GATE_W / 2].forEach(x => {
-    const p = new THREE.Mesh(pillarGeo, lacquer); p.position.set(x, FLOOR_Y + GATE_H / 2, 0); gate.add(p);
-    const strip = new THREE.Mesh(new THREE.BoxGeometry(0.035, GATE_H * 0.92, 0.035), cyanMat); strip.position.set(x + (x < 0 ? 0.26 : -0.26), FLOOR_Y + GATE_H * 0.47, 0.26); gate.add(strip);
-    const foot = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.28, 0.8), lacquer); foot.position.set(x, FLOOR_Y + 0.14, 0); gate.add(foot);
-  });
-  // kasagi: a long top beam whose ends lift, built from a curved extrusion
-  const kasagiShape = new THREE.Shape();
-  const KW = GATE_W + 2.2;
-  kasagiShape.moveTo(-KW / 2, 0.42); kasagiShape.quadraticCurveTo(0, 0.12, KW / 2, 0.42); kasagiShape.lineTo(KW / 2 - 0.1, 0.0);
-  kasagiShape.quadraticCurveTo(0, -0.28, -KW / 2 + 0.1, 0.0); kasagiShape.closePath();
-  const kasagiGeo = new THREE.ExtrudeGeometry(kasagiShape, {depth: 0.62, bevelEnabled: false, curveSegments: 32}); kasagiGeo.translate(0, 0, -0.31);
-  const kasagi = new THREE.Mesh(kasagiGeo, lacquer); kasagi.position.y = top - 0.1; gate.add(kasagi);
-  const kasagiLine = new THREE.Mesh(new THREE.BoxGeometry(KW * 0.86, 0.025, 0.03), inlayMat); kasagiLine.position.set(0, top - 0.22, 0.32); gate.add(kasagiLine);
-  const nuki = new THREE.Mesh(new THREE.BoxGeometry(GATE_W + 1.1, 0.3, 0.36), lacquer); nuki.position.y = top - 1.15; gate.add(nuki);
-  const plaque = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.78, 0.08), lacquer); plaque.position.set(0, top - 0.62, 0.22); gate.add(plaque);
-  const plaqueMat = new THREE.MeshBasicMaterial({transparent: true, toneMapped: false});
-  const plaqueFace = new THREE.Mesh(new THREE.PlaneGeometry(0.46, 0.68), plaqueMat); plaqueFace.position.set(0, top - 0.62, 0.265); gate.add(plaqueFace);
-  fontsReady().then(() => {
-    const c = document.createElement('canvas'); c.width = 128; c.height = 190; const g = c.getContext('2d');
-    g.fillStyle = '#06061a'; g.fillRect(0, 0, 128, 190); g.strokeStyle = '#ff2fa6'; g.lineWidth = 6; g.strokeRect(5, 5, 118, 180); g.fillStyle = '#7ff4ff'; g.shadowColor = '#19e6ff'; g.shadowBlur = 14; g.font = '900 72px "Noto Sans JP Variable", serif'; g.textAlign = 'center';
-    g.fillText('関', 64, 82); g.fillText('門', 64, 166);
-    plaqueMat.map = new THREE.CanvasTexture(c); plaqueMat.map.colorSpace = THREE.SRGBColorSpace; plaqueMat.needsUpdate = true;
-  });
 
-  /* The seal: an aperture ring between the pillars, with an iris that closes on revocation. */
+  /* The scan ring: the eye's gaze, projected over the street. Calls are judged as they pass through it;
+     on revocation its aperture closes. */
   const R = 1.35, SEAL_Y = 0.7;
-  const seal = new THREE.Group(); seal.position.y = SEAL_Y; gate.add(seal);
+  const seal = new THREE.Group(); seal.position.y = SEAL_Y; real.add(seal);
   const ringMat = new THREE.MeshBasicMaterial({color: COL.bone.clone().multiplyScalar(1.6)});
   seal.add(new THREE.Mesh(new THREE.TorusGeometry(R, 0.05, 16, 200), ringMat));
   const bezel = new THREE.Mesh(new THREE.TorusGeometry(R + 0.14, 0.12, 16, 200), lacquer); bezel.scale.z = 0.6; seal.add(bezel);
@@ -398,21 +350,8 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
     stampMat.map = new THREE.CanvasTexture(c); stampMat.map.colorSpace = THREE.SRGBColorSpace; stampMat.needsUpdate = true;
   });
 
-  // reflection: a mirrored copy of the gate (geometry only, shares materials)
-  const gateMirror = gate.clone(true); mirror.add(gateMirror);
-
-  /* Lanterns: two rows of stone posts with warm lights lining the approach. */
-  const lanternGeo = new THREE.BoxGeometry(0.22, 1.1, 0.22);
-  const lanterns = new THREE.InstancedMesh(lanternGeo, lacquer, 16);
-  const lampMat = new THREE.MeshBasicMaterial({color: 0xffffff});
-  const lamps = new THREE.InstancedMesh(new THREE.BoxGeometry(0.16, 0.16, 0.16), lampMat, 16);
-  for (let i = 0; i < 16; i++) {
-    const side = i % 2 ? 1 : -1, z = 3 + Math.floor(i / 2) * 2.4;
-    dm.rotation.set(0, 0, 0); dm.scale.setScalar(1); dm.position.set(side * 3.6, FLOOR_Y + 0.55, z); dm.updateMatrix(); lanterns.setMatrixAt(i, dm.matrix);
-    dm.position.y = FLOOR_Y + 1.2; dm.updateMatrix(); lamps.setMatrixAt(i, dm.matrix);
-    lamps.setColorAt(i, (side > 0 ? COL.mag : COL.cyan).clone().multiplyScalar(2.4));
-  }
-  real.add(lanterns, lamps); mirror.add(lanterns.clone(), lamps.clone());
+  // reflection: a mirrored copy of the ring (geometry only, shares materials)
+  const sealMirror = seal.clone(true); mirror.add(sealMirror);
 
   /* Rain: thin falling streaks, animated entirely on the GPU (no per-frame CPU work). It follows the camera. */
   const RAIN = small ? 600 : 1400;
@@ -446,7 +385,7 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
   const signSpots = [];
   for (let i = 0; i < towerCount; i++) {
     const side = i % 2 ? 1 : -1, w = rand(2, 4.2), dd = rand(2, 4.2), h = rand(4, 11) * (i > towerCount * 0.5 ? rand(1.3, 2.6) : 1);
-    const z = 10 - (i / towerCount) * 128 + rand(-2, 2), x = side * (rand(7.5, 10.5) + (i % 4 === 0 ? rand(2, 8) : 0));
+    const z = 10 - (i / towerCount) * 128 + rand(-2, 2), x = side * (z < -88 ? rand(16, 26) : rand(7.5, 10.5) + (i % 4 === 0 ? rand(2, 8) : 0));
     dm.rotation.set(0, 0, 0); dm.position.set(x, FLOOR_Y + h / 2, z); dm.scale.set(w, h, dd); dm.updateMatrix(); towers.setMatrixAt(i, dm.matrix);
     dims[i * 3] = w; dims[i * 3 + 1] = h; dims[i * 3 + 2] = dd; seeds[i] = Math.random();
     if (i % 3 === 0 && signSpots.length < 22 && h > 5) signSpots.push({x: x - side * (w / 2 + 0.06), y: FLOOR_Y + rand(2.4, Math.min(h - 1.2, 7)), z, side});
@@ -484,21 +423,8 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
   const flights = Array.from({length: AIR}, (_, i) => ({x: rand(-14, 14), y: FLOOR_Y + rand(4.5, 9), z: rand(-80, 12), v: rand(5, 14) * (i % 2 ? 1 : -1), len: rand(1, 3), c: [COL.cyan, COL.mag, COL.amber][i % 3]}));
   world.add(air);
 
-  /* The corridor beyond the gate: checkpoint rings receding toward the sun, each with an iris that
-     seals on lockdown; runway lights chasing toward the vanishing point; low traffic in four lanes. */
-  const ECHO = 10, echoes = [];
-  const echoRingMat = [COL.cyan, COL.mag].map(c => new THREE.MeshBasicMaterial({color: c.clone().multiplyScalar(1.6)}));
-  const echoIrisMat = new THREE.MeshBasicMaterial({color: COL.shu.clone().multiplyScalar(0.9), transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide});
-  for (let i = 0; i < ECHO; i++) {
-    const g = new THREE.Group(); g.position.set(0, FLOOR_Y + 4.0, -12 - i * 12.5);
-    const own = echoRingMat[i % 2].clone();
-    g.add(new THREE.Mesh(new THREE.TorusGeometry(4.3, 0.06, 8, 160), own));
-    const ticks2 = new THREE.Mesh(new THREE.TorusGeometry(4.65, 0.012, 4, 160), echoRingMat[(i + 1) % 2]); g.add(ticks2);
-    const iris = new THREE.Mesh(new THREE.RingGeometry(0.001, 4.3, 64), echoIrisMat); g.add(iris);
-    g.userData = {iris, own, base: i % 2 ? COL.mag : COL.cyan, spin: (i % 2 ? 1 : -1) * (0.1 + i * 0.01)};
-    real.add(g); echoes.push(g);
-  }
-  const RUN = small ? 50 : 80;
+  /* The approach: runway lights chasing toward the eye; low traffic in four lanes. */
+  const RUN = small ? 60 : 96;
   const runGeo = new THREE.BoxGeometry(0.08, 0.035, 0.8);
   const runL = new THREE.InstancedMesh(runGeo, new THREE.MeshBasicMaterial({}), RUN), runR = new THREE.InstancedMesh(runGeo, new THREE.MeshBasicMaterial({}), RUN);
   for (let i = 0; i < RUN; i++) { dm.rotation.set(0, 0, 0); dm.scale.setScalar(1); dm.position.set(-4.6, FLOOR_Y + 0.03, 6 - i * 1.7); dm.updateMatrix(); runL.setMatrixAt(i, dm.matrix); dm.position.x = 4.6; dm.updateMatrix(); runR.setMatrixAt(i, dm.matrix); }
@@ -507,8 +433,31 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
   const LANES = small ? 40 : 80;
   const lanes = new THREE.InstancedMesh(new THREE.BoxGeometry(0.035, 0.035, 1), new THREE.MeshBasicMaterial({}), LANES);
   lanes.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(LANES * 3), 3);
-  const cars = Array.from({length: LANES}, (_, i) => ({x: (i % 2 ? 1 : -1) * rand(5.3, 6.6), y: FLOOR_Y + rand(0.25, 2.6), z: rand(-135, 8), v: rand(8, 22) * (i % 4 < 2 ? 1 : -1), len: rand(1, 3.4), c: [COL.cyan, COL.mag, COL.amber, COL.bone][i % 4]}));
+  const cars = Array.from({length: LANES}, (_, i) => ({x: (i % 2 ? 1 : -1) * rand(5.3, 6.6), y: FLOOR_Y + rand(0.25, 2.6), z: rand(-112, 8), v: rand(8, 22) * (i % 4 < 2 ? 1 : -1), len: rand(1, 3.4), c: [COL.cyan, COL.mag, COL.amber, COL.bone][i % 4]}));
   world.add(lanes);
+
+  /* The watcher, and its reflection in the flood */
+  const watcher = createWatcher({ER, small});
+  watcher.root.position.set(...EYE); real.add(watcher.root);
+  const watcherMirror = watcher.mirrorCopy(); watcherMirror.position.set(...EYE); mirror.add(watcherMirror);
+
+  /* The scan beam: a cone of light from the pupil down to whatever the eye is reading */
+  const beamGeo = new THREE.CylinderGeometry(0.05, 1, 1, 64, 1, true); beamGeo.translate(0, -0.5, 0);
+  const beamMat = new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+    uniforms: {uColor: {value: COL.cyan.clone()}, uAmount: {value: 0}, uTime: {value: 0}},
+    vertexShader: 'varying vec2 vUv; varying float vFace; void main(){ vUv = uv; vec3 n = normalize(normalMatrix * normal); vec4 mv = modelViewMatrix * vec4(position, 1.0); vFace = abs(dot(n, normalize(-mv.xyz))); gl_Position = projectionMatrix * mv; }',
+    fragmentShader: `varying vec2 vUv; varying float vFace; uniform vec3 uColor; uniform float uAmount, uTime;
+      void main(){
+        float along = vUv.y;                                    // 1 at the eye, 0 at the target
+        float core = pow(vFace, 2.5);
+        float bands = 0.65 + 0.35 * step(0.5, fract(along * 70.0 + uTime * 3.0));
+        float a = core * bands * (0.15 + 0.85 * smoothstep(0.0, 0.25, along) * smoothstep(1.0, 0.6, along)) + smoothstep(0.04, 0.0, along) * 0.8;
+        gl_FragColor = vec4(uColor * a * uAmount, 1.0);
+      }`,
+  });
+  const beam = new THREE.Mesh(beamGeo, beamMat); beam.frustumCulled = false; beam.renderOrder = 20; real.add(beam);
+  const beamFrom = new THREE.Vector3(), beamTo = new THREE.Vector3(), gazeAt = new THREE.Vector3(), yAxis = new THREE.Vector3(0, 1, 0);
 
   /* Passport */
   const cardGroup = new THREE.Group();
@@ -541,7 +490,7 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
   }
   parts.forEach(p => spawn(p));
 
-  /* Ledger: stamped blocks running away behind the gate */
+  /* Ledger: stamped blocks running away toward the eye */
   const CHAIN = small ? 40 : 64;
   const blocks = new THREE.InstancedMesh(new THREE.BoxGeometry(0.42, 0.42, 0.42), new THREE.MeshStandardMaterial({color: 0x110e0d, metalness: 0.5, roughness: 0.4}), CHAIN);
   const faces = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.3, 0.3), new THREE.MeshBasicMaterial({toneMapped: false}), CHAIN);
@@ -553,7 +502,7 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
   let pulse = 0, flash = 0, glitch = 0, shake = 0, alertNow = 0;
   const pushLedger = kind => { ledger.unshift(kind); ledger.pop(); pulse = 1; };
   const resolveCall = (p, kind) => {
-    p.kind = kind; flash = 1; onDecision?.(kind);
+    p.kind = kind; flash = 1; onDecision?.(kind); watcher.flash(kind);
     if (kind === 'deny' && glitch < 0.05 && (alertNow > 0.4 || Math.random() < 0.05)) { glitch = 0.7; shake = 0.3; }
   };
 
@@ -571,9 +520,12 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
 
   /* Rig */
   const clone = o => JSON.parse(JSON.stringify(o));
-  const cur = clone(STAGES[0]), target = clone(STAGES[0]);
+  const cur = clone(STAGES[0]), target = clone(STAGES[0]), view = clone(STAGES[0]);
   const pointer = {x: 0, y: 0, sx: 0, sy: 0};
-  let override = null, stage = 0, velocity = 0, velTarget = 0, introT = 1, introOn = false, portrait = false;
+  let override = null, stage = 0, velocity = 0, velTarget = 0, portrait = false;
+  // the opening: the eye wakes up in close-up, looks at you, and the camera pulls back down the canyon
+  const OPEN = {wake: [0.5, 1.5], blink: [2.15, 2.4], pull: [2.9, 5.6]};
+  let intro = null;
 
   function aim(f) {
     const i = Math.min(Math.max(Math.floor(f), 0), STAGES.length - 2);
@@ -600,13 +552,14 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
 
   const sph = new THREE.Spherical(), cp = new THREE.Vector3(), tmp = new THREE.Vector3(), look = new THREE.Vector3();
   let dist = 8, prevCamX = 0, bank = 0;
-  function placeCamera(time) {
+  function placeCamera(v, time) {
     const half = THREE.MathUtils.degToRad(camera.fov / 2), t = Math.tan(half), aspect = width / height;
-    let z = cur.zone;
-    if (portrait) z = cur.zone.w > 0.9 ? Z(0.5, 0.45, 1, 1) : Z(0.5, 0.3, 0.94, 0.42);
-    dist = Math.max(cur.r / (z.h * t), cur.r / (z.w * aspect * t));
-    look.set(cur.lx, cur.ly, cur.lz);
-    sph.set(dist, PI / 2 - cur.el - pointer.sy * 0.03, cur.az + pointer.sx * 0.06);
+    let z = v.zone;
+    // portrait: wide stages keep the full frame; side-panel stages put the subject in the top band
+    if (portrait) z = v.zone.w > 0.9 ? Z(0.5, v.zone.cy, 1, 1) : Z(0.5, 0.3, 0.94, 0.42);
+    dist = Math.max(v.r / (z.h * t), v.r / (z.w * aspect * t));
+    look.set(v.lx, v.ly, v.lz);
+    sph.set(dist, PI / 2 - v.el - pointer.sy * 0.03, v.az + pointer.sx * 0.06);
     cp.setFromSpherical(sph).add(look);
     if (cp.y < FLOOR_Y + 0.25) cp.y = FLOOR_Y + 0.25;
     cp.x += Math.sin(time * 41) * shake * 0.03; cp.y += Math.cos(time * 53) * shake * 0.03;
@@ -621,16 +574,27 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
   const anchors = {};
   function project(name, v, space) { tmp.copy(v); space.localToWorld(tmp); tmp.project(camera); anchors[name] = {x: (tmp.x * 0.5 + 0.5) * width, y: (-tmp.y * 0.5 + 0.5) * height, on: tmp.z < 1 && tmp.z > -1}; }
   const sealAnchor = new THREE.Vector3(Math.cos(0.75) * (R + 0.34), Math.sin(0.75) * (R + 0.34), 0);
-  const plaqueAnchor = new THREE.Vector3(0.3, top - 0.62, 0.26);
 
   const clock = new THREE.Clock();
-  let raf = 0, running = false, time = 0, frames = 0;
+  let raf = 0, running = false, time = 0, frames = 0, reveal = 1;
   const tc = new THREE.Color();
+  const eyeWorld = new THREE.Vector3(...EYE);
+  const ease3 = t => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+  const span = (t, [a, b]) => Math.min(1, Math.max(0, (t - a) / (b - a)));
+
+  /** The view the camera uses: the scroll-driven pose, or during the opening a blend from the close-up to it. */
+  function blendView() {
+    if (!intro) { Object.assign(view, cur); return 1; }
+    const p = ease3(span(intro.t, OPEN.pull));
+    for (const k of NUM) view[k] = lerp(INTRO[k], cur[k], p);
+    view.r = Math.exp(lerp(Math.log(INTRO.r), Math.log(cur.r), p));     // a dolly feels even in log distance
+    view.zone = {}; for (const k of ZONE) view.zone[k] = lerp(INTRO.zone[k], cur.zone[k], p);
+    view.card = cur.card; view.mix = cur.mix; view.open = cur.open;
+    return p;
+  }
 
   function step(dt) {
     time += dt;
-    if (introOn) introT = Math.min(1, introT + dt / 2.8);
-    const intro = smooth(introT);
     const k = 1 - Math.pow(0.0008, dt);
     for (const key of NUM) if (key !== 'closed') cur[key] += (target[key] - cur[key]) * k;
     for (const key of ZONE) cur.zone[key] += (target.zone[key] - cur.zone[key]) * k;
@@ -644,18 +608,23 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
     velTarget *= Math.pow(0.04, dt);
     velocity += (velTarget - velocity) * (1 - Math.pow(0.02, dt));   // eased: a flick of the wheel never jolts the scene
     pulse = Math.max(0, pulse - dt * 2.4); flash = Math.max(0, flash - dt * 3); glitch = Math.max(0, glitch - dt * 4.5); shake = Math.max(0, shake - dt * 4);
+    if (intro) {
+      intro.t += dt * intro.speed;
+      if (intro.t >= OPEN.pull[1]) { const done = intro.done; intro = null; done?.(); }
+    }
+    const pull = blendView();
+    reveal = intro ? smooth(Math.max(0, pull - 0.5) * 2) : Math.min(1, reveal + dt);
     const closed = cur.closed;
     const alert = Math.max(cur.alert * (override === 'open' ? 0 : 1), closed > 0.5 ? (closed - 0.5) * 2 : 0); alertNow = alert;
 
     // palette
     const tone = COL.cyan.clone().lerp(COL.shu, smooth(Math.min(closed * 1.2, 1)));
     ringMat.color.copy(tone).multiplyScalar(1.6 + flash * 1.4);
-    haloMat.uniforms.uColor.value.copy(tone); const near = smooth(Math.min(1, Math.max(0, (Math.abs(camera.position.z) - 1.5) / 4)));
-    haloMat.uniforms.uAmount.value = (0.45 + flash * 0.5 + closed * 0.4) * intro * near;
-    sealLight.color.copy(tone); sealLight.intensity = (14 + flash * 18) * intro;
-    inlayMat.color.copy(COL.mag).lerp(COL.shu, alert).multiplyScalar(1.6 + alert * 1.2 + Math.sin(time * 8) * alert * 0.6);
-    cyanMat.color.copy(COL.cyan).lerp(COL.shu, alert).multiplyScalar(1.7 + (Math.sin(time * 37) > 0.97 ? -1 : 0));
-    lampMat.color.setScalar(1).lerp(COL.shu, alert).multiplyScalar(1 + alert * Math.max(0, Math.sin(time * 10)));
+    haloMat.uniforms.uColor.value.copy(tone);
+    // the camera sometimes passes close over the ring: fade its glow, and drop it entirely when it would fill the lens
+    const ringNear = smooth(Math.min(1, Math.max(0, (camera.position.distanceTo(seal.position) - 2.5) / 4)));
+    haloMat.uniforms.uAmount.value = (0.45 + flash * 0.5 + closed * 0.4) * reveal * ringNear;
+    sealLight.color.copy(tone); sealLight.intensity = (14 + flash * 18) * reveal;
     rainMat.uniforms.uColor.value.copy(COL.cyan).lerp(COL.shu, alert * 0.8).multiplyScalar(0.5 + alert * 0.4);
     rim.color.copy(COL.mag).lerp(COL.shu, alert); rim.intensity = 4.5 + alert * 3;
     key.color.copy(COL.cyan).lerp(COL.shu, alert);
@@ -663,51 +632,69 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
     signs.forEach(sg => { const fl = Math.sin(time * 3 + sg.seed) > 0.985 || (Math.sin(time * 23 + sg.seed * 7) > 0.995) ? 0.25 : 1; sg.mat.color.copy(sg.base).lerp(COL.shu, alert * 0.8).multiplyScalar(fl); });
     for (let i = 0; i < AIR; i++) {
       const f = flights[i]; f.z += f.v * dt * (1 + velocity * 3);
-      if (f.z > 14) f.z = -80; if (f.z < -80) f.z = 14;
+      if (f.z > 14) f.z = -110; if (f.z < -110) f.z = 14;
       dm.position.set(f.x, f.y, f.z); dm.rotation.set(0, 0, 0); dm.scale.set(1, 1, f.len * (1 + velocity * 3)); dm.updateMatrix(); air.setMatrixAt(i, dm.matrix);
       tc.copy(f.c).lerp(COL.shu, alert).multiplyScalar(1.8); air.setColorAt(i, tc);
     }
     air.instanceMatrix.needsUpdate = true; air.instanceColor.needsUpdate = true;
-    skyMat.uniforms.uTime.value = time;
-    // the sky eye: blinks every few seconds, looks where the cursor is
-    const bp = (time % 6.5) / 0.22; skyMat.uniforms.uOpen.value = bp < 1 ? Math.abs(Math.cos(bp * Math.PI)) : 1;
-    skyMat.uniforms.uLook.value.set(pointer.sx, -pointer.sy); skyMat.uniforms.uAlert.value = alert; skyMat.uniforms.uDim.value = cur.dim;
+    skyMat.uniforms.uTime.value = time; skyMat.uniforms.uAlert.value = alert; skyMat.uniforms.uDim.value = view.dim;
     veilMat.uniforms.uTime.value = time; veilMat.uniforms.uLine.value.copy(COL.cyan).lerp(COL.shu, alert); veilMat.uniforms.uLine2.value.copy(COL.mag).lerp(COL.shu, alert);
     stampMat.opacity = smooth(Math.max(0, (closed - 0.75) / 0.25)) * (override === 'open' ? 0 : 1);
 
-    // gate intro: rises out of the flood
-    gate.position.y = (1 - intro) * -1.2; gateMirror.position.y = gate.position.y;
-    seal.rotation.z = (1 - intro) * 1.4;
+    // the scan ring
+    seal.rotation.z = (1 - reveal) * 1.4;
+    seal.scale.setScalar(Math.max(0.0001, reveal)); seal.visible = ringNear > 0.02;
     ticks.rotation.z = -time * 0.04 * (1 + velocity * 4);
     blades.forEach(g => { g.children[0].scale.y = Math.max(0.0001, closed * (RB + 0.02)); g.rotation.z = g.userData.a - PI / 2 + closed * 0.55; g.visible = closed > 0.01; });
     irisBack.material.opacity = smooth(Math.max(0, (closed - 0.5) / 0.5));
-    // keep the reflection in sync with animated parts
-    gateMirror.traverse(o => { const src = o.userData.src; if (src) { o.rotation.copy(src.rotation); o.visible = src.visible; o.scale.copy(src.scale); } });
+    sealMirror.traverse(o => { const src = o.userData.src; if (src) { o.rotation.copy(src.rotation); o.visible = src.visible; o.scale.copy(src.scale); } });
 
-    // corridor
-    const cz = camera.position.z;
-    echoes.forEach((g, i) => {
-      g.rotation.z = time * g.userData.spin * (1 + velocity * 6);
-      const shut = smooth(Math.min(1, Math.max(0, closed * 1.6 - i * 0.06)));
-      g.userData.iris.scale.setScalar(1); g.userData.iris.material.opacity = shut * 0.55;
-      g.userData.iris.visible = shut > 0.01;
-      // flare as the camera flies through: brightest just before the ring passes overhead
-      const ahead = g.position.z - cz;
-      const prox = Math.exp(-Math.pow((ahead + 4) / 5, 2));
-      g.userData.own.color.copy(g.userData.base).lerp(COL.shu, alert).multiplyScalar(1.6 + prox * 2.6);
-      g.scale.setScalar(1 + prox * 0.05);
-    });
-    echoRingMat[0].color.copy(COL.cyan).lerp(COL.shu, alert).multiplyScalar(1.6 + flash * 0.4);
-    echoRingMat[1].color.copy(COL.mag).lerp(COL.shu, alert).multiplyScalar(1.6);
+    // the eye: what it looks at, how open it is, what the pupil does
+    const it = intro ? intro.t : 99;
+    const wake = intro ? smooth(span(it, OPEN.wake)) : 1;
+    let open = view.open * wake;
+    if (intro && it > OPEN.blink[0] && it < OPEN.blink[1]) open *= 1 - Math.sin(span(it, OPEN.blink) * PI) * 0.96;
+    // gaze: the scan ring (or the pass) when it is reading; otherwise you, wherever your cursor is
+    const reading = cur.card.o > 0.5 ? cardGroup.position : seal.position;
+    gazeAt.copy(camera.position).add(tmp.set(pointer.sx * 9, -pointer.sy * 6, 0));
+    gazeAt.lerp(reading, smooth(Math.min(1, view.gaze)));
+    let glance = 0;
+    if (intro && it > OPEN.wake[1] && it < OPEN.pull[0]) {
+      // the first look around: left, right, then straight at you
+      const g = it - OPEN.wake[1];
+      gazeAt.copy(camera.position).add(tmp.set(g < 0.35 ? -26 : g < 0.7 ? 22 : pointer.sx * 9, g < 0.7 ? 4 : -pointer.sy * 6, 0));
+      glance = 0;
+    }
+    tmp.copy(eyeWorld).sub(camera.position);
+    const eyeOpen = watcher.update(dt, time, {dist: tmp.length(), open, gaze: gazeAt, pupil: view.pupil + (1 - wake) * 0.3, slit: override === 'open' ? 0 : override === 'closed' ? 1 : view.slit, scan: view.scan, alert, autoBlink: !intro, glance});
+    // the sky around the eye
+    tmp.copy(eyeWorld).sub(camera.position); const eyeDist = tmp.length();
+    skyMat.uniforms.uEyeDir.value.copy(tmp).normalize(); skyMat.uniforms.uEyeAng.value = Math.asin(Math.min(0.99, ER / eyeDist)); skyMat.uniforms.uEyeOpen.value = eyeOpen;
+    // the beam from the pupil to whatever it is reading
+    const beamOn = view.beam * reveal * Math.min(1, eyeOpen * 1.5);
+    beam.visible = beamOn > 0.01;
+    if (beam.visible) {
+      beamFrom.set(0, 0, ER * 1.02).applyQuaternion(watcher.ball.quaternion).add(eyeWorld);
+      beamTo.copy(reading);
+      tmp.copy(beamTo).sub(beamFrom); const len = tmp.length();
+      beam.position.copy(beamFrom); beam.quaternion.setFromUnitVectors(yAxis, tmp.normalize().negate()); beam.scale.set(R * 0.9, len, R * 0.9);
+      // never fly through it: fade as the camera nears the beam's axis
+      const along = Math.max(0, Math.min(len, tmp.set(0, 0, 0).subVectors(camera.position, beamFrom).dot(look.copy(beamTo).sub(beamFrom).normalize())));
+      const axisDist = tmp.copy(beamFrom).addScaledVector(look, along).distanceTo(camera.position);
+      beamMat.uniforms.uAmount.value = beamOn * 0.55 * smooth(Math.min(1, Math.max(0, (axisDist - 2) / 5))); beamMat.uniforms.uTime.value = time;
+      beamMat.uniforms.uColor.value.copy(COL.cyan).lerp(COL.shu, alert);
+    }
+
     for (let i = 0; i < RUN; i++) {
       const wave = 0.2 + 0.8 * Math.pow(0.5 + 0.5 * Math.sin(i * 0.45 + time * 7), 4);
       tc.copy(COL.cyan).lerp(COL.shu, alert).multiplyScalar(0.35 + wave * 2.4); runL.setColorAt(i, tc);
       tc.copy(COL.mag).lerp(COL.shu, alert).multiplyScalar(0.35 + wave * 2.4); runR.setColorAt(i, tc);
     }
     runL.instanceColor.needsUpdate = true; runR.instanceColor.needsUpdate = true;
+    const cz = camera.position.z;
     for (let i = 0; i < LANES; i++) {
       const c = cars[i]; c.z += c.v * dt * (1 + velocity * 4);
-      if (c.z > 10) c.z = -135; if (c.z < -135) c.z = 10;
+      if (c.z > 10) c.z = -112; if (c.z < -112) c.z = 10;
       dm.position.set(c.x, c.y, c.z); dm.rotation.set(0, 0, 0); dm.scale.set(1, 1, c.len * (1 + velocity * 5)); dm.updateMatrix(); lanes.setMatrixAt(i, dm.matrix);
       tc.copy(c.c).lerp(COL.shu, alert * 0.9).multiplyScalar(2); lanes.setColorAt(i, tc);
     }
@@ -745,20 +732,20 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
       }
       const fadeIn = p.phase === 'in' ? smooth(Math.min(Math.max((7.4 - p.z) / 2, 0), 1)) : 1;
       dm.position.set(p.x, p.y, p.z); dm.rotation.set(0, 0, 0);
-      dm.scale.set(1, 1, (p.phase === 'hold' ? 0.35 : 1) + Math.min(2, velocity * 2.4)).multiplyScalar(Math.max(p.scale * fadeIn * intro, 0.0001)); dm.updateMatrix();
+      dm.scale.set(1, 1, (p.phase === 'hold' ? 0.35 : 1) + Math.min(2, velocity * 2.4)).multiplyScalar(Math.max(p.scale * fadeIn * reveal, 0.0001)); dm.updateMatrix();
       calls.setMatrixAt(i, dm.matrix); calls.setColorAt(i, HOT[p.kind]);
     }
     calls.instanceMatrix.needsUpdate = true; calls.instanceColor.needsUpdate = true;
 
     // ledger
     for (let i = 0; i < CHAIN; i++) {
-      const s = Math.max(0.0001, (i === 0 ? 1 + pulse * 0.4 : 1) * cur.ledger);
+      const s = Math.max(0.0001, (i === 0 ? 1 + pulse * 0.4 : 1) * view.ledger);
       dm.position.copy(slots[i]); dm.rotation.set(0, 0, 0); dm.scale.setScalar(s); dm.updateMatrix(); blocks.setMatrixAt(i, dm.matrix);
       dm.position.y += 0.212 * s; dm.rotation.set(-PI / 2, 0, 0); dm.updateMatrix(); faces.setMatrixAt(i, dm.matrix);
       tc.copy(STAMP[ledger[i]]); if (i === 0) tc.multiplyScalar(1 + pulse); faces.setColorAt(i, tc);
     }
     blocks.instanceMatrix.needsUpdate = true; faces.instanceMatrix.needsUpdate = true; faces.instanceColor.needsUpdate = true;
-    chainLine.visible = cur.ledger > 0.08; chainLine.material.opacity = 0.7 * cur.ledger;
+    chainLine.visible = view.ledger > 0.08; chainLine.material.opacity = 0.7 * view.ledger;
 
     // passport
     const c = cur.card;
@@ -771,22 +758,21 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
     bloom.strength = 0.42 + flash * 0.1 + alert * 0.25;
     finalPass.uniforms.uTime.value = time; finalPass.uniforms.uGlitch.value = glitch * (0.3 + alert * 0.7);
     finalPass.uniforms.uAb.value = 0.0004 + glitch * 0.003;
-    
   }
 
   function draw() {
-    placeCamera(time);
+    placeCamera(view, time);
     skyMat.uniforms.uInvProj.value.copy(camera.projectionMatrixInverse); skyMat.uniforms.uCamWorld.value.copy(camera.matrixWorld);
     if (usePost) composer.render(); else renderer.render(scene, camera);
     camera.updateMatrixWorld();
-    project('card', cardGroup.position, real); project('seal', sealAnchor, seal); project('ledger', slots[4], real); project('plaque', plaqueAnchor, gate);
-    onFrame?.(anchors, {stage, closed: cur.closed, alert: alertNow});
+    project('card', cardGroup.position, real); project('seal', sealAnchor, seal); project('ledger', slots[4], real);
+    onFrame?.(anchors, {stage, closed: cur.closed, alert: alertNow, intro: !!intro});
   }
 
   // tag mirror nodes with their source so animated parts can be synced cheaply
-  (function link(src, dst) { dst.userData.src = src; src.children.forEach((c, i) => dst.children[i] && link(c, dst.children[i])); })(gate, gateMirror);
+  (function link(src, dst) { dst.userData.src = src; src.children.forEach((c, i) => dst.children[i] && link(c, dst.children[i])); })(seal, sealMirror);
 
-  // Adaptive quality, two steps: first drop pixel ratio, then drop post-processing. Judged on a smoothed frame time.
+  // Adaptive quality, two steps, both only lower the pixel ratio (post stays on, so the look never changes).
   let ema = 0.016, quality = 2, settleUntil = 45;
   const lockHigh = new URLSearchParams(location.search).get('q') === 'high';
   function downgrade() {
@@ -819,9 +805,14 @@ export function createSeal(canvas, {onDecision, onFrame, reduced = false, small 
       stage = f; aim(f);
       if (reduced) { for (const key of NUM) cur[key] = target[key]; for (const key of ZONE) cur.zone[key] = target.zone[key]; cur.card = clone(target.card); step(0.016); draw(); }
     },
-    intro() { introT = 0; introOn = true; },
+    /** Play the opening (eye wakes in close-up, then the camera pulls back to the page's first frame). */
+    intro(done) { if (reduced) { done?.(); return; } intro = {t: 0, speed: 1, done}; reveal = 0; },
+    /** Hurry the opening along: jump to the pull-back and run it faster. */
+    skipIntro() { if (!intro) return; intro.t = Math.max(intro.t, OPEN.pull[0]); intro.speed = 1.8; },
+    /** Debug: jump the opening to time t (seconds) and draw. */
+    seek(t) { if (intro) { intro.t = t; for (let i = 0; i < 30; i++) step(0.016); draw(); } },
     setVelocity(v) { velTarget = Math.max(velTarget, Math.min(1, v)); },
-    settle(n = 60) { for (let i = 0; i < n; i++) step(0.05); introT = 1; draw(); },
+    settle(n = 60) { if (intro) { const d = intro.done; intro = null; d?.(); } for (let i = 0; i < n; i++) step(0.05); draw(); },
     setIris(mode) { override = mode; },
     destroy() {
       stop(); ro.disconnect(); document.removeEventListener('visibilitychange', onVisibility); removeEventListener('pointermove', onPointer);

@@ -5,17 +5,14 @@ import {Link} from '../lib/router.jsx';
  * The Mihari mark: a watching eye. Almond lids in ink-cyan, three manga lash strokes, a magenta iris whose pupil
  * is a portal (the dark centre with a cyan catchlight). It reads at 16px and scales to a sign.
  */
-export function Mark({size = 24, className = ''}) {
+/** The mark: an eye cut from the interface's own chamfered shape. The iris is a hexagon; the pupil is a cursor. */
+export function Mark({size = 24, className = '', live = false}) {
   return (
-    <svg className={`mark ${className}`} width={size} height={size} viewBox="0 0 64 64" aria-hidden="true">
-      <path d="M4 34 Q32 6 60 34 Q32 56 4 34 Z" fill="#0b0b22" />
-      <circle cx="32" cy="33" r="12.5" fill="#ff2fa6" />
-      <circle cx="32" cy="33" r="12.5" fill="none" stroke="#ffd0f0" strokeWidth="1" opacity=".55" />
-      <circle cx="32" cy="33" r="5.6" fill="#05050f" />
-      <circle cx="28.4" cy="29.4" r="2" fill="#bff8ff" />
-      <path d="M4 34 Q32 6 60 34" fill="none" stroke="#19e6ff" strokeWidth="3.6" strokeLinecap="round" />
-      <path d="M8 35 Q32 54 56 35" fill="none" stroke="#19e6ff" strokeWidth="2" strokeLinecap="round" opacity=".7" />
-      <path d="M16 21 L11 12 M25 15.5 L23 6 M36 15 L39 5.5" stroke="#19e6ff" strokeWidth="3" strokeLinecap="round" />
+    <svg className={`mark ${live ? 'live' : ''} ${className}`} width={size} height={size} viewBox="0 0 64 64" aria-hidden="true">
+      <path d="M1 32 L19 17 H45 L63 32 L45 47 H19 Z" fill="#0d0a24" />
+      <g className="mk-iris"><path d="M22 32 L27 21 H37 L42 32 L37 43 H27 Z" fill="#ff2fa6" /><rect x="29" y="24" width="6" height="16" fill="#05050f" /><rect className="mk-cur" x="29" y="24" width="6" height="2.4" fill="#19e6ff" /></g>
+      <path className="mk-up" d="M1 32 L19 17 H45 L63 32" fill="none" stroke="#19e6ff" strokeWidth="3" strokeLinejoin="bevel" />
+      <path className="mk-lo" d="M5 34.5 L19 46.5 H45 L59 34.5" fill="none" stroke="#19e6ff" strokeWidth="1.6" strokeLinejoin="bevel" />
     </svg>
   );
 }

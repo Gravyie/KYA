@@ -589,15 +589,18 @@
 .mark { filter: drop-shadow(0 0 6px rgba(25, 230, 255, 0.5)) drop-shadow(0 0 14px rgba(255, 47, 166, 0.35)); }
 .logo-word small { color: var(--mag) !important; }
 
-/* opening: full-screen eye, the pupil is a hole onto the city */
-.eye-intro { position: fixed; inset: 0; z-index: 200; pointer-events: auto; cursor: pointer; background: #05050f; }
-.eye-intro.falling { background: transparent; }
-.eye-intro.falling .ei-cap { opacity: 0; transition: opacity .3s; }
-.eye-intro canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-.ei-cap { position: absolute; left: 50%; bottom: 34px; transform: translateX(-50%); margin: 0; font: 500 11px var(--mono); letter-spacing: 0.24em; text-transform: uppercase; color: rgba(220, 230, 255, 0.55); white-space: nowrap; animation: ei-cap 3.4s ease both; }
-.ei-cap span { font-family: var(--kanji); font-weight: 900; color: var(--mag); margin-right: 6px; }
-.ei-cap em { font-style: normal; color: rgba(220, 230, 255, 0.35); }
-@keyframes ei-cap { 0% { opacity: 0; } 20%, 70% { opacity: 1; } 100% { opacity: 0; } }
+/* opening: a loader with the mark, then a thin frame while the 3D eye wakes and the camera pulls back */
+.opening { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center; pointer-events: none; }
+.opening.op-loading { background: #05050f; pointer-events: auto; }
+.opening.op-playing { background: transparent; animation: op-out 0.9s ease both; }
+@keyframes op-out { from { background: #05050f; } to { background: rgba(5, 5, 15, 0); } }
+.op-mark { transition: opacity 0.5s, transform 0.9s var(--ease); }
+.op-playing .op-mark { opacity: 0; transform: scale(2.4); }
+.op-cap { position: absolute; left: 50%; bottom: 32px; transform: translateX(-50%); margin: 0; display: flex; gap: 14px; align-items: baseline; font: 600 11px var(--mono); letter-spacing: 0.3em; color: rgba(225, 232, 255, 0.75); white-space: nowrap; }
+.op-cap span { font: 900 12px var(--kanji); letter-spacing: 0.2em; color: var(--mag); }
+.op-cap em { font-style: normal; font-weight: 500; letter-spacing: 0.2em; color: rgba(225, 232, 255, 0.4); text-transform: uppercase; }
+.landing.is-opening .hero .mh-in, .landing.is-opening .nav, .landing.is-opening .hud .ro, .landing.is-opening .hud .rail, .landing.is-opening .hud .vf, .landing.is-opening .scrollbar, .landing.is-opening .tapes, .landing.is-opening .mh-hud, .landing.is-opening .ticker { opacity: 0; pointer-events: none; }
+.landing .hero .mh-in, .landing .nav, .landing .hud .ro, .landing .mh-hud, .landing .ticker, .landing .tapes { transition: opacity 0.8s ease 0.2s; }
 
 /* hero: one block headline, the eye in the sky owns the right half */
 .landing .hero.mh { display: flex; align-items: center; min-height: 100vh; min-height: 100svh; padding: 100px 0 90px; position: relative; text-align: left; }
