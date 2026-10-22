@@ -83,8 +83,8 @@ const TOWER_FRAG = `
     float h = hash(cell.yx + vSeed * 9.0);
     vec3 wc = h < 0.4 ? vec3(0.1, 0.9, 1.0) : h < 0.7 ? vec3(1.0, 0.2, 0.75) : h < 0.9 ? vec3(1.0, 0.7, 0.2) : vec3(0.85, 0.95, 1.0);
     wc = mix(wc, vec3(1.0, 0.12, 0.2), uAlert * 0.85);
-    // bodies are lit just enough to register as sparse glyphs in the text-vision, so the skyline has mass
-    vec3 base = vec3(0.035, 0.04, 0.085) + vec3(0.03, 0.08, 0.14) * smoothstep(0.0, 1.0, v / vDim.y) * 0.6;
+    // bodies are lit just enough to register in the text-vision lens, so the skyline has mass there too
+    vec3 base = vec3(0.016, 0.019, 0.045) + vec3(0.02, 0.06, 0.1) * smoothstep(0.0, 1.0, v / vDim.y) * 0.45;
     // rim light on the top and sides facing the corridor
     float rim = step(vDim.y - 0.12, v) * step(0.5, abs(vN.y));
     float hw = (side ? vDim.z : vDim.x) * 0.5;
@@ -527,7 +527,8 @@ export function createWorld(canvas, {onDecision, onFrame, reduced = false, small
   const pointer = {x: 0, y: 0, sx: 0, sy: 0};
   let override = null, stage = 0, velocity = 0, velTarget = 0, portrait = false;
   // the opening: the city decodes out of scrambled glyphs, then the eye in the sky opens, blinks, and finds you
-  const OPEN = {decode: [0, 1.6], wake: [1.4, 2.5], blink: [2.75, 3.0], look: [3.05, 3.7], end: 3.9};
+  // then the text-vision dissolves, cell by cell, into the full picture
+  const OPEN = {decode: [0, 1.6], wake: [1.4, 2.5], blink: [2.75, 3.0], look: [3.05, 3.7], dissolve: [3.7, 4.7], end: 4.8};
   let intro = null;
 
   function aim(f) {
@@ -615,8 +616,15 @@ export function createWorld(canvas, {onDecision, onFrame, reduced = false, small
     }
     blendView();
     reveal = intro ? smooth(span(intro.t, [1.0, 2.4])) : Math.min(1, reveal + dt);
-    ascii.material.uniforms.uDecode.value = intro ? smooth(span(intro.t, OPEN.decode)) : 1;
-    ascii.material.uniforms.uTime.value = time;
+    const au = ascii.material.uniforms;
+    au.uDecode.value = intro ? smooth(span(intro.t, OPEN.decode)) : 1;
+    au.uAll.value = intro ? 1 - smooth(span(intro.t, OPEN.dissolve)) : 0;
+    au.uTime.value = time; au.uAlert.value = alertNow;
+    // the lens: follows the pointer tightly, grows in when it arrives, shrinks away when it leaves
+    const dpr = renderer.getPixelRatio();
+    lens.x += (lens.tx * dpr - lens.x) * (1 - Math.pow(1e-5, dt)); lens.y += ((height - lens.ty) * dpr - lens.y) * (1 - Math.pow(1e-5, dt));
+    lens.r += ((lens.on && !intro ? (portrait ? 96 : 150) * dpr : 0) - lens.r) * (1 - Math.pow(0.002, dt));
+    au.uLens.value.set(lens.x, lens.y); au.uLensR.value = lens.r;
     const closed = cur.closed;
     const alert = Math.max(cur.alert * (override === 'open' ? 0 : 1), closed > 0.5 ? (closed - 0.5) * 2 : 0); alertNow = alert;
 
@@ -788,11 +796,20 @@ export function createWorld(canvas, {onDecision, onFrame, reduced = false, small
   const start = () => { if (reduced || running) return; running = true; clock.getDelta(); raf = requestAnimationFrame(frame); };
   const stop = () => { running = false; cancelAnimationFrame(raf); };
   const onVisibility = () => (document.hidden ? stop() : start());
-  const onPointer = e => { pointer.x = (e.clientX / innerWidth - 0.5) * 2; pointer.y = (e.clientY / innerHeight - 0.5) * 2; };
+  const lens = {x: -9999, y: -9999, tx: -9999, ty: -9999, r: 0, on: false, off: 0};
+  const onPointer = e => {
+    pointer.x = (e.clientX / innerWidth - 0.5) * 2; pointer.y = (e.clientY / innerHeight - 0.5) * 2;
+    if (lens.x < -999) { lens.x = e.clientX * renderer.getPixelRatio(); lens.y = (height - e.clientY) * renderer.getPixelRatio(); }
+    lens.tx = e.clientX; lens.ty = e.clientY;
+    if (e.pointerType !== 'touch' || e.buttons) { lens.on = true; clearTimeout(lens.off); }
+  };
+  const onLeave = e => { if (!e.relatedTarget) lens.on = false; };
+  const onUp = e => { if (e.pointerType === 'touch') { clearTimeout(lens.off); lens.off = setTimeout(() => { lens.on = false; }, 900); } };
   const ro = new ResizeObserver(() => { resize(); if (!running) draw(); });
   ro.observe(canvas);
   document.addEventListener('visibilitychange', onVisibility);
-  addEventListener('pointermove', onPointer, {passive: true});
+  addEventListener('pointermove', onPointer, {passive: true}); addEventListener('pointerdown', onPointer, {passive: true});
+  addEventListener('pointerup', onUp, {passive: true}); document.addEventListener('pointerout', onLeave);
   resize();
   if (reduced) { for (let i = 0; i < 260; i++) step(0.03); draw(); } else start();
 
@@ -811,7 +828,7 @@ export function createWorld(canvas, {onDecision, onFrame, reduced = false, small
     settle(n = 60) { if (intro) { const d = intro.done; intro = null; d?.(); } for (let i = 0; i < n; i++) step(0.05); draw(); },
     setIris(mode) { override = mode; },
     destroy() {
-      stop(); ro.disconnect(); document.removeEventListener('visibilitychange', onVisibility); removeEventListener('pointermove', onPointer);
+      stop(); ro.disconnect(); document.removeEventListener('visibilitychange', onVisibility); removeEventListener('pointermove', onPointer); removeEventListener('pointerdown', onPointer); removeEventListener('pointerup', onUp); document.removeEventListener('pointerout', onLeave); clearTimeout(lens.off);
       scene.traverse(o => { o.geometry?.dispose?.(); const m = o.material; (Array.isArray(m) ? m : m ? [m] : []).forEach(x => { x.map?.dispose?.(); x.dispose(); }); });
       composer.dispose(); renderer.dispose();
     },

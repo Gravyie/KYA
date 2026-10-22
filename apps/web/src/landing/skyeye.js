@@ -59,7 +59,7 @@ void main(){
     float a = atan(ip.y, ip.x), u = a / 6.2831853 + 0.5;
     vec2 pp = vec2(ip.x / mix(1.0, 0.24, uSlit), ip.y * mix(1.0, 0.94, uSlit)); float pr = length(pp);
     float rn = clamp((r - uPupil) / (1.0 - uPupil), 0.0, 1.0);
-    float fib = ring(u, rn, 110.0, 2.2) * 0.45 + ring(u + 0.21, rn, 260.0, 5.0) * 0.25 + ringf(u + 0.5, rn, 36.0, 1.6) * 0.5;
+    float fib = ring(u, rn, 110.0, 2.2) * 0.4 + ring(u + 0.21, rn, 260.0, 5.0) * 0.22 + ring(u + 0.43, rn, 640.0, 11.0) * 0.18 + ringf(u + 0.5, rn, 36.0, 1.6) * 0.45;
     float wav = 0.34 + 0.035 * sin(a * 13.0 + 1.3) + 0.018 * sin(a * 29.0 + 0.4);
     float coll = smoothstep(0.045, 0.0, abs(rn - wav));
     float crypt = smoothstep(0.64, 0.8, ringf(u + 0.7, rn, 22.0, 3.4)) * smoothstep(0.38, 0.5, rn) * smoothstep(0.9, 0.7, rn);
@@ -96,13 +96,13 @@ void main(){
   // ── ink: a heavy liner along the upper lid ending in a wing, a fine line under the eye ──
   float dx = 0.004, slope = (upperY(x + dx) - upperY(x - dx)) / (2.0 * dx);
   float dUp = abs(q.y - yu) / sqrt(1.0 + slope * slope);
-  // everything is drawn at the scale of a character cell: thinner lines would fall between the glyphs
-  float thick = mix(0.035, 0.075, smoothstep(-1.0, 0.7, x)) * step(abs(x), 1.0) * (0.6 + 0.4 * uOpen) + 0.01;
+  // bold enough to survive the text-vision lens (a line thinner than a character cell falls between glyphs)
+  float thick = mix(0.024, 0.055, smoothstep(-1.0, 0.7, x)) * step(abs(x), 1.0) * (0.6 + 0.4 * uOpen) + 0.008;
   float wingEnd = 0.0;
   vec2 c0 = vec2(1.0, upperY(1.0));
   float wing = seg(q, c0 - vec2(0.06, 0.0), c0 + vec2(0.2, 0.1 + 0.03 * uOpen));
   float liner = max(smoothstep(thick, thick * 0.6, dUp) * step(abs(x), 1.0), smoothstep(0.055, 0.03, wing) * step(0.94, x));
-  float lowLine = smoothstep(0.03, 0.015, abs(q.y - yl)) * step(abs(x), 0.98) * uOpen;
+  float lowLine = smoothstep(0.02, 0.01, abs(q.y - yl)) * step(abs(x), 0.98) * uOpen;
   // lashes: fanned strokes along the upper lid, longer and curled at the outer corner
   float lash = 0.0;
   for (int i = 0; i < 16; i++) {
@@ -115,7 +115,7 @@ void main(){
     vec2 d = normalize(n + vec2(0.5 * x0 + 0.25, 0.0));
     float L = (0.12 + 0.2 * smoothstep(-0.3, 1.0, x0)) * (0.8 + 0.4 * hash(vec2(float(i), 2.0)));
     vec2 p1 = b + d * L * 0.55, p2 = b + (d + vec2(0.3 + 0.2 * x0, 0.12 * sign(d.y))) * L;
-    float w = mix(0.032, 0.012, clamp(length(q - b) / L, 0.0, 1.0));
+    float w = mix(0.022, 0.006, clamp(length(q - b) / L, 0.0, 1.0));
     lash = max(lash, smoothstep(w, w * 0.4, min(seg(q, b, p1), seg(q, p1, p2))));
   }
   for (int i = 0; i < 7; i++) {

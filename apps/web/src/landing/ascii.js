@@ -2,11 +2,12 @@ import * as THREE from 'three';
 import {Pass, FullScreenQuad} from 'three/examples/jsm/postprocessing/Pass.js';
 
 /*
- * The city as the watcher sees it: text. The scene is rendered small, then every cell of the screen
+ * The watcher's text-vision. The city renders in full detail; wherever you point, a lens turns it into
+ * what the watcher sees: text. The scene is rendered small, then every cell of the screen
  * becomes one glyph, chosen by brightness from a ramp measured off a real font (ASCII and half-width
  * katakana), or by edge direction where the image has an edge (| - / \), and tinted with the cell's
- * colour. A faint underlay of the image keeps the neon's atmosphere. uDecode reveals the field out of
- * scrambled glyphs, for the opening.
+ * colour. Outside the lens only a whisper of glyph texture remains. For the opening the whole frame is
+ * text (uAll), resolving out of scrambled glyphs (uDecode), then dissolving cell by cell into the picture.
  */
 
 const CANDIDATES = ".'`,:;-~_^\"!=+*<>ri?lt7vcxzjfIJ1LYTunoeaszkhdbpqwmXZOQ0#%&@$MWｦｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ";
@@ -59,7 +60,7 @@ function buildAtlas() {
 }
 
 const FRAG = `
-uniform sampler2D tScene, tGlyph; uniform vec2 uRes, uCell; uniform float uCount, uLevels, uTime, uDecode, uUnder, uExposure, uAlert;
+uniform sampler2D tScene, tGlyph; uniform vec2 uRes, uCell, uLens; uniform float uCount, uLevels, uTime, uDecode, uUnder, uExposure, uAlert, uAll, uLensR, uDpr, uHint;
 varying vec2 vUv;
 float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float lum(vec3 c){ return dot(c, vec3(0.3, 0.59, 0.11)); }
@@ -98,12 +99,31 @@ void main(){
   float m = max(max(c.r, c.g), max(c.b, 1e-4));
   vec3 hue = c / m;
   vec3 glyphCol = hue * (0.22 + 1.35 * t * t + 0.15 * t);
-  vec3 under = (1.0 - exp(-c * 1.5)) * uUnder * (1.0 - scrambled);
-  vec3 col = glyphCol * ink + under;
+  vec3 image = sceneAt(vUv);
+  vec3 under = (1.0 - exp(-image * 1.5)) * uUnder * (1.0 - scrambled);
+  vec3 text = glyphCol * ink + under;
+
+  // where the text shows: the lens around the pointer (its edge dissolves cell by cell), or the whole frame
+  vec2 cc = (cell + 0.5) * uCell;
+  float dc = length(cc - uLens);
+  float lens = step(h * 0.35 + 0.65, smoothstep(uLensR, uLensR * 0.62, dc) + 0.65 * step(dc, uLensR * 0.62));
+  float full = step(hash(cell * 0.71 + 4.0), uAll);
+  float show = max(lens * step(1.0, uLensR), full);
+  vec3 col = mix(image + glyphCol * ink * uHint, text, show);
+
+  // the lens's HUD: a thin ring with a tick scale, and a faint sweep inside
+  float dl = length(px - uLens);
+  float on = smoothstep(4.0, 30.0, uLensR) * (1.0 - uAll);
+  float ringC = smoothstep(1.2 * uDpr, 0.0, abs(dl - uLensR - 3.0 * uDpr));
+  float ang = atan(px.y - uLens.y, px.x - uLens.x);
+  float tick = step(0.82, fract(ang / 6.2831853 * 48.0)) * step(uLensR + 6.0 * uDpr, dl) * step(dl, uLensR + (mod(floor(ang / 6.2831853 * 48.0), 4.0) < 0.5 ? 16.0 : 10.0) * uDpr);
+  float sweep = pow(fract(ang / 6.2831853 - uTime * 0.25), 30.0) * step(dl, uLensR) * 0.25;
+  vec3 hud = mix(vec3(0.1, 0.9, 1.0), vec3(1.0, 0.15, 0.2), uAlert);
+  col += hud * (ringC * 0.9 + tick * 0.6 + sweep) * on;
   gl_FragColor = vec4(col, 1.0);
 }`;
 
-/** Renders the scene small, then draws it as glyphs into the composer's buffer. */
+/** Renders the scene, then composes picture and text-vision into the composer's buffer. */
 export class AsciiPass extends Pass {
   constructor(scene, camera, {cell = [8, 14]} = {}) {
     super();
@@ -113,6 +133,7 @@ export class AsciiPass extends Pass {
     this.material = new THREE.ShaderMaterial({
       uniforms: {
         tScene: {value: this.rt.texture}, tGlyph: {value: null}, uRes: {value: new THREE.Vector2(1, 1)}, uCell: {value: new THREE.Vector2(...cell)},
+        uLens: {value: new THREE.Vector2(-9999, -9999)}, uLensR: {value: 0}, uAll: {value: 0}, uDpr: {value: 1}, uHint: {value: 0.025},
         uCount: {value: 1}, uLevels: {value: LEVELS}, uTime: {value: 0}, uDecode: {value: 1}, uUnder: {value: 0.12}, uExposure: {value: 2.8}, uAlert: {value: 0},
       },
       vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
@@ -125,11 +146,11 @@ export class AsciiPass extends Pass {
   /** Fonts must be loaded first, or the ramp is measured off the fallback font. */
   build() { this.atlas = buildAtlas(); this.material.uniforms.tGlyph.value = this.atlas.tex; this.material.uniforms.uCount.value = this.atlas.count; }
   setSize(w, h) {
-    // w, h arrive in device pixels; the scene only needs ~2 samples per cell side
+    // w, h arrive in device pixels; the picture is full detail, the text samples it per cell
     this.material.uniforms.uRes.value.set(w, h);
-    const cw = this.cell[0] * this.pixelRatio, ch = this.cell[1] * this.pixelRatio;
-    this.material.uniforms.uCell.value.set(cw, ch);
-    this.rt.setSize(Math.max(2, Math.ceil(w / cw) * 2), Math.max(2, Math.ceil(h / ch) * 2));
+    this.material.uniforms.uDpr.value = this.pixelRatio;
+    this.material.uniforms.uCell.value.set(this.cell[0] * this.pixelRatio, this.cell[1] * this.pixelRatio);
+    this.rt.setSize(Math.max(2, w), Math.max(2, h));
   }
   render(renderer, writeBuffer) {
     renderer.setRenderTarget(this.rt); renderer.clear(); renderer.render(this.scene, this.camera);
