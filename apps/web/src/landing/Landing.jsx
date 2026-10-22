@@ -30,7 +30,7 @@ function useWorld(canvasRef, frameApi, handlers) {
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
     let world, lenis, cancelled = false, raf = 0, rafLenis = 0;
 
-    import('./director.js').then(({createWorld}) => {
+    import('./journey.js').then(({createWorld}) => {
       if (cancelled || !canvasRef.current) return;
       try {
         world = createWorld(canvasRef.current, {reduced, small: innerWidth < 760, onDecision: k => cb.current.onDecision?.(k), onFrame: (a, info) => { frameApi.current?.(a, info); cb.current.onFrame?.(info); }});

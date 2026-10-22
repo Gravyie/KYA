@@ -5,8 +5,8 @@ export const BEATS = [
   {key: 'identify', label: 'Passport', jp: '通行証'},
   {key: 'decide', label: 'Gate', jp: '鳥居'},
   {key: 'prove', label: 'Record', jp: '記録'},
-  {key: 'contain', label: 'Swarm', jp: '群れ'},
-  {key: 'journey', label: 'Journey', jp: '旅路'},
+  {key: 'contain', label: 'Portal', jp: '門'},
+  {key: 'tunnel', label: 'Tunnel', jp: '超空間'},
 ];
 
 // Tags hang off their 3D anchor at (dx, dy) and are clamped to the scene's side of the screen.

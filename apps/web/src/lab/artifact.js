@@ -33,28 +33,10 @@ function labelTexture(n, title, sub, colr) {
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
 }
 
-export function create(canvas) {
-  const st = makeStage(canvas, {fov: 32, bloom: [0.55, 0.6, 0.85], exposure: 1.05});
-  const {scene, camera, renderer} = st;
-  const pmrem = new THREE.PMREMGenerator(renderer);
-  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-  scene.background = new THREE.Color(0x05050c);
-
-  // bokeh: soft discs of neon at many depths behind the object
-  const B = 70, bpos = new Float32Array(B * 3), bcol = new Float32Array(B * 3), bsize = new Float32Array(B);
-  for (let i = 0; i < B; i++) { bpos.set([rand(-30, 30), rand(-16, 16), rand(-40, -8)], i * 3); new THREE.Color([NEON.cyan, NEON.mag, NEON.amber, NEON.violet][i % 4]).toArray(bcol, i * 3); bsize[i] = rand(90, 340); }
-  const bgeo = new THREE.BufferGeometry(); bgeo.setAttribute('position', new THREE.BufferAttribute(bpos, 3)); bgeo.setAttribute('aCol', new THREE.BufferAttribute(bcol, 3)); bgeo.setAttribute('aSize', new THREE.BufferAttribute(bsize, 1));
-  const bokeh = new THREE.Points(bgeo, new THREE.ShaderMaterial({
-    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, uniforms: {uTime: {value: 0}},
-    vertexShader: 'attribute vec3 aCol; attribute float aSize; varying vec3 vCol; uniform float uTime; void main(){ vCol = aCol; vec3 p = position; p.y += sin(uTime * 0.2 + position.x) * 0.4; vec4 mv = modelViewMatrix * vec4(p, 1.0); gl_PointSize = aSize / -mv.z * 6.0; gl_Position = projectionMatrix * mv; }',
-    fragmentShader: 'varying vec3 vCol; void main(){ float r = length(gl_PointCoord - 0.5) * 2.0; float a = smoothstep(1.0, 0.3, r) * 0.07 + smoothstep(1.0, 0.92, r) * smoothstep(0.85, 0.95, r) * 0.05; gl_FragColor = vec4(vCol * a, 1.0); }',
-  }));
-  scene.add(bokeh);
-  const key = new THREE.PointLight(NEON.cyan, 40, 20); key.position.set(-4, 3, 4);
-  const rim = new THREE.PointLight(NEON.mag, 60, 20); rim.position.set(5, -2, -2);
-  scene.add(key, rim, new THREE.AmbientLight(0x404060, 0.3));
-
-  const card = new THREE.Group(); scene.add(card);
+/** The passport object itself: six layers (shell, circuit, chip, foil, print, glass) with labels that
+ *  appear when it opens. Reused by the site's journey. */
+export function buildPassport() {
+  const card = new THREE.Group();
   const layers = [];
   const add = (obj, z, label) => { const g = new THREE.Group(); g.add(obj); g.userData = {z, label}; card.add(g); layers.push(g); return g; };
   // 0 · shell: brushed dark metal with a bevel
@@ -113,23 +95,56 @@ export function create(canvas) {
     });
   });
 
+  return {card, layers, circuit, foil, open: 0};
+}
+
+/** Ease the passport toward `open` (0 shut, 1 exploded into its layers) and let it turn toward the pointer. */
+export function animatePassport(p, dt, t, open, pointer) {
+  p.open += (open - p.open) * (1 - Math.pow(0.02, dt));
+  const o = p.open;
+  p.layers.forEach((l, i) => {
+    l.position.z = l.userData.z + o * (i - 2) * 0.62;
+    l.position.x = o * (i - 2) * -0.12;
+    if (l.userData.tag) l.userData.tag.material.opacity = smooth(Math.max(0, (o - 0.6) / 0.4));
+  });
+  p.card.rotation.y = -0.55 * o + pointer.sx * 0.35 + Math.sin(t * 0.4) * 0.08;
+  p.card.rotation.x = 0.12 * o - pointer.sy * 0.25 + Math.sin(t * 0.3) * 0.05;
+  p.card.position.y = Math.sin(t * 0.8) * 0.05;
+  p.circuit.material.uniforms.uTime.value = t; p.foil.material.uniforms.uTime.value = t;
+}
+
+export function create(canvas) {
+  const st = makeStage(canvas, {fov: 32, bloom: [0.55, 0.6, 0.85], exposure: 1.05});
+  const {scene, camera, renderer} = st;
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+  scene.background = new THREE.Color(0x05050c);
+
+  // bokeh: soft discs of neon at many depths behind the object
+  const B = 70, bpos = new Float32Array(B * 3), bcol = new Float32Array(B * 3), bsize = new Float32Array(B);
+  for (let i = 0; i < B; i++) { bpos.set([rand(-30, 30), rand(-16, 16), rand(-40, -8)], i * 3); new THREE.Color([NEON.cyan, NEON.mag, NEON.amber, NEON.violet][i % 4]).toArray(bcol, i * 3); bsize[i] = rand(90, 340); }
+  const bgeo = new THREE.BufferGeometry(); bgeo.setAttribute('position', new THREE.BufferAttribute(bpos, 3)); bgeo.setAttribute('aCol', new THREE.BufferAttribute(bcol, 3)); bgeo.setAttribute('aSize', new THREE.BufferAttribute(bsize, 1));
+  const bokeh = new THREE.Points(bgeo, new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, uniforms: {uTime: {value: 0}},
+    vertexShader: 'attribute vec3 aCol; attribute float aSize; varying vec3 vCol; uniform float uTime; void main(){ vCol = aCol; vec3 p = position; p.y += sin(uTime * 0.2 + position.x) * 0.4; vec4 mv = modelViewMatrix * vec4(p, 1.0); gl_PointSize = aSize / -mv.z * 6.0; gl_Position = projectionMatrix * mv; }',
+    fragmentShader: 'varying vec3 vCol; void main(){ float r = length(gl_PointCoord - 0.5) * 2.0; float a = smoothstep(1.0, 0.3, r) * 0.07 + smoothstep(1.0, 0.92, r) * smoothstep(0.85, 0.95, r) * 0.05; gl_FragColor = vec4(vCol * a, 1.0); }',
+  }));
+  scene.add(bokeh);
+  const key = new THREE.PointLight(NEON.cyan, 40, 20); key.position.set(-4, 3, 4);
+  const rim = new THREE.PointLight(NEON.mag, 60, 20); rim.position.set(5, -2, -2);
+  scene.add(key, rim, new THREE.AmbientLight(0x404060, 0.3));
+
+  const pass = buildPassport(); scene.add(pass.card);
+
   camera.position.set(0, 0, 9.5);
   st.run((dt, t) => {
     // breathe apart every few seconds, or while the pointer is held
     const cycle = (t % 8) / 8;
     const auto = cycle < 0.35 ? 0 : cycle < 0.5 ? smooth((cycle - 0.35) / 0.15) : cycle < 0.85 ? 1 : 1 - smooth((cycle - 0.85) / 0.15);
     const open = st.pointer.down ? 1 : st.ctx?.open ?? auto;
-    card.userData.open = (card.userData.open ?? 0) + (open - (card.userData.open ?? 0)) * (1 - Math.pow(0.02, dt));
-    const o = card.userData.open;
-    layers.forEach((l, i) => {
-      l.position.z = l.userData.z + o * (i - 2) * 0.62;
-      l.position.x = o * (i - 2) * -0.12;
-      if (l.userData.tag) l.userData.tag.material.opacity = smooth(Math.max(0, (o - 0.6) / 0.4));
-    });
-    card.rotation.y = -0.55 * o + st.pointer.sx * 0.35 + Math.sin(t * 0.4) * 0.08;
-    card.rotation.x = 0.12 * o - st.pointer.sy * 0.25 + Math.sin(t * 0.3) * 0.05;
-    card.position.x = (st.ctx?.x ?? -1.35) - 0.5 * o; card.position.y = Math.sin(t * 0.8) * 0.05;
-    circuit.material.uniforms.uTime.value = t; foil.material.uniforms.uTime.value = t; bokeh.material.uniforms.uTime.value = t;
+    animatePassport(pass, dt, t, open, st.pointer);
+    pass.card.position.x = (st.ctx?.x ?? -1.35) - 0.5 * pass.open;
+    bokeh.material.uniforms.uTime.value = t;
     key.position.x = -4 + Math.sin(t * 0.5) * 2;
   });
   return st;

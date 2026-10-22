@@ -27,7 +27,6 @@ const FILM = {
 };
 
 export function makeStage(canvas, {fov = 40, bloom = [0.6, 0.45, 0.85], exposure = 1, fog = null, far = 800} = {}) {
-  if (HOST.current) return hostedStage(HOST.current, {fov, bloom, exposure, fog, far});
   const small = innerWidth < 760;
   const renderer = new THREE.WebGLRenderer({canvas, antialias: false, powerPreference: 'high-performance'});
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, small ? 1.25 : 1.5));
@@ -73,24 +72,6 @@ export function makeStage(canvas, {fov = 40, bloom = [0.6, 0.45, 0.85], exposure
       composer.dispose(); renderer.dispose();
     },
   };
-}
-
-/* Hosting: the site's director renders many of these scenes with one renderer. While a host is set,
-   makeStage hands out a stage without its own canvas or loop; the host drives tick(), sizes the camera,
-   and applies the scene's bloom and exposure when it is on screen. */
-export const HOST = {current: null};
-function hostedStage(host, {fov, bloom, exposure, fog, far}) {
-  const scene = new THREE.Scene(); if (fog) scene.fog = fog;
-  const camera = new THREE.PerspectiveCamera(fov, 1, 0.1, far); camera.userData.fov = fov;
-  const st = {
-    renderer: host.renderer, scene, camera, pointer: host.pointer, small: host.small, ctx: host.ctx, look: {bloom, exposure},
-    tick: () => {}, t: 0,
-    run(fn) { st.tick = fn; },
-    step(dt) { st.t += dt; st.tick(dt, st.t); },
-    settle(n = 60) { for (let i = 0; i < n; i++) st.step(0.033); },
-    destroy() { scene.traverse(o => { o.geometry?.dispose?.(); const m = o.material; (Array.isArray(m) ? m : m ? [m] : []).forEach(x => { x.map?.dispose?.(); x.dispose(); }); }); },
-  };
-  return st;
 }
 
 export const fontsReady = () => Promise.all([document.fonts?.load('900 100px "Noto Sans JP Variable"'), document.fonts?.load('700 100px "Chakra Petch"'), document.fonts?.load('500 40px "Geist Mono Variable"'), document.fonts?.ready]).catch(() => {});

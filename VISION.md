@@ -1,22 +1,20 @@
-# Mihari 見張り — design vision (v19: "Six worlds, one journey")
+# Mihari 見張り — design vision (v20: "The Watch Line")
 
 ## One sentence
-The page travels through six cyberpunk worlds, one per chapter, and warps between them: the frame streaks toward its centre, a ring of light opens, and the next world rushes out of it.
+One world and one unbroken flight: over the megacity at night, past a checkpoint where the passport is scanned, down onto a flooded torii path, through a portal made of the swarm, and into the wormhole beyond. No cuts; every change of place is somewhere you fly through.
 
-## The worlds (picked from the 17 in /lab)
-| Chapter | World | What it shows |
+## The line (apps/web/src/landing/journey.js)
+| Chapter | Where you are | Picked from the lab |
 |---|---|---|
-| Hero | Spinner Flight 夜間飛行 | A slow flight over the megacity: holograms, searchlights, air checkpoints. "A million agents. One watch." |
-| 01 Identify / 06 Passport | The Artifact 通行証 | The agent's passport as a physical object; it opens into its layers as you reach the chapter |
-| 02 Decide / 07 Integrate | Senbon Torii 千本鳥居 | An endless neon torii path over a flooded street; every call is stamped at the gates |
-| 03 Prove / 05 Console | Broadcast 電波ジャック | The audit log as a wall of live CRTs that glitch into sync as one screen |
-| 04 Contain / 08 Use cases | Swarm 群れ | Tens of thousands of agents through one gate; Revoke turns the gate red and throws every one back |
-| Finale | Wormhole 超空間 | Straight through the gate |
+| Hero | High over the megacity: holograms, searchlights, air lanes; the swarm portal glows on the horizon and agents stream to it across the sky | 04 Spinner Flight |
+| 01 Identify | A checkpoint hovering over the avenue; the passport is scanned and opens into its labelled layers (its only appearance) | 05 The Artifact |
+| 02 Decide · 03 Prove | Down on a flooded street: the Senbon Torii path. Agents walk the gates and are stamped; the towers beside it dissolve into wireframe as the portal nears | 01 Senbon Torii |
+| 04 Contain | The swarm portal at the end of the path: tens of thousands of agents pour through it. Revoke turns it red and throws them all back | 09 Swarm |
+| Lower sections | Inside: the wormhole, plating flowing past, the swarm streaming along it, iris gates opening ahead | 17 Wormhole |
+| Finale | The last iris opens onto light. "Straight through the gate." | |
 
-## How it is built
-- apps/web/src/landing/director.js: one renderer hosts every world (lab/base.js HOST); worlds are built ahead of time when the browser is idle; only the world on screen is updated and drawn, both during a warp. Bloom and exposure follow the dominant world. The journey eases behind the scroll.
-- Each world sits back behind its chapter's content by a per-chapter dim.
-- The lab (/lab) keeps all 17 directions live for comparison.
+## Flow (kept from v10, The Corridor)
+Scroll is travel along one axis. Each chapter is a camera pose; between poses the camera flies on eased paths, and the subject is framed beside the copy (the view's centre is offset, never the subject hidden behind a panel). The cursor only turns the head a touch. Things keep moving when you stop: traffic, agents, the tunnel's flow.
 
 ## References and what each contributes
 - **Blade Runner / 2049**: rain, wet ground reflecting neon, smog-filtered light, the scale of towers.
