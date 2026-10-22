@@ -655,3 +655,22 @@
   .landing .hero.mh .ticker { display: none; }
   .landing .mh-fin .fin-t { font-size: clamp(44px, 14vw, 76px); }
 }
+
+/* ════ v21 the watch line: passport stage, the great gate ════ */
+.scene-right .wrap { display: flex; justify-content: flex-end; }
+.pass-stage { position: absolute; z-index: 2; left: 0; top: 0; bottom: 0; width: 52%; cursor: grab; touch-action: pan-y; outline: none; }
+.pass-stage:active { cursor: grabbing; }
+.pass-stage:focus-visible { box-shadow: inset 0 0 0 2px var(--cyan); }
+.pass-hint { position: absolute; left: 50%; bottom: 16vh; transform: translateX(-50%); display: flex; gap: 10px; align-items: center; padding: 8px 14px; font: 500 11px var(--mono); letter-spacing: 0.18em; text-transform: uppercase; color: #bfefff; background: rgba(3, 8, 18, 0.7); border: 1px solid rgba(25, 230, 255, 0.3); white-space: nowrap; pointer-events: none; }
+.pass-hint i { width: 6px; height: 6px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 8px var(--cyan); animation: mh-blink 1.6s steps(2) infinite; }
+.scene-gate { min-height: 120vh; align-items: flex-end; padding-bottom: 12vh; }
+.gate-card { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.gate-card .eyebrow { justify-content: center; }
+.gate-line { margin: 10px 0 0; max-width: 46ch; font-size: clamp(15px, 1.15vw, 18px); line-height: 1.6; color: #e3e8f4; text-shadow: 0 2px 18px rgba(0, 0, 0, 0.95); }
+.gate-line span { font-family: var(--kanji); font-weight: 900; color: var(--red, #ff3b4a); margin-right: 8px; }
+@media (max-width: 960px) {
+  .scene-right .wrap { display: block; }
+  .pass-stage { width: 100%; height: 48vh; bottom: auto; }
+  .pass-hint { bottom: 4vh; }
+  .scene-gate { padding: 70vh 0 8vh; }
+}

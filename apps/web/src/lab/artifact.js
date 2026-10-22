@@ -14,7 +14,7 @@ function rounded(w, h, r) {
 }
 function flatGeo() { const g = new THREE.ShapeGeometry(rounded(W, H, 0.12), 16); const uv = g.attributes.uv, p = g.attributes.position; for (let i = 0; i < uv.count; i++) uv.setXY(i, p.getX(i) / W + 0.5, p.getY(i) / H + 0.5); return g; }
 
-function printTexture() {
+export function printTexture() {
   const c = document.createElement('canvas'); c.width = 1360; c.height = 856; const g = c.getContext('2d');
   const mono = (px, w = 500) => `${w} ${px}px "Geist Mono Variable", ui-monospace, monospace`;
   g.fillStyle = '#7fefff'; g.font = mono(28); g.fillText('MIHARI · AGENT PASSPORT · 通行証', 80, 110);

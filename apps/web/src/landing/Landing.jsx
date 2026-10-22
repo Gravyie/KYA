@@ -91,6 +91,26 @@ function Opening({phase}) {
   );
 }
 
+/** The passport's stage: the left half of its chapter. Drag turns it, a click opens it, hovering scans it. */
+function PassStage({worldRef}) {
+  const last = useRef(null);
+  const [open, setOpen] = useState(false);
+  const send = (kind, e) => {
+    const w = worldRef.current; if (!w) return;
+    if (kind === 'down') { last.current = {x: e.clientX, y: e.clientY}; e.currentTarget.setPointerCapture?.(e.pointerId); }
+    let dx = 0, dy = 0;
+    if (kind === 'drag') { if (!last.current) return; dx = e.clientX - last.current.x; dy = e.clientY - last.current.y; last.current = {x: e.clientX, y: e.clientY}; }
+    if (kind === 'up') last.current = null;
+    const o = w.passInput?.(kind, dx, dy); if (kind === 'up') setOpen(!!o);
+  };
+  return (
+    <div className="pass-stage" onPointerEnter={e => send('enter', e)} onPointerLeave={e => send('leave', e)} onPointerDown={e => send('down', e)} onPointerMove={e => send('drag', e)} onPointerUp={e => send('up', e)}
+      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); send('down', e); send('up', e); } }} role="button" tabIndex={0} aria-label="The agent passport. Drag to turn it, click to open its layers." aria-pressed={open}>
+      <span className="pass-hint"><i />{open ? 'Click to close · drag to turn' : 'Drag to turn · click to open'}</span>
+    </div>
+  );
+}
+
 function Nav({alert}) {
   const [solid, setSolid] = useState(false);
   useEffect(() => { const on = () => setSolid(scrollY > 24); on(); addEventListener('scroll', on, {passive: true}); return () => removeEventListener('scroll', on); }, []);
@@ -158,7 +178,7 @@ export default function Landing() {
   const countRef = useRef(0), lastTick = useRef(0);
 
   const handlers = useRef({
-    onStage: f => setBeat(prev => { const b = f >= 4.6 ? 5 : Math.round(f); return prev === b ? prev : b; }),
+    onStage: f => setBeat(prev => { const b = f >= 5.6 ? 6 : Math.round(f); return prev === b ? prev : b; }),
     onDecision: kind => {
       countRef.current += 1; countApi.current?.(countRef.current);
       const now = performance.now(); if (now - lastTick.current < 1200 || !tickRef.current) return; lastTick.current = now;
@@ -172,7 +192,7 @@ export default function Landing() {
   useReveal(booted);
   useEffect(() => { document.title = 'Mihari 見張り — Know your agent'; }, []);
   const done = useCallback(() => { setBooted(true); try { sessionStorage.setItem('mihari.boot', '1'); } catch { /* private mode */ } }, []);
-  useEffect(() => { if (beat !== 4) { setRevoked(false); worldRef.current?.setIris(null); } }, [beat, worldRef]);
+  useEffect(() => { if (beat !== 5) { setRevoked(false); worldRef.current?.setIris(null); } }, [beat, worldRef]);
   // the opening plays once per session: the city fades up out of the dark
   const [opening, setOpening] = useState(() => (booted ? 'off' : 'loading'));
   const [bootRead, setBootRead] = useState(false);   // the boot lines get time to be read, however fast the world loads
@@ -199,7 +219,7 @@ export default function Landing() {
   const snip = SNIPPETS[tab];
 
   return (
-    <div className={`landing w-${mode} ${booted ? 'booted' : ''} ${alert ? 'is-alert' : ''} ${opening !== 'off' ? 'is-opening' : ''}`} ref={rootRef} data-end={beat >= 5 ? '1' : '0'}>
+    <div className={`landing w-${mode} ${booted ? 'booted' : ''} ${alert ? 'is-alert' : ''} ${opening !== 'off' ? 'is-opening' : ''}`} ref={rootRef} data-end={beat >= 6 ? '1' : '0'}>
       {opening !== 'off' && <Opening phase={opening} />}
       <a className="skip" href="#console">Skip to content</a>
       <div className="scrollbar" aria-hidden="true"><i /></div>
@@ -233,8 +253,9 @@ export default function Landing() {
         <div className="tape t2"><div>{'CAUTION // AGENTS AT WORK // 注意 // SCOPED KEYS ONLY // HUMAN IN THE LOOP // '.repeat(4)}</div></div>
       </div>
 
-      <section id="identify" className="scene" data-stage="1">
+      <section id="identify" className="scene scene-right" data-stage="1">
         <span className="scene-kanji" lang="ja" aria-hidden="true">識別</span>
+        <PassStage worldRef={worldRef} />
         <div className="wrap"><div className="sheet rise">
           <p className="eyebrow"><b>01</b><i />第一話 · Identity</p>
           <h2 className="big"><Words>Every agent carries a pass.</Words></h2>
@@ -243,7 +264,15 @@ export default function Landing() {
         </div></div>
       </section>
 
-      <section id="decide" className="scene scene-wide" data-stage="2">
+      {/* ── the great gate: no panels, nothing in the way ── */}
+      <section id="gate" className="scene scene-gate" data-stage="2">
+        <div className="wrap gate-card rise">
+          <p className="eyebrow"><b>02</b><i />大鳥居 · The gate</p>
+          <p className="gate-line"><span lang="ja">関門</span> Every call walks this path. Nothing reaches a tool without passing the gates.</p>
+        </div>
+      </section>
+
+      <section id="decide" className="scene scene-wide" data-stage="3">
         <span className="scene-kanji" lang="ja" aria-hidden="true">審判</span>
         <div className="wrap">
           <div className="decide-head rise">
@@ -255,7 +284,7 @@ export default function Landing() {
         </div>
       </section>
 
-      <section id="prove" className="scene" data-stage="3">
+      <section id="prove" className="scene" data-stage="4">
         <span className="scene-kanji" lang="ja" aria-hidden="true">記録</span>
         <div className="wrap"><div className="sheet sheet-wide rise">
           <p className="eyebrow"><b>03</b><i />第三話 · Audit</p>
@@ -266,7 +295,7 @@ export default function Landing() {
         </div></div>
       </section>
 
-      <section id="contain" className="scene" data-stage="4">
+      <section id="contain" className="scene" data-stage="5">
         <span className="scene-kanji red" lang="ja" aria-hidden="true">封鎖</span>
         <div className="wrap"><div className={`sheet sheet-alert rise ${revoked ? 'on' : ''}`}>
           <div className="hazard" aria-hidden="true" />
@@ -281,14 +310,14 @@ export default function Landing() {
       </section>
 
       <div className="lower">
-        <section id="console" className="sec" data-stage="5">
+        <section id="console" className="sec" data-stage="6">
           <div className="wrap">
             <SectionHead n="05" label="控室 · Console" title="See every call. Approve the risky ones." sub="The console is where a human stays in the loop: live activity, one-click approvals, the audit log, and the switch that revokes." />
             <div className="rise"><ProductWindow /></div>
           </div>
         </section>
 
-        <section id="passport" className="sec" data-stage="6">
+        <section id="passport" className="sec" data-stage="7">
           <div className="wrap">
             <SectionHead n="06" label="通行証 · Passport" title="An identity that travels." sub="Each agent’s pass is an ERC-8004 registration file signed by your registry. One wallet signature publishes it to the public Identity Registry on Base, with nothing to host." />
             <div className="passport-grid">
@@ -305,7 +334,7 @@ export default function Landing() {
           </div>
         </section>
 
-        <section id="integrate" className="sec" data-stage="7">
+        <section id="integrate" className="sec" data-stage="8">
           <div className="wrap">
             <SectionHead n="07" label="接続 · Integrate" title="Drop it in front of the tools you already use." sub="One config line for any MCP client. An SDK for your own code. Plain REST for everything else." />
             <div className="int-grid rise">
@@ -318,14 +347,14 @@ export default function Landing() {
           </div>
         </section>
 
-        <section className="sec" data-stage="8">
+        <section className="sec" data-stage="9">
           <div className="wrap">
             <SectionHead n="08" label="用途 · Use cases" title="Three jobs it does on day one." />
             <Cases />
           </div>
         </section>
 
-        <section id="stack" className="sec" data-stage="9">
+        <section id="stack" className="sec" data-stage="10">
           <div className="wrap">
             <SectionHead n="09" label="構成 · Your stack" title="It fits next to what you already run." sub="Identity providers answer who an agent is and which apps it may open. Mihari answers whether it may do this particular thing right now, and proves what happened." />
             <Stack />
@@ -347,7 +376,7 @@ export default function Landing() {
         </section>
       </div>
 
-      <section className="finale mh-fin" data-stage="10">
+      <section className="finale mh-fin" data-stage="11">
         <div className="wrap fin-in">
           <p className="mh-kicker rise"><span lang="ja">見張り</span> Know your agent</p>
           <h2 className="mh-title fin-t" aria-label="Straight through the gate."><span className="mh-l"><Words>STRAIGHT THROUGH</Words></span><span className="mh-l mh-w" data-text="THE GATE."><Words>THE GATE.</Words></span></h2>

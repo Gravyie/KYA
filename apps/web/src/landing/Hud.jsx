@@ -3,7 +3,8 @@ import {useEffect, useRef} from 'react';
 export const BEATS = [
   {key: 'city', label: 'City', jp: '都市'},
   {key: 'identify', label: 'Passport', jp: '通行証'},
-  {key: 'decide', label: 'Gate', jp: '鳥居'},
+  {key: 'gate', label: 'Gate', jp: '鳥居'},
+  {key: 'decide', label: 'Policy', jp: '審判'},
   {key: 'prove', label: 'Record', jp: '記録'},
   {key: 'contain', label: 'Portal', jp: '門'},
   {key: 'tunnel', label: 'Tunnel', jp: '超空間'},
@@ -52,8 +53,8 @@ export default function Hud({canvasRef, beat, countApi, frameApi, onJump, alert}
       <div className="vf" aria-hidden="true"><i className="tl" /><i className="tr" /><i className="bl" /><i className="br" /></div>
       <div className="ro ro-l" aria-hidden="true"><span>第{String(beat + 1).padStart(2, '0')}幕 · SCENE {String(beat + 1).padStart(2, '0')}</span><b key={b.key}><span lang="ja">{b.jp}</span> {b.label.toUpperCase()}</b></div>
       <div className="ro ro-r" aria-hidden="true"><span>判定数 · VERDICTS (SIM)</span><b ref={countEl}>000000</b></div>
-      <ol className="rail" aria-label="Story progress" hidden={beat > 4}>
-        {BEATS.slice(0, 5).map((x, i) => <li key={x.key}><button type="button" className={i === beat ? 'on' : ''} onClick={() => onJump(i)} aria-label={x.label} aria-current={i === beat}><span lang="ja">{x.jp}</span></button></li>)}
+      <ol className="rail" aria-label="Story progress" hidden={beat > 5}>
+        {BEATS.slice(0, 6).map((x, i) => <li key={x.key}><button type="button" className={i === beat ? 'on' : ''} onClick={() => onJump(i)} aria-label={x.label} aria-current={i === beat}><span lang="ja">{x.jp}</span></button></li>)}
       </ol>
     </div>
   );

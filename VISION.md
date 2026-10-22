@@ -1,17 +1,19 @@
-# Mihari 見張り — design vision (v20: "The Watch Line")
+# Mihari 見張り — design vision (v21: "The Watch Line", reworked)
 
 ## One sentence
 One world and one unbroken flight: over the megacity at night, past a checkpoint where the passport is scanned, down onto a flooded torii path, through a portal made of the swarm, and into the wormhole beyond. No cuts; every change of place is somewhere you fly through.
 
 ## The line (apps/web/src/landing/journey.js)
-| Chapter | Where you are | Picked from the lab |
-|---|---|---|
-| Hero | High over the megacity: holograms, searchlights, air lanes; the swarm portal glows on the horizon and agents stream to it across the sky | 04 Spinner Flight |
-| 01 Identify | A checkpoint hovering over the avenue; the passport is scanned and opens into its labelled layers (its only appearance) | 05 The Artifact |
-| 02 Decide · 03 Prove | Down on a flooded street: the Senbon Torii path. Agents walk the gates and are stamped; the towers beside it dissolve into wireframe as the portal nears | 01 Senbon Torii |
-| 04 Contain | The swarm portal at the end of the path: tens of thousands of agents pour through it. Revoke turns it red and throws them all back | 09 Swarm |
-| Lower sections | Inside: the wormhole, plating flowing past, the swarm streaming along it, iris gates opening ahead | 17 Wormhole |
-| Finale | The last iris opens onto light. "Straight through the gate." | |
+The swarm is the thread: one stream of agents (GPU streaks with glowing heads) pours across the sky over the city, sweeps down to the horizon, forms the portal's ring, and through it becomes the wormhole's walls.
+| Chapter | Where you are |
+|---|---|
+| Hero | High over the megacity; the river of agents pours from the top of the frame to the portal's light on the horizon |
+| 01 Identify | A checkpoint over the avenue: the passport on its own stage, left of the copy. Drag to turn it, click to open its layers, hover to scan |
+| 02 The gate | No panels: the great entrance torii (大鳥居), lit and named, with the path beyond |
+| 03 Decide · 04 Prove | Inside the Senbon Torii path; the view's centre is lifted so the path's vanishing point sits above the policy panel |
+| 05 Contain | Out through the great exit gate onto the plaza; the swarm portal stands on the water: ring, accretion disc of agents, light rays, rim lightning, spiral vortex, reflection. Revoke throws every agent back |
+| 06–10 | The wormhole of agents: a ring of live log screens (console), passports streaming past, a helix of code (integrate), labelled layer rings (your stack), irises between chapters |
+| Finale | The last iris opens onto light. "Straight through the gate." |
 
 ## Flow (kept from v10, The Corridor)
 Scroll is travel along one axis. Each chapter is a camera pose; between poses the camera flies on eased paths, and the subject is framed beside the copy (the view's centre is offset, never the subject hidden behind a panel). The cursor only turns the head a touch. Things keep moving when you stop: traffic, agents, the tunnel's flow.
