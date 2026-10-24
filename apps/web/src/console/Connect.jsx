@@ -2,6 +2,7 @@ import {useState} from 'react';
 import {Code, CopyButton} from '../components/ui.jsx';
 import {Link} from '../lib/router.jsx';
 import {useConsole} from './ctx.js';
+import {tabKeys} from '../lib/useDialog.js';
 
 export default function Connect() {
   const {data} = useConsole();
@@ -19,7 +20,7 @@ export default function Connect() {
       "env": { "MIHARI_AGENT_KEY": "mia_…", "MIHARI_URL": "${url}" }
     }
   }
-}`, 'Paste into Claude Desktop, Cursor or any MCP client config. Tool names become rule actions (read_file, write_file…); the first path, url or query argument becomes the resource. Tools the agent has no rule for are hidden from it.'],
+}`, 'Paste into Claude Desktop, Cursor or any MCP client config. Tool names become rule actions (read_file, write_file…); the first path, url or query argument becomes the resource. Tools the agent has no rule for are hidden from it. If the agent runs on another machine, replace the wrapper path with its local checkout path.'],
     sdk: ['Node SDK', `# in your agent's project
 npm install ${sdk}
 
@@ -29,7 +30,7 @@ const guard = createMihari({ agentKey: process.env.MIHARI_AGENT_KEY, baseUrl: '$
 await guard.run(
   { action: 'files.read', resource: 'workspace/report.md', note: 'why the agent wants it' },
   () => readFile('report.md', 'utf8'),
-);`, 'Fails closed if Mihari is unreachable. “Ask me” rules block until you decide in Approvals.'],
+);`, 'Use the SDK example template for these action names. Fails closed if Wardrail is unreachable. “Ask me” rules block until you decide in Approvals.'],
     rest: ['REST', `curl -s ${url}/api/authorize \\
   -H "authorization: Bearer $MIHARI_AGENT_KEY" -H "content-type: application/json" \\
   -d '{"action":"payments.send","resource":"acme-corp","amount":240,"note":"March invoice"}'
@@ -37,13 +38,16 @@ await guard.run(
 # outcome is "allow", "ask" or "deny"
 # if "ask": GET ${url}/api/authorize/<eventId> until status ≠ pending
 # then:  POST ${url}/api/receipt  {"eventId":"…","outcome":"success"}`, 'Any language works. Every authorize call is one audit event.'],
-    example: ['Try an example', `# 1. register an agent from the “Coding agent” template, copy its key
+    example: ['Try an example', `# 1. register an agent from the “SDK example” template, copy its key
 # 2. run a scripted agent that tries allowed, denied and approval-gated calls:
 MIHARI_AGENT_KEY=mia_… MIHARI_URL=${url} node ${examples}/research-agent.mjs
 
-# or put the firewall in front of the bundled demo MCP server:
+# For MCP instead, register a Coding agent and edit its resource paths.
+# Then wrap the bundled demo server with that agent’s key:
 MIHARI_AGENT_KEY=mia_… MIHARI_URL=${url} node ${mcp} -- node ${examples}/demo-mcp-server.mjs`, 'The research agent pauses on the write: approve it under Approvals and watch it continue.'],
     verify: ['Prove identity', `# the agent mints a short-lived assertion for one audience
+import { createMihari } from '@mihari/sdk';
+const guard = createMihari({ agentKey: process.env.MIHARI_AGENT_KEY, baseUrl: '${url}' });
 const { token } = await guard.assertion('https://api.partner.com');
 
 # the partner verifies it (offline) and checks revocation
@@ -64,11 +68,11 @@ node ${examples}/relying-party.mjs      # a runnable example of the receiving si
         </div>
       </section>
       <section className="panel">
-        <div className="tabs" role="tablist">
-          {Object.entries(tabs).map(([k, [label]]) => <button key={k} role="tab" aria-selected={tab === k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{label}</button>)}
+        <div className="tabs" role="tablist" aria-label="Integration method" onKeyDown={tabKeys}>
+          {Object.entries(tabs).map(([k, [label]]) => <button key={k} id={`connect-tab-${k}`} role="tab" aria-controls="connect-panel" tabIndex={tab === k ? 0 : -1} aria-selected={tab === k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{label}</button>)}
         </div>
-        <p className="muted pad-b">{note}</p>
-        <Code title={tabs[tab][0]} plain>{code}</Code>
+        <div id="connect-panel" role="tabpanel" aria-labelledby={`connect-tab-${tab}`}><p className="muted pad-b">{note}</p>
+        <Code title={tabs[tab][0]} plain>{code}</Code></div>
       </section>
       <section className="panel">
         <div className="panel-head"><h2>Registry</h2></div>

@@ -1,14 +1,15 @@
 import {CopyButton, Code} from '../components/ui.jsx';
 import {useConsole} from './ctx.js';
-import {X} from 'lucide-react';
+import {useDialog} from '../lib/useDialog.js';
 
 export default function KeyReveal({agent, secret, onClose, rotated}) {
   const url = location.origin;
+  const dialogRef = useDialog(); // A secret must be deliberately acknowledged, never dismissed by Escape.
   const mcp = useConsole().data.paths.mcp;
   return (
     <div className="modal-back">
-      <div className="modal" role="dialog" aria-modal="true" aria-label="Agent key">
-        <div className="modal-head"><h2>{rotated ? 'New key for ' : ''}{agent.name}</h2><button className="icon-btn" onClick={onClose} aria-label="Done"><X size={17} /></button></div>
+      <div ref={dialogRef} className="modal" role="dialog" aria-modal="true" aria-label="Agent key">
+        <div className="modal-head"><h2>{rotated ? 'New key for ' : ''}{agent.name}</h2></div>
         <p className="muted">This key lets the agent ask for permission as <b>{agent.name}</b>. It is shown once and stored only as a hash.</p>
         <div className="secret"><code>{secret}</code><CopyButton text={secret} /></div>
         <p className="label">Fastest way to use it: wrap any MCP server</p>

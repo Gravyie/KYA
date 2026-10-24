@@ -14,11 +14,13 @@ async function call(path, {method = 'GET', key, body} = {}) {
   try {
     res = await fetch(path, {
       method,
+      signal: AbortSignal.timeout(15000),
       headers: {...(key ? {authorization: `Bearer ${key}`} : {}), ...(body ? {'content-type': 'application/json'} : {})},
       body: body ? JSON.stringify(body) : undefined,
     });
-  } catch {
-    throw new ApiError('Cannot reach the Mihari server. Is it running?', 0);
+  } catch (e) {
+    if (e.name === 'TimeoutError') throw new ApiError('The server took too long to respond. Check the current state before retrying an action.', 0);
+    throw new ApiError('Cannot reach the Wardrail server. Is it running?', 0);
   }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new ApiError(data.error || `Request failed (${res.status})`, res.status);

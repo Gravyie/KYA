@@ -1,0 +1,18 @@
+services:
+  wardrail:
+    build: .
+    init: true
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5055:5055"
+    environment:
+      MIHARI_PUBLIC_URL: ${MIHARI_PUBLIC_URL:-http://127.0.0.1:5055}
+    volumes:
+      - registry:/data
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+volumes:
+  registry:

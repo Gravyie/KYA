@@ -1,5 +1,6 @@
 import {useEffect, useRef, useState} from 'react';
 import {Bot, Inbox, LayoutDashboard, ScrollText, Check, X} from 'lucide-react';
+import {Mark} from '../components/ui.jsx';
 
 const FEED = [
   ['allow', 'read_file', 'repo/src/billing.ts'], ['allow', 'web.search', '“seed benchmarks”'], ['deny', 'read_file', 'repo/.env.local'],
@@ -7,7 +8,7 @@ const FEED = [
   ['allow', 'invoices.read', 'inv-2291'], ['deny', 'payments.send', '$90,000 → unknown-llc'],
 ];
 const ASKS = [
-  {agent: 'research-bot', action: 'files.write', resource: 'workspace/out/summary.md', note: 'Summarising the README for the weekly report'},
+  {agent: 'workspace-agent', action: 'files.write', resource: 'workspace/out/summary.md', note: 'Summarising the README for the weekly report'},
   {agent: 'ops-agent', action: 'payments.send', resource: 'acme-corp · $420', note: 'March invoice, matches PO-1182'},
   {agent: 'support-agent', action: 'reply.send', resource: 'ticket T-4481', note: 'Refund confirmation drafted for review'},
 ];
@@ -46,10 +47,10 @@ export default function ProductWindow() {
 
   return (
     <div className="pw" ref={ref}>
-      <div className="pw-bar"><i /><i /><i /><span>mihari · console</span><em>Illustrative, interactive</em></div>
+      <div className="pw-bar"><i /><i /><i /><span>wardrail · console</span><em>Illustrative, interactive</em></div>
       <div className="pw-body">
         <aside>
-          <b className="pw-logo"><svg width="18" height="18" viewBox="0 0 32 32"><circle cx="16" cy="16" r="11" fill="none" stroke="currentColor" strokeWidth="3.4" /><circle cx="16" cy="16" r="3.4" fill="var(--allow-glow)" /></svg> Mihari</b>
+          <b className="pw-logo"><Mark size={18} /> Wardrail</b>
           <span><LayoutDashboard size={15} /> Overview</span><span><Bot size={15} /> Agents</span>
           <span className="on"><Inbox size={15} /> Approvals {pending && <u>1</u>}</span><span><ScrollText size={15} /> Audit log</span>
         </aside>

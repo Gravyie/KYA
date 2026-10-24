@@ -1,6 +1,6 @@
 export const TEMPLATES = [
   {
-    id: 'coding', name: 'Coding agent', blurb: 'Reads and edits the repo, never secrets, asks before pushing.',
+    id: 'coding', name: 'Coding agent', blurb: 'Reads the repo, blocks root .env files, asks before pushing.',
     description: 'Works inside a repository via MCP filesystem and git tools.',
     scopes: [
       {mode: 'allow', action: 'read_file', resources: ['/Users/me/project/*'], maxAmount: ''},
@@ -32,6 +32,16 @@ export const TEMPLATES = [
     limits: {budget: {amount: '', windowHours: 24}, rate: {count: '', windowMinutes: 1}},
   },
   {
+    id: 'sdk', name: 'SDK example', blurb: 'Read a workspace, deny secrets, approve summary writes.',
+    description: 'Matches the bundled research-agent.mjs SDK walkthrough.',
+    scopes: [
+      {mode: 'allow', action: 'files.read', resources: ['workspace/*'], maxAmount: ''},
+      {mode: 'deny', action: 'files.read', resources: ['workspace/.env*'], maxAmount: ''},
+      {mode: 'ask', action: 'files.write', resources: ['workspace/out/*'], maxAmount: ''},
+    ],
+    limits: {budget: {amount: '', windowHours: 24}, rate: {count: 60, windowMinutes: 1}},
+  },
+  {
     id: 'blank', name: 'Start blank', blurb: 'One example rule. Everything else is denied by default.',
     description: '',
     scopes: [{mode: 'allow', action: 'files.read', resources: ['workspace/*'], maxAmount: ''}],
@@ -39,14 +49,29 @@ export const TEMPLATES = [
   },
 ];
 
+function numeric(value, label, {min = 0, max = Infinity, integer = false} = {}) {
+  const n = Number(value);
+  if (value === '' || value == null || !Number.isFinite(n) || n < min || n > max || (integer && !Number.isInteger(n))) {
+    throw new Error(`${label} must be ${integer ? 'a whole number' : 'a number'} between ${min} and ${max === Infinity ? 'a finite maximum' : max}.`);
+  }
+  return n;
+}
+
 export const toPayload = ({scopes, limits}) => ({
-  scopes: scopes.map(s => ({
-    mode: s.mode, action: s.action.trim(), maxAmount: s.maxAmount === '' ? null : Number(s.maxAmount),
+  scopes: scopes.map((s, index) => ({
+    mode: s.mode, action: s.action.trim(),
+    maxAmount: s.maxAmount === '' || s.maxAmount == null ? null : numeric(s.maxAmount, `Rule ${index + 1} maximum amount`),
     resources: (Array.isArray(s.resources) ? s.resources : String(s.resources).split(',')).map(r => r.trim()).filter(Boolean),
   })),
   limits: {
-    budget: limits.budget?.amount === '' || limits.budget?.amount == null ? null : {amount: Number(limits.budget.amount), windowHours: Number(limits.budget.windowHours || 24)},
-    rate: limits.rate?.count === '' || limits.rate?.count == null ? null : {count: Number(limits.rate.count), windowMinutes: Number(limits.rate.windowMinutes || 1)},
+    budget: limits.budget?.amount === '' || limits.budget?.amount == null ? null : {
+      amount: numeric(limits.budget.amount, 'Budget'),
+      windowHours: numeric(limits.budget.windowHours, 'Budget window in hours', {min: 1, max: 2160}),
+    },
+    rate: limits.rate?.count === '' || limits.rate?.count == null ? null : {
+      count: numeric(limits.rate.count, 'Rate limit', {min: 1, integer: true}),
+      windowMinutes: numeric(limits.rate.windowMinutes, 'Rate window in minutes', {min: 1, max: 1440}),
+    },
   },
 });
 

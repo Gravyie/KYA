@@ -1,6 +1,6 @@
 import {useCallback, useEffect, useRef, useState} from 'react';
 import Lenis from 'lenis';
-import {ArrowRight, ShieldCheck} from 'lucide-react';
+import {ArrowRight, ShieldCheck, Menu, X} from 'lucide-react';
 import {Link} from '../lib/router.jsx';
 import {Logo, Mark, Code, CopyButton} from '../components/ui.jsx';
 import {SNIPPETS, DECISIONS} from './snippets.js';
@@ -23,27 +23,32 @@ const webglOk = () => { try { const c = document.createElement('canvas'); return
 function useWorld(canvasRef, frameApi, handlers) {
   const [mode, setMode] = useState('loading');
   const worldRef = useRef(null);
+  const [graphicsLost, setGraphicsLost] = useState(false);
   const cb = useRef(handlers); cb.current = handlers;
 
   useEffect(() => {
-    if (!webglOk()) { setMode('static'); return undefined; }
+    if (graphicsLost || !webglOk()) { setMode('static'); return undefined; }
+    setMode('loading');
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
     let world, lenis, cancelled = false, raf = 0, rafLenis = 0;
+    const canvas = canvasRef.current;
+    const contextLost = e => { e.preventDefault(); setGraphicsLost(true); };
+    canvas?.addEventListener('webglcontextlost', contextLost);
 
     import('./journey.js').then(({createWorld}) => {
       if (cancelled || !canvasRef.current) return;
       try {
-        world = createWorld(canvasRef.current, {reduced, small: innerWidth < 760, onDecision: k => cb.current.onDecision?.(k), onFrame: (a, info) => { frameApi.current?.(a, info); cb.current.onFrame?.(info); }});
+        world = createWorld(canvasRef.current, {reduced, small: innerWidth < 760, onDecision: k => cb.current.onDecision?.(k), onPassState: open => cb.current.onPassState?.(open), onFrame: (a, info) => { frameApi.current?.(a, info); cb.current.onFrame?.(info); }});
       } catch (e) { console.error(e); setMode('static'); return; }
       worldRef.current = world;
-      if (location.search.includes('debug')) window.__world = world;
+      if (import.meta.env.DEV && location.search.includes('debug')) window.__world = world;
       setMode('ready');
 
       // Stage centres are measured once (and on resize), then mapped from scrollY: no layout reads while scrolling.
       let centers = [];
       const measure = () => {
         const beats = [...document.querySelectorAll('[data-stage]')].sort((a, b) => a.dataset.stage - b.dataset.stage);
-        centers = beats.map(el => { const r = el.getBoundingClientRect(); return r.top + scrollY + r.height / 2; });
+        centers = beats.map(el => { const r = el.getBoundingClientRect(); return r.top + scrollY + (el.hasAttribute('data-entry')?Math.min(r.height,innerHeight):r.height) / 2; });
       };
       const update = () => {
         raf = 0;
@@ -72,18 +77,18 @@ function useWorld(canvasRef, frameApi, handlers) {
         const ease = t => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
         let busyUntil = 0, lastWheel = 0, settledAt = 0;
         const busy = () => performance.now() < busyUntil;
-        const snaps = () => [...document.querySelectorAll('[data-snap]')].map(el => { const r = el.getBoundingClientRect(); return {top: r.top + scrollY, bottom: r.bottom + scrollY, h: r.height}; });
-        const place = (sec, dir) => (sec.h <= innerHeight + 2 ? sec.top - (innerHeight - sec.h) / 2 : dir > 0 ? sec.top : sec.bottom - innerHeight);
+        const snaps = () => [...document.querySelectorAll('[data-snap]')].map(el => { const r = el.getBoundingClientRect(); return {top: r.top + scrollY, bottom: r.bottom + scrollY, h: r.height,entry:el.hasAttribute('data-entry'),stage:Number(el.dataset.stage)}; });
+        const place = (sec, dir) => sec.entry?sec.top:(sec.h <= innerHeight + 2 ? sec.top - (innerHeight - sec.h) / 2 : dir > 0 ? sec.top : sec.bottom - innerHeight);
         // while a glide runs, Lenis is stopped so no stray wheel event can redirect it
         const go = y => { busyUntil = performance.now() + 1400; lenis.stop(); lenis.scrollTo(Math.max(0, y), {duration: 1.35, easing: ease, force: true, onComplete: () => { lenis.start(); settledAt = performance.now(); busyUntil = 0; }}); setTimeout(() => { if (lenis.isStopped) { lenis.start(); settledAt = performance.now(); } }, 1500); };
         const step = dir => {
           const list = snaps(), y = Math.round(lenis.targetScroll ?? scrollY), mid = y + innerHeight / 2;   // where Lenis is heading, not where it is
           const i = list.findIndex(sec => mid >= sec.top - 1 && mid < sec.bottom + 1);
-          if (i < 0) {                                                    // in the free part: snap only when a chapter is on screen
-            const near = list.find(sec => dir > 0 ? sec.top > y && sec.top < y + innerHeight * 0.6 : sec.bottom < y + innerHeight && sec.bottom > y + innerHeight * 0.4);
-            if (!near) return false; go(place(near, dir)); return true;
-          }
+          // Beyond the gateway, no later section can recapture ordinary reading.
+          const entry = list.find(sec => sec.entry);
+          if ((entry && y > entry.top + 4) || i < 0) return false;
           const sec = list[i];
+          if(sec.entry&&(dir>0||y>sec.top+4))return false;  // continuous reading begins once the gateway has been crossed
           if (sec.h > innerHeight + 2 && (dir > 0 ? y + innerHeight < sec.bottom - 4 : y > sec.top + 4)) return false;   // tall chapter: read it first
           const next = list[i + dir];
           if (!next || (dir > 0 ? next.top - sec.bottom : sec.top - next.bottom) > 240) return false;                     // the free part begins: scroll on
@@ -91,20 +96,34 @@ function useWorld(canvasRef, frameApi, handlers) {
         };
         const onWheel = e => {
           const now = performance.now(), gap = now - lastWheel; lastWheel = now;
-          if (Math.abs(e.deltaY) < 2 || e.ctrlKey) return;
+          if (Math.abs(e.deltaY) < 2 || e.ctrlKey || e.target.closest?.('[data-lenis-prevent]')) return;
           if (busy() || (now - settledAt < 450 && gap < 120)) { e.preventDefault(); e.stopImmediatePropagation(); return; }   // a gesture's tail, not a new one
           if (step(Math.sign(e.deltaY))) { e.preventDefault(); e.stopImmediatePropagation(); }
         };
         const onKey = e => {
-          if (e.target.closest?.('input, textarea, select, [contenteditable]')) return;
+          if (e.target.closest?.('input, textarea, select, button, a, summary, [role="button"], [role="tab"], [contenteditable]')) return;
           const dir = ['ArrowDown', 'PageDown', ' '].includes(e.key) ? (e.shiftKey && e.key === ' ' ? -1 : 1) : ['ArrowUp', 'PageUp'].includes(e.key) ? -1 : 0;
           if (!dir) return;
           if (busy()) { e.preventDefault(); return; }
           if (step(dir)) e.preventDefault();
         };
+        let touchY=null,touchGateway=false,touchCaptured=false;
+        const onTouchStart=e=>{
+          if(e.touches.length!==1||e.target.closest?.('button,a,input,[role="button"],[data-lenis-prevent]'))return;
+          const y=scrollY,mid=y+innerHeight/2,sec=snaps().find(s=>mid>=s.top-1&&mid<s.bottom+1);
+          touchY=e.touches[0].clientY;touchGateway=sec?.stage===5||(sec?.entry&&Math.abs(y-sec.top)<5);touchCaptured=false;
+        };
+        const onTouchMove=e=>{
+          if(touchCaptured&&busy()){e.preventDefault();return;}
+          if(!touchGateway||touchY===null||e.touches.length!==1)return;
+          const delta=touchY-e.touches[0].clientY;
+          if(Math.abs(delta)>24&&step(Math.sign(delta))){touchGateway=false;touchCaptured=true;e.preventDefault();}
+        };
+        const onTouchEnd=()=>{touchY=null;touchGateway=touchCaptured=false;};
         addEventListener('wheel', onWheel, {passive: false, capture: true});
         addEventListener('keydown', onKey);
-        world.snapCleanup = () => { removeEventListener('wheel', onWheel, {capture: true}); removeEventListener('keydown', onKey); };
+        addEventListener('touchstart',onTouchStart,{passive:true});addEventListener('touchmove',onTouchMove,{passive:false});addEventListener('touchend',onTouchEnd);addEventListener('touchcancel',onTouchEnd);
+        world.snapCleanup = () => { removeEventListener('wheel', onWheel, {capture: true}); removeEventListener('keydown', onKey);removeEventListener('touchstart',onTouchStart);removeEventListener('touchmove',onTouchMove);removeEventListener('touchend',onTouchEnd);removeEventListener('touchcancel',onTouchEnd); };
       }
       const remeasure = () => { measure(); queue(); };
       const ro = new ResizeObserver(remeasure); ro.observe(document.body);
@@ -113,40 +132,39 @@ function useWorld(canvasRef, frameApi, handlers) {
       world.cleanup = () => { removeEventListener('scroll', queue); ro.disconnect(); world.snapCleanup?.(); };
     }).catch(e => { console.error(e); setMode('static'); });
 
-    return () => { cancelled = true; cancelAnimationFrame(raf); cancelAnimationFrame(rafLenis); lenis?.destroy(); window.__lenis = null; world?.cleanup?.(); world?.destroy(); };
-  }, [canvasRef, frameApi]);
+    return () => { cancelled = true; canvas?.removeEventListener('webglcontextlost', contextLost); cancelAnimationFrame(raf); cancelAnimationFrame(rafLenis); lenis?.destroy(); window.__lenis = null; world?.cleanup?.(); world?.destroy(); worldRef.current = null; if (import.meta.env.DEV) delete window.__world; };
+  }, [canvasRef, frameApi, graphicsLost]);
   return {mode, worldRef};
 }
 
 /** Covers the page while the world loads; then the stack powers up behind it, floor by floor. */
 function Opening({phase}) {
   return (
-    <div className={`opening op-${phase}`} aria-hidden="true">
+    <div className={`opening op-${phase}`}>
       <div className="op-load">
         <Mark size={56} live />
-        <p><span lang="ja">見張り</span> MIHARI</p>
-        <i className="op-bar"><b /></i>
-        <em>{phase === 'loading' ? 'Waking the city' : 'Click to skip'}</em>
+        <p>WARDRAIL</p>
+        <i className="op-bar" aria-hidden="true"><b /></i>
+        <em role="status">{phase === 'loading' ? 'Preparing the city' : 'Entering Wardrail'}</em>
       </div>
     </div>
   );
 }
 
 /** The passport's stage: the left half of its chapter. Drag turns it, a click opens it, hovering scans it. */
-function PassStage({worldRef}) {
+function PassStage({worldRef, open}) {
   const last = useRef(null);
-  const [open, setOpen] = useState(false);
   const send = (kind, e) => {
     const w = worldRef.current; if (!w) return;
     if (kind === 'down') { last.current = {x: e.clientX, y: e.clientY}; e.currentTarget.setPointerCapture?.(e.pointerId); }
     let dx = 0, dy = 0;
     if (kind === 'drag') { if (!last.current) return; dx = e.clientX - last.current.x; dy = e.clientY - last.current.y; last.current = {x: e.clientX, y: e.clientY}; }
-    if (kind === 'up') last.current = null;
-    const o = w.passInput?.(kind, dx, dy); if (kind === 'up') setOpen(!!o);
+    if (kind === 'up' || kind === 'cancel') last.current = null;
+    w.passInput?.(kind, dx, dy);
   };
   return (
-    <div className="pass-stage" onPointerEnter={e => send('enter', e)} onPointerLeave={e => send('leave', e)} onPointerDown={e => send('down', e)} onPointerMove={e => send('drag', e)} onPointerUp={e => send('up', e)}
-      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); send('down', e); send('up', e); } }} role="button" tabIndex={0} aria-label="The agent passport. Drag to turn it, click to open its layers." aria-pressed={open}>
+    <div className="pass-stage" onPointerEnter={e => send('enter', e)} onPointerLeave={e => send('leave', e)} onPointerDown={e => send('down', e)} onPointerMove={e => send('drag', e)} onPointerUp={e => send('up', e)} onPointerCancel={e => send('cancel', e)}
+      onKeyDown={e => { if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) { e.preventDefault(); worldRef.current?.passInput('down'); worldRef.current?.passInput('up'); } }} role="button" tabIndex={0} aria-label="The agent passport. Drag to turn it, click to open its layers." aria-pressed={open}>
       <span className="pass-hint"><i />{open ? 'Click to close · drag to turn' : 'Drag to turn · click to open'}</span>
     </div>
   );
@@ -154,18 +172,37 @@ function PassStage({worldRef}) {
 
 function Nav({alert}) {
   const [solid, setSolid] = useState(false);
+  const [active,setActive]=useState(null),[menuOpen,setMenuOpen]=useState(false);
+  const menuButton=useRef(null);
+  useEffect(()=>{
+    const sections=[['.hero',null],['#identify','story'],['#gate','story'],['#decide','policy'],['#prove','story'],['#contain','story'],['#console',null],['#passport','passport'],['#integrate','integrate'],['#stack',null],['.finale',null]];
+    const names=new Map();const observer=new IntersectionObserver(entries=>{for(const entry of entries)if(entry.isIntersecting)setActive(names.get(entry.target));},{rootMargin:'-30% 0px -50% 0px'});
+    sections.forEach(([selector,name])=>{const el=document.querySelector(selector);if(el){names.set(el,name);observer.observe(el);}});
+    return()=>observer.disconnect();
+  },[]);
+  useEffect(()=>{
+    if(!menuOpen)return;
+    const close=e=>{if(e.key==='Escape'){setMenuOpen(false);menuButton.current?.focus();}else if(e.type==='pointerdown'&&!e.target.closest('.nav'))setMenuOpen(false);};
+    document.addEventListener('keydown',close);document.addEventListener('pointerdown',close);
+    return()=>{document.removeEventListener('keydown',close);document.removeEventListener('pointerdown',close);};
+  },[menuOpen]);
   useEffect(() => { const on = () => setSolid(scrollY > 24); on(); addEventListener('scroll', on, {passive: true}); return () => removeEventListener('scroll', on); }, []);
-  const go = id => e => { const el = document.getElementById(id); if (!el) return; e.preventDefault(); window.__lenis ? window.__lenis.scrollTo(el, {offset: -80}) : el.scrollIntoView({behavior: 'smooth'}); };
+  const go = id => e => { setMenuOpen(false); const el = document.getElementById(id); if (!el) return; e.preventDefault(); window.__lenis ? window.__lenis.scrollTo(el, {offset: el.hasAttribute('data-snap') ? 0 : -80}) : el.scrollIntoView({behavior: 'smooth'}); };
   return (
     <header className={`nav ${solid ? 'solid' : ''}`}>
       <div className="wrap nav-in">
         <Logo />
         <nav aria-label="Main">
-          <a href="#identify" onClick={go('identify')}>Story</a><a href="#decide" onClick={go('decide')}>Policy</a><a href="#passport" onClick={go('passport')}>Passport</a><a href="#integrate" onClick={go('integrate')}>Integrate</a>
+          <a href="#identify" aria-current={active==='story'?'location':undefined} onClick={go('identify')}>Story</a><a href="#decide" aria-current={active==='policy'?'location':undefined} onClick={go('decide')}>Policy</a><a href="#passport" aria-current={active==='passport'?'location':undefined} onClick={go('passport')}>Passport</a><a href="#integrate" aria-current={active==='integrate'?'location':undefined} onClick={go('integrate')}>Integrate</a>
           <Link to="/docs">Docs</Link><Link to="/verify">Verify</Link>
         </nav>
-        <span className={`sys ${alert ? 'red' : ''}`} aria-hidden="true"><i />{alert ? '封鎖 LOCKDOWN' : '稼働 ONLINE'}</span>
+        <span className={`sys ${alert ? 'red' : ''}`} aria-hidden="true"><i />{alert ? '封鎖 LOCKDOWN' : 'DEMO ACTIVE'}</span>
         <Link to="/app" className="btn sm">Console <ArrowRight size={14} /></Link>
+        <button className="mobile-menu-toggle" ref={menuButton} type="button" aria-expanded={menuOpen} aria-controls="mobile-navigation" aria-label={menuOpen?'Close navigation':'Open navigation'} onClick={()=>setMenuOpen(v=>!v)}>{menuOpen?<X size={20}/>:<Menu size={20}/>}</button>
+        <nav id="mobile-navigation" className={`mobile-links ${menuOpen?'open':''}`} data-lenis-prevent aria-label="Mobile navigation" hidden={!menuOpen}>
+          <a href="#identify" onClick={go('identify')}>Story</a><a href="#decide" onClick={go('decide')}>Policy</a><a href="#passport" onClick={go('passport')}>Passport</a><a href="#integrate" onClick={go('integrate')}>Integrate</a>
+          <Link to="/docs" onClick={()=>setMenuOpen(false)}>Docs</Link><Link to="/verify" onClick={()=>setMenuOpen(false)}>Verify an agent</Link>
+        </nav>
       </div>
     </header>
   );
@@ -215,37 +252,37 @@ export default function Landing() {
   const [beat, setBeat] = useState(0);
   const [revoked, setRevoked] = useState(false);
   const [alert, setAlert] = useState(false);
+  const [passportOpen, setPassportOpen] = useState(false);
   const [booted, setBooted] = useState(() => { try { return sessionStorage.getItem('mihari.boot') === '1'; } catch { return false; } });
   const countRef = useRef(0), lastTick = useRef(0);
 
   const handlers = useRef({
-    onStage: f => setBeat(prev => { const b = f >= 5.6 ? 6 : Math.round(f); return prev === b ? prev : b; }),
+    onPassState: setPassportOpen,
+    onStage: f => setBeat(prev => { const b = Math.round(f); return prev === b ? prev : b; }),
     onDecision: kind => {
       countRef.current += 1; countApi.current?.(countRef.current);
-      const now = performance.now(); if (now - lastTick.current < 1200 || !tickRef.current) return; lastTick.current = now;
+      const now = performance.now(); if (now - lastTick.current < 2200 || !tickRef.current) return; lastTick.current = now;
       const pool = DECISIONS[kind]; const el = tickRef.current;
       el.dataset.kind = kind; el.querySelector('b').textContent = kind === 'allow' ? '可決 ALLOW' : kind === 'ask' ? '保留 ASK' : '否決 DENY'; el.querySelector('code').textContent = pool[Math.floor(Math.random() * pool.length)];
       el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
     },
-    onFrame: info => { const a = info.alert > 0.5; setAlert(prev => (prev === a ? prev : a)); },
+    onFrame: info => { if(info.accent&&rootRef.current&&rootRef.current.dataset.chapterAccent!==info.accent){rootRef.current.dataset.chapterAccent=info.accent;rootRef.current.style.setProperty('--chapter-accent','#'+info.accent);} const a = info.alert > 0.5; setAlert(prev => (prev === a ? prev : a)); },
   }).current;
   const {mode, worldRef} = useWorld(canvasRef, frameApi, handlers);
   useReveal(booted);
-  useEffect(() => { document.title = 'Mihari 見張り — Know your agent'; }, []);
+  useEffect(() => { document.title = 'Wardrail | Identity and permissions for AI agents'; }, []);
   const done = useCallback(() => { setBooted(true); try { sessionStorage.setItem('mihari.boot', '1'); } catch { /* private mode */ } }, []);
   useEffect(() => { if (beat !== 5) { setRevoked(false); worldRef.current?.setIris(null); } }, [beat, worldRef]);
   // the opening plays once per session: the city fades up out of the dark
   const [opening, setOpening] = useState(() => (booted ? 'off' : 'loading'));
-  const [bootRead, setBootRead] = useState(false);   // the boot lines get time to be read, however fast the world loads
-  useEffect(() => { const t = setTimeout(() => setBootRead(true), 900); return () => clearTimeout(t); }, []);
   useEffect(() => {
-    if (opening !== 'loading') return;
     if (mode === 'static') { setOpening('off'); done(); return; }
-    if (mode !== 'ready' || !bootRead) return;
+    if (opening !== 'loading') return;
+    if (mode !== 'ready') return;
     scrollTo(0, 0); window.__lenis?.stop();
     setOpening('playing');
     worldRef.current.intro(() => { window.__lenis?.start(); setOpening('off'); done(); });
-  }, [mode, opening, worldRef, done, bootRead]);
+  }, [mode, opening, worldRef, done]);
   useEffect(() => {
     if (opening !== 'playing') return undefined;
     const skip = () => worldRef.current?.skipIntro();
@@ -255,28 +292,28 @@ export default function Landing() {
   }, [opening, worldRef]);
   useMagnetic(rootRef); useTilt(rootRef); useScrollBar(rootRef);
 
-  const jump = i => { const el = document.querySelector(`[data-stage="${i}"]`); if (el) window.__lenis ? window.__lenis.scrollTo(el, {offset: -(innerHeight - el.offsetHeight) / 2}) : el.scrollIntoView({behavior: 'smooth', block: 'center'}); };
+  const jump = i => { const el = document.querySelector(`[data-stage="${i}"]`); if (el) window.__lenis ? window.__lenis.scrollTo(el, {offset: el.hasAttribute('data-entry') ? 0 : -(innerHeight - el.offsetHeight) / 2}) : el.scrollIntoView({behavior: 'smooth', block: el.hasAttribute('data-entry') ? 'start' : 'center'}); };
   const toggleIris = () => { const next = !revoked; setRevoked(next); worldRef.current?.setIris(next ? 'closed' : 'open'); };
   const snip = SNIPPETS[tab];
 
   return (
-    <div className={`landing w-${mode} ${booted ? 'booted' : ''} ${alert ? 'is-alert' : ''} ${opening !== 'off' ? 'is-opening' : ''}`} ref={rootRef} data-end={beat >= 6 ? '1' : '0'}>
+    <div className={`landing w-${mode} ${booted ? 'booted' : ''} ${alert ? 'is-alert' : ''} ${opening !== 'off' ? 'is-opening' : ''}`} ref={rootRef} data-end={beat >= 6 ? '1' : '0'} data-beat={beat}>
       {opening !== 'off' && <Opening phase={opening} />}
       <a className="skip" href="#console">Skip to content</a>
       <div className="scrollbar" aria-hidden="true"><i /></div>
-      {mode === 'static' ? <div className="hud static" aria-hidden="true"><div className="static-sun" /></div> : <Hud canvasRef={canvasRef} beat={beat} countApi={countApi} frameApi={frameApi} onJump={jump} alert={alert} />}
+      {mode === 'static' && <div className="hud static" aria-hidden="true"><div className="static-sun" /></div>}
+      <Hud canvasRef={canvasRef} beat={beat} countApi={countApi} frameApi={frameApi} onJump={jump} alert={alert} />
       <Nav alert={alert} />
 
       {/* ── Scene 1: the city from the air ── */}
       <section className="hero mh" data-snap data-stage="0">
         <div className="wrap mh-in">
-          <p className="mh-kicker rise"><span className="dot" /><span lang="ja">見張り</span> MIHARI — the open-source lookout for AI agents</p>
-          <h1 className="mh-title" aria-label="A million agents. One watch.">
-            <span className="mh-l"><Words>A MILLION</Words></span>
-            <span className="mh-l"><Words>AGENTS.</Words></span>
-            <span className="mh-l mh-w" data-text="ONE WATCH."><Words>ONE WATCH.</Words></span>
+          <p className="mh-kicker rise"><span className="dot" /><span>WARDRAIL</span> / the permission layer for AI agents</p>
+          <h1 className="mh-title" aria-label="AI agents. Your rules.">
+            <span className="mh-l"><Words>AI AGENTS.</Words></span>
+            <span className="mh-l mh-w" data-text="YOUR RULES."><Words>YOUR RULES.</Words></span>
           </h1>
-          <p className="mh-sub rise">Mihari gives each AI agent a verifiable identity, checks every tool call before it runs — allow it, ask a human, or block it — and keeps a record nobody can quietly edit.</p>
+          <p className="mh-sub rise">Connect Wardrail between your agents and their tools. Give each agent its own identity, limit what it can do, and require human approval for sensitive actions. Every decision leaves a verifiable record.</p>
           <div className="mh-cta rise">
             <Link to="/app" className="btn magnetic">Open the console <ArrowRight size={16} /></Link>
             <Link to="/docs" className="btn ghost magnetic">Read the quickstart</Link>
@@ -284,7 +321,7 @@ export default function Landing() {
         </div>
         <div className="mh-hud" aria-hidden="true">
           <span className="mh-live"><i />MONITORING · LIVE</span>
-          <span className="mh-jp" lang="ja">汝の代理人を知れ</span>
+          <span className="particle-hint">Move to disturb<br />Hold to attract</span>
         </div>
         <div className="ticker" ref={tickRef} data-kind="allow" aria-hidden="true"><b>可決 ALLOW</b><code>read_file workspace/q3-report.md</code><em>live sim</em></div>
       </section>
@@ -296,11 +333,11 @@ export default function Landing() {
 
       <section id="identify" className="scene scene-right" data-snap data-stage="1">
         <span className="scene-kanji" lang="ja" aria-hidden="true">識別</span>
-        <PassStage worldRef={worldRef} />
+        <PassStage worldRef={worldRef} open={passportOpen} />
         <div className="wrap"><div className="sheet rise">
           <p className="eyebrow"><b>01</b><i />第一話 · Identity</p>
-          <h2 className="big"><Words>Every agent carries a pass.</Words></h2>
-          <p className="sub">No more ten agents behind one shared API key. Each agent gets its own key, a signed identity card, and the name of the person who answers for it. Publish the pass to the ERC-8004 registry and any service can check it without trusting your server.</p>
+          <h2 className="big"><Words>Know which agent is acting.</Words></h2>
+          <p className="sub">Shared API keys hide who did what. Wardrail gives every agent a separate key and a signed passport naming its operator. Rotate or revoke one agent without disrupting the others. Publish its identity on-chain when partners need a public record.</p>
           <ul className="specs"><li><b>Ed25519</b> signed card</li><li><b>256-bit</b> keys, stored as hashes</li><li><b>ERC-8004</b> on-chain identity</li></ul>
         </div></div>
       </section>
@@ -309,7 +346,7 @@ export default function Landing() {
       <section id="gate" className="scene scene-gate" data-snap data-stage="2">
         <div className="wrap gate-card rise">
           <p className="eyebrow"><b>02</b><i />大鳥居 · The gate</p>
-          <p className="gate-line"><span lang="ja">関門</span> Every call walks this path. Nothing reaches a tool without passing the gates.</p>
+          <p className="gate-line"><span lang="ja">関門</span> A request is not permission. Check the agent, the action, and its limits before a connected tool runs.</p>
         </div>
       </section>
 
@@ -318,10 +355,10 @@ export default function Landing() {
         <div className="wrap">
           <div className="decide-head rise">
             <p className="eyebrow"><b>02</b><i />第二話 · Policy</p>
-            <h2 className="big"><Words>Every call passes the gate.</Words></h2>
-            <p className="sub">Three checks run before any tool does: is the agent still who it says, does a rule allow this action on this resource, and is it within budget and rate. The answer is allow, ask a human, or block. This panel runs the same decision code as the server.</p>
+            <h2 className="big"><Words>Decide before the tool runs.</Words></h2>
+            <p className="sub">Allow routine work. Pause sensitive actions for a human. Deny the rest. Try the policy engine with the requests below.</p>
           </div>
-          <div className="rise has-sticker"><span className="sticker s-a">Live engine · try me</span><Magi /></div>
+          <div className="rise has-sticker"><span className="sticker s-a">Interactive policy demo</span><Magi /></div>
         </div>
       </section>
 
@@ -329,44 +366,44 @@ export default function Landing() {
         <span className="scene-kanji" lang="ja" aria-hidden="true">記録</span>
         <div className="wrap"><div className="sheet sheet-wide rise">
           <p className="eyebrow"><b>03</b><i />第三話 · Audit</p>
-          <h2 className="big"><Words>Every action, on the record.</Words></h2>
-          <p className="sub">Each event carries the hash of the one before it, so editing the past breaks every link after it. Export the log and verify it offline against your registry key. Below is a real SHA-256 chain running in your browser.</p>
-          <span className="sticker s-b">Tamper with it</span>
+          <h2 className="big"><Words>An audit trail you can verify.</Words></h2>
+          <p className="sub">Investigate a decision without piecing together chat logs. Wardrail records policy decisions and reported outcomes in a hash-linked ledger. Export it and verify its integrity offline against a trusted chain head. Change an event below to see how tampering is detected.</p>
+          <span className="sticker s-b">Test the audit chain</span>
           <Chain />
         </div></div>
       </section>
 
       <section id="contain" className="scene" data-snap data-stage="5">
         <span className="scene-kanji red" lang="ja" aria-hidden="true">封鎖</span>
-        <div className="wrap"><div className={`sheet sheet-alert rise ${revoked ? 'on' : ''}`}>
+        <div className="wrap"><div className="sheet sheet-alert rise" data-revoked={revoked ? 'true' : 'false'}>
           <div className="hazard" aria-hidden="true" />
           <p className="eyebrow"><b>04</b><i />第四話 · Revoke</p>
-          <h2 className="big"><Words>Revoke once. Closed everywhere.</Words></h2>
-          <p className="sub">One switch: pending approvals are cancelled, the next call is refused, and every service that checks the agent's status stops trusting it. A leaked key can be rotated without losing the agent's history.</p>
-          <div className="rv-actions"><span className="sticker s-c">Pull the plug</span>
-            <button className={`btn magnetic ${revoked ? 'ghost' : 'danger'}`} onClick={toggleIris}>{revoked ? 'Re-issue research-bot' : 'Revoke research-bot'}</button>
+          <h2 className="big"><Words>Stop an agent. Keep its history.</Words></h2>
+          <p className="sub">Revoke a compromised agent to cancel pending approvals and refuse its next authorization request. Connected services can check its live status. Rotate a leaked key while keeping the same agent identity and audit history.</p>
+          <div className="rv-actions"><span className="sticker s-c">Try revocation</span>
+            <button className={`btn magnetic ${revoked ? 'ghost' : 'danger'}`} onClick={toggleIris}>{revoked ? 'Reset demo agent' : 'Revoke workspace-agent'}</button>
             <span className={`rv-state ${revoked ? 'off' : 'on'}`}><i />{revoked ? 'REVOKED · 封鎖' : 'ACTIVE · 稼働'}</span>
           </div>
         </div></div>
       </section>
 
       <div className="lower">
-        <section id="console" className="sec" data-stage="6">
+        <section id="console" className="sec" data-snap data-entry data-stage="6">
           <div className="wrap">
-            <SectionHead n="05" label="控室 · Console" title="See every call. Approve the risky ones." sub="The console is where a human stays in the loop: live activity, one-click approvals, the audit log, and the switch that revokes." />
+            <SectionHead n="05" label="控室 · Console" title="One place to oversee your agents." sub="Review authorization requests, approve sensitive actions, inspect the audit trail, and revoke credentials. This interactive preview shows the operator workflow." />
             <div className="rise"><ProductWindow /></div>
           </div>
         </section>
 
         <section id="passport" className="sec" data-stage="7">
           <div className="wrap">
-            <SectionHead n="06" label="通行証 · Passport" title="An identity that travels." sub="Each agent’s pass is an ERC-8004 registration file signed by your registry. One wallet signature publishes it to the public Identity Registry on Base, with nothing to host." />
+            <SectionHead n="06" label="通行証 · Passport" title="Give partners a verifiable identity." sub="Signed passports identify the agent and its operator. Short-lived, audience-bound assertions let a partner verify the signature and check live revocation. ERC-8004 publication is optional; tool permissions work without a wallet." />
             <div className="passport-grid">
               <div className="p-left">
                 <HoloPassport />
                 <ol className="p-steps">
                   <li className="rise"><b>01</b><div><h3>Register</h3><p>Name the agent, set its rules, get its key. The pass is generated for you.</p></div></li>
-                  <li className="rise"><b>02</b><div><h3>Publish</h3><p>One wallet signature on Base. The file travels inside the transaction; testnet gas is free.</p></div></li>
+                  <li className="rise"><b>02</b><div><h3>Publish, optionally</h3><p>Register on Base when you need a public identity. Try Base Sepolia with test ETH. Your tool permissions work without publishing.</p></div></li>
                   <li className="rise"><b>03</b><div><h3>Verify</h3><p>A partner reads the registry, checks the signature, asks whether the agent is still active.</p></div></li>
                 </ol>
               </div>
@@ -377,7 +414,7 @@ export default function Landing() {
 
         <section id="integrate" className="sec" data-stage="8">
           <div className="wrap">
-            <SectionHead n="07" label="接続 · Integrate" title="Drop it in front of the tools you already use." sub="One config line for any MCP client. An SDK for your own code. Plain REST for everything else." />
+            <SectionHead n="07" label="接続 · Integrate" title="Enforce permissions where tools run." sub="Wrap an MCP server to block denied calls before forwarding them. Use the Node SDK to guard your own functions, or call the REST API from another language. Keep your current models and tools." />
             <div className="int-grid rise">
               <div className="int-tabs" role="tablist">
                 {Object.entries(SNIPPETS).map(([k, s]) => <button key={k} role="tab" aria-selected={tab === k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{s.label}</button>)}
@@ -390,14 +427,14 @@ export default function Landing() {
 
         <section className="sec" data-stage="9">
           <div className="wrap">
-            <SectionHead n="08" label="用途 · Use cases" title="Three jobs it does on day one." />
+            <SectionHead n="08" label="用途 · Use cases" title="Let agents work. Set the boundaries." sub="Protect source code, cap spending, and verify service-to-service identity with explicit policies and a human approval path." />
             <Cases />
           </div>
         </section>
 
         <section id="stack" className="sec" data-stage="10">
           <div className="wrap">
-            <SectionHead n="09" label="構成 · Your stack" title="It fits next to what you already run." sub="Identity providers answer who an agent is and which apps it may open. Mihari answers whether it may do this particular thing right now, and proves what happened." />
+            <SectionHead n="09" label="構成 · Your stack" title="It fits next to what you already run." sub="Identity providers answer who an agent is and which apps it may open. Wardrail answers whether it may do this particular thing right now, and records the decision." />
             <Stack />
             <dl className="numbers">
               <div className="rise"><dt><Counter to={0} /></dt><dd>runtime dependencies in the server</dd></div>
@@ -411,27 +448,27 @@ export default function Landing() {
                 <li><ShieldCheck size={16} /> Zero-dependency server. Your data is a folder on your machine.</li>
                 <li><ShieldCheck size={16} /> MIT licensed. No telemetry, no account, no paid service.</li>
               </ul>
-              <div className="limits rise"><p className="eyebrow">但し書き · Honest limits</p><p>Mihari decides and records. It cannot stop a tool that skips the check, so enforce at the tool or MCP layer. Receipts are agent-reported. The log is tamper-evident against a known head, not a distributed ledger.</p></div>
+              <div className="limits rise"><p className="eyebrow">但し書き · Honest limits</p><p>Wardrail decides and records. It cannot stop a tool that skips the check, so enforce at the tool or MCP layer. Receipts are agent-reported. The log is tamper-evident against a known head, not a distributed ledger.</p></div>
             </div>
           </div>
         </section>
       </div>
 
-      <section className="finale mh-fin" data-snap data-stage="11">
+      <section className="finale mh-fin" data-stage="11">
         <div className="wrap fin-in">
-          <p className="mh-kicker rise"><span lang="ja">見張り</span> Know your agent</p>
-          <h2 className="mh-title fin-t" aria-label="Straight through the gate."><span className="mh-l"><Words>STRAIGHT THROUGH</Words></span><span className="mh-l mh-w" data-text="THE GATE."><Words>THE GATE.</Words></span></h2>
-          <p className="mh-sub rise">Self-hosted in a minute. One process, one folder, no account and no paid service.</p>
+          <p className="mh-kicker rise"><span>WARDRAIL</span> Know your agent</p>
+          <h2 className="mh-title fin-t" aria-label="Put your agents behind a policy."><span className="mh-l"><Words>AGENTS WORK.</Words></span><span className="mh-l mh-w" data-text="YOU DECIDE."><Words>YOU DECIDE.</Words></span></h2>
+          <p className="mh-sub rise">Start with one agent and one policy. Run Wardrail on your own infrastructure: an open-source Node server, local file storage, and no vendor account or paid service required.</p>
           <div className="mh-cta rise">
             <Link to="/app" className="btn magnetic">Open the console <ArrowRight size={16} /></Link>
             <Link to="/docs" className="btn ghost magnetic">Read the quickstart</Link>
           </div>
-          <div className="install rise"><span>$</span><code>git clone https://github.com/mihari-dev/mihari && cd mihari && npm start</code><CopyButton text="git clone https://github.com/mihari-dev/mihari && cd mihari && npm --prefix apps/web install && npm run build && npm start" /></div>
+          <div className="install rise"><span>$</span><code>git clone https://github.com/Gravyie/KYA.git && cd KYA && npm --prefix apps/web ci && npm run build && npm start</code><CopyButton text="git clone https://github.com/Gravyie/KYA.git && cd KYA && npm --prefix apps/web install && npm run build && npm start" /></div>
         </div>
         <footer className="foot">
           <div className="wrap foot-in">
             <Logo />
-            <span className="foot-tag">Know your agent · MIT licensed</span>
+            <span className="foot-tag">Agent identity, permissions & audit · MIT licensed</span>
             <nav aria-label="Footer"><Link to="/docs">Docs</Link><Link to="/verify">Verify an agent</Link><Link to="/app">Console</Link><a href="/llms.txt">llms.txt</a></nav>
           </div>
         </footer>

@@ -7,7 +7,7 @@ export const BEATS = [
   {key: 'decide', label: 'Policy', jp: '審判'},
   {key: 'prove', label: 'Record', jp: '記録'},
   {key: 'contain', label: 'Portal', jp: '門'},
-  {key: 'tunnel', label: 'Tunnel', jp: '超空間'},
+  {key: 'tunnel', label: 'Inside', jp: '内部'},
 ];
 
 // Tags hang off their 3D anchor at (dx, dy) and are clamped to the scene's side of the screen.
@@ -43,7 +43,7 @@ export default function Hud({canvasRef, beat, countApi, frameApi, onJump, alert}
 
   const b = BEATS[Math.min(beat, BEATS.length - 1)];
   return (
-    <div className={`hud ${alert ? 'alert' : ''}`}>
+    <><div className={`hud ${alert ? 'alert' : ''}`}>
       <canvas ref={canvasRef} className="stage" aria-hidden="true" />
       <svg className="leaders" aria-hidden="true">{tags.map(c => <line key={c.id + beat} ref={el => { els.current[c.id] = {...els.current[c.id], line: el}; }} x1="0" y1="0" x2="0" y2="0" />)}</svg>
       {tags.map(c => <i key={c.id + beat} className="pin" aria-hidden="true" ref={el => { els.current[c.id] = {...els.current[c.id], pin: el}; }} />)}
@@ -53,9 +53,10 @@ export default function Hud({canvasRef, beat, countApi, frameApi, onJump, alert}
       <div className="vf" aria-hidden="true"><i className="tl" /><i className="tr" /><i className="bl" /><i className="br" /></div>
       <div className="ro ro-l" aria-hidden="true"><span>第{String(beat + 1).padStart(2, '0')}幕 · SCENE {String(beat + 1).padStart(2, '0')}</span><b key={b.key}><span lang="ja">{b.jp}</span> {b.label.toUpperCase()}</b></div>
       <div className="ro ro-r" aria-hidden="true"><span>判定数 · VERDICTS (SIM)</span><b ref={countEl}>000000</b></div>
-      <ol className="rail" aria-label="Story progress" hidden={beat > 5}>
-        {BEATS.slice(0, 6).map((x, i) => <li key={x.key}><button type="button" className={i === beat ? 'on' : ''} onClick={() => onJump(i)} aria-label={x.label} aria-current={i === beat}><span lang="ja">{x.jp}</span></button></li>)}
-      </ol>
     </div>
+      <ol className="rail" aria-label="Story progress" hidden={beat > 6}>
+        {BEATS.map((x, i) => <li key={x.key}><button type="button" className={i === beat ? 'on' : ''} onClick={() => onJump(i)} aria-label={x.label} aria-current={i === beat ? 'step' : undefined}><span lang="ja">{x.jp}</span></button></li>)}
+      </ol>
+    </>
   );
 }

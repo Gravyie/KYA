@@ -6,8 +6,8 @@ import {CHAINS} from '../../../../packages/sdk/src/erc8004.js';
 
 const FILE = `{
   "type": "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
-  "name": "research-bot",
-  "description": "research-bot: an AI agent operated by Acme Inc. …",
+  "name": "workspace-agent",
+  "description": "workspace-agent: an AI agent operated by Acme Inc. …",
   "services": [
     { "name": "mihari-card",   "endpoint": "https://reg.acme.co/api/agents/8f3a…/card" },
     { "name": "mihari-status", "endpoint": "https://reg.acme.co/api/agents/8f3a…/status" }
@@ -24,7 +24,7 @@ const ASSERTION = `// POST /api/assertion  { "audience": "https://api.partner.co
 {
   "iss": "mihari:91c277de0b4e1a3c",
   "sub": "8f3a…",                       // the agent
-  "name": "research-bot",
+  "name": "workspace-agent",
   "operator": "Acme Inc.",              // the accountable human
   "aud": "https://api.partner.com",
   "exp": 1792600560,                    // minutes, not days
@@ -77,7 +77,7 @@ function Lookup() {
               <dt>Owner</dt><dd className="mono">{short(d.owner)}</dd>
               <dt>File</dt><dd>{d.uriKind === 'data' ? 'Embedded in the token (data: URI)' : `${d.uriKind.toUpperCase()} URI`}</dd>
               {d.registration?.services?.length > 0 && <><dt>Services</dt><dd>{d.registration.services.map(s => s.name).join(', ')}</dd></>}
-              <dt>Mihari</dt><dd>{d.registration?.mihari ? 'Issued by a Mihari registry' : 'Not a Mihari agent'}</dd>
+              <dt>Wardrail</dt><dd>{d.registration?.mihari ? 'Issued by a Wardrail registry' : 'Not a Wardrail agent'}</dd>
             </dl>
             <a className="ext" href={`${d.chain.explorer}/token/${d.chain.registry}?a=${d.agentId}`} target="_blank" rel="noreferrer">Open on the explorer <ExternalLink size={13} /></a>
           </article>

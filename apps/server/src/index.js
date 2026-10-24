@@ -15,6 +15,10 @@ const port = Number(process.env.PORT || 5055);
 const host = process.env.MIHARI_HOST || '127.0.0.1';
 
 const store = createStore(dataDir);
-createApp(store, {webDist: resolve(root, 'apps/web/dist'), root}).listen(port, host, () => {
-  console.log(`Mihari  http://${host}:${port}   data: ${dataDir}`);
+const server = createApp(store, {webDist: resolve(root, 'apps/web/dist'), root}).listen(port, host, () => {
+  console.log(`Wardrail  http://${host}:${port}   data: ${dataDir}`);
+});
+for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => {
+  server.close(() => process.exit(0));
+  setTimeout(() => process.exit(1), 10000).unref();
 });

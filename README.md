@@ -1,18 +1,18 @@
-# Mihari 見張り
+# Wardrail
 
-*The lookout for AI agents.* 見張り (mihari) is Japanese for a lookout or a guard on watch.
+**The permission layer for AI agents.**
 
-**Know your agent.** Mihari is an open-source identity, permission and audit layer for AI agents. Every agent gets its own key and a signed identity card. Every tool call is checked against a policy (allow, ask a human, or deny). Spend and rate limits cap the damage when a rule is too generous. Every decision lands in a hash-linked log that anyone can verify offline.
+**Know your agent.** Wardrail is an open-source identity, permission and audit layer for AI agents. Every agent gets its own key and a signed identity card. Every tool call is checked against a policy (allow, ask a human, or deny). Spend and rate limits cap the damage when a rule is too generous. Every decision lands in a hash-linked log that anyone can verify offline.
 
 Free, self-hosted, one Node process and one folder. No database, account, telemetry or paid service.
 
 ```bash
-npm --prefix apps/web install
+npm --prefix apps/web ci
 npm run build
 npm start                 # http://127.0.0.1:5055
 ```
 
-Open the console, name your registry, register an agent from a template, and give it its key. Requires Node 20.12+.
+Open the console, name your registry, register an agent from a template, and give it its key. Use Node 24 LTS. The SDK and environment variables retain their `mihari` names for compatibility.
 
 ## Put an agent behind it
 
@@ -37,7 +37,7 @@ await guard.run({action: 'payments.send', resource: 'acme', amount: 240}, () => 
 
 **Any language:** `POST /api/authorize`, poll if the answer is `ask`, then `POST /api/receipt`. See `/docs` in the running app or `apps/web/public/llms.txt`.
 
-**Publish the agent’s identity on-chain (ERC-8004):** every agent has a passport, an ERC-8004 registration file at `/api/agents/:id/registration.json`. In the console, *Agents → Identity → Register with wallet* publishes it to the public Identity Registry on Base Sepolia (free testnet gas), Ethereum Sepolia or Base. The file rides inside the transaction as a `data:` URI, so nothing needs hosting. Mihari verifies ownership on-chain before linking, and assertions then carry the `erc8004` claim.
+**Publish the agent’s identity on-chain (ERC-8004):** every agent has a passport, an ERC-8004 registration file at `/api/agents/:id/registration.json`. In the console, *Agents → Identity → Register with wallet* publishes it to the public Identity Registry on Base Sepolia (free testnet gas), Ethereum Sepolia or Base. The file rides inside the transaction as a `data:` URI, so nothing needs hosting. Wardrail verifies ownership on-chain before linking, and assertions then carry the `erc8004` claim.
 
 **Prove identity to a partner:** an agent mints a short-lived signed assertion for one audience. The partner verifies it offline and checks live revocation (`examples/relying-party.mjs`, or paste a token at `/verify`).
 
@@ -50,6 +50,7 @@ await guard.run({action: 'payments.send', resource: 'acme', amount: 240}, () => 
 | `packages/sdk` | `@mihari/sdk`: guard, wrap, approvals, assertions, offline verifiers |
 | `packages/mcp` | `@mihari/mcp`: the MCP policy firewall |
 | `examples` | A scripted agent, a relying-party API, and a real demo MCP server |
+| `reference/visual-lab` | Standalone archive of the seventeen interactive visual explorations |
 | `legacy/` | The original ETHGlobal "KYA" prototype (contracts, browser agent), kept for reference |
 
 ## Policy in one screen
@@ -62,11 +63,11 @@ A rule is `{action, resources[], mode: allow | ask | deny, maxAmount?}`. A patte
 npm test                  # policy, lifecycle, approvals, limits, assertions, audit tamper test, MCP proxy, recovery
 ```
 
-Ten tests run the real server, the real SDK and the real MCP proxy against a real demo MCP server. The same flows were also driven through the console in a browser.
+The integration tests run the real server, the real SDK and the real MCP proxy against a real demo MCP server. The console workflow also has a repeatable browser check: `npm ci`, `npx playwright install chromium`, then `npm run test:web` after building. It uses an isolated temporary registry.
 
 ## Honest limits
 
-- Mihari decides and records. It **cannot stop a tool that bypasses the check.** Enforce at the tool or MCP layer.
+- Wardrail decides and records. It **cannot stop a tool that bypasses the check.** Enforce at the tool or MCP layer.
 - Outcome receipts are reported by the agent. They are claims, not proof.
 - The audit log is tamper-evident against a known head, not a distributed ledger. Keep periodic exports elsewhere.
 - Single owner per registry, JSON-file storage, one process per data directory. Fine for a team; not yet multi-tenant.
@@ -75,4 +76,4 @@ Ten tests run the real server, the real SDK and the real MCP proxy against a rea
 
 Lost your owner key? On the host: `npm run owner:recover` (needs `.data/mihari/recovery.key`, loopback only, audited). Set `MIHARI_HOST` to expose the server and put TLS in front.
 
-See [PRODUCT.md](PRODUCT.md) for the thinking behind the product, the name and the design, and [PITCH.md](PITCH.md) for the investor framing.
+See [DEPLOYMENT.md](DEPLOYMENT.md) for hosting, persistent storage and recovery; [RELEASE-AUDIT.md](RELEASE-AUDIT.md) for the current acceptance review. Historical design and pitch notes are preserved in [reference/product-history](reference/product-history). The separate [visual Lab](reference/visual-lab) is excluded from the product build.

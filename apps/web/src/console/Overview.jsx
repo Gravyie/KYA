@@ -21,7 +21,7 @@ export function EventRow({e, agents}) {
 export default function Overview() {
   const {data} = useConsole();
   const [chain, setChain] = useState(null);
-  useEffect(() => { api.verifyChain().then(setChain).catch(() => setChain({valid: false})); }, [data.eventCount]);
+  useEffect(() => { let live = true; api.verifyChain().then(r => { if (live) setChain(r); }).catch(e => { if (live) setChain({unavailable: e.message}); }); return () => { live = false; }; }, [data.eventCount]);
 
   const active = data.agents.filter(a => a.status === 'active').length;
   const totals = data.agents.reduce((t, a) => ({allowed: t.allowed + a.stats.allowed, denied: t.denied + a.stats.denied}), {allowed: 0, denied: 0});
@@ -31,7 +31,7 @@ export default function Overview() {
   return (
     <>
       <header className="page-head">
-        <div><p className="eyebrow">Overview</p><h1>Good to see you, {data.owner}</h1></div>
+        <div><p className="eyebrow">{data.owner} / Overview</p><h1>Your agents. Under control.</h1><p className="muted">Review permissions, respond to requests, and trace each decision.</p></div>
         <Link to="/app/agents?new=1" className="btn">Register an agent</Link>
       </header>
 
@@ -41,6 +41,12 @@ export default function Overview() {
         <div className="stat"><span>Blocked calls</span><b className={totals.denied ? 'deny' : ''}>{totals.denied}</b><small>all time</small></div>
         <Link to="/app/approvals" className={`stat link ${pending.length ? 'attn' : ''}`}><span>Waiting on you</span><b>{pending.length}</b><small>{pending.length ? 'approve or decline →' : 'nothing pending'}</small></Link>
       </div>
+
+      <section className="onboarding" aria-label="Integration checklist">
+        <Link to="/app/agents?new=1"><span className="mono">01 / IDENTITY</span><b>{data.agents.length ? 'Agents registered' : 'Give your agent an identity'}</b><p>Issue a separate key and a policy for each agent.</p><span>{data.agents.length ? `${data.agents.length} registered` : 'Register your first agent →'}</span></Link>
+        <Link to="/app/connect"><span className="mono">02 / ENFORCEMENT</span><b>Connect at the tool boundary</b><p>Wrap an MCP server or guard functions with the SDK.</p><span>Get integration instructions →</span></Link>
+        <Link to="/app/audit"><span className="mono">03 / EVIDENCE</span><b>{totals.allowed + totals.denied ? 'Decisions are arriving' : 'Make your first guarded call'}</b><p>Test an allowed call, a denial, and a human approval.</p><span>{totals.allowed + totals.denied ? 'Inspect the audit trail →' : 'Watch for real activity →'}</span></Link>
+      </section>
 
       {data.agents.length === 0 ? (
         <section className="empty">
@@ -55,11 +61,11 @@ export default function Overview() {
         </section>
       )}
 
-      <section className={`integrity ${chain?.valid === false ? 'bad' : ''}`}>
+      <section className={`integrity ${chain?.valid === false ? 'bad' : chain?.unavailable || !chain ? 'unknown' : ''}`}>
         {chain?.valid === false ? <AlertTriangle size={18} /> : <CheckCircle2 size={18} />}
         <div>
-          <b>{chain == null ? 'Checking audit chain…' : chain.valid ? 'Audit chain intact' : 'Audit chain is broken'}</b>
-          <span>{chain?.valid ? `${chain.count} events, head ${chain.head.slice(0, 12)}…` : chain?.valid === false ? `The log was changed at event ${chain.seq ?? chain.at}.` : ''}</span>
+          <b>{chain == null ? 'Checking audit chain…' : chain.unavailable ? 'Audit check unavailable' : chain.valid ? 'Audit chain intact' : 'Audit chain is broken'}</b>
+          <span>{chain?.unavailable || (chain?.valid ? `${chain.count} events, head ${chain.head.slice(0, 12)}…` : chain?.valid === false ? `The log was changed at event ${chain.seq ?? chain.at}.` : '')}</span>
         </div>
         <Link to="/app/audit" className="muted">Verify & export</Link>
       </section>

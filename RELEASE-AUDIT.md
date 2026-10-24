@@ -1,0 +1,81 @@
+# Wardrail release audit — 25 October 2026
+
+This pass preserves the approved cyberpunk city → shrine → portal journey. It does not reintroduce the rejected Lab-style interior stream. The current product is a self-hosted, single-owner registry, not a managed multi-tenant service.
+
+## Recent request reconciliation
+
+Later corrections take precedence over earlier experiments.
+
+| Request | Final implementation |
+| --- | --- |
+| Keep the cyberpunk theme and chapter-specific palettes | Preserved city cyan/magenta, sunset shrine, jade policy, violet audit and plum/cyan threshold palettes. |
+| Keep buildings stable across refreshes | Seeded city blueprint, signature `a9d8c3`; no per-visit skyline generation. |
+| Sunset through the city and a brighter evening sun at the gates | Shared sun direction and sky/water lighting preserved; city sun peeks around the skyline. |
+| More practical park and boundaries | 48 desktop trees with branches and leaf geometry, nine connected paths, pond edges, viewing deck, pergola, benches, planting, walkers and 246 boundary posts. Mobile uses reduced detail. |
+| Natural continuous approach, including during the opening zoom | One cubic approach joins the existing spiral with a matched tangent, originating behind the elevated opening camera. No detached starter streak or elbow. Left-edge glimpses belong to this same path; their visibility follows perspective and building occlusion, not a separate decorative stream. |
+| Keep the original top-left incoming trail at the gates | Preserved. The incoming trail is not squeezed into the portal. |
+| Inner coils should sit only slightly inside the rim | The two inner turns share a proportional inset (`.71` at the gate), preserving spacing and axial depth. |
+| Scale the whole portal composition gradually | Shared camera framing changes through gate/policy/audit/portal stages. Hero coils use the larger proportional composition; final portal fits the viewport. |
+| Soften solid cyan/pink rings and rigid external strokes | Organic luminous filaments, uneven rose accents and irregular tapered flares; zero solid torus rings in the landing portal. |
+| Brighter golden outer boundary | Golden particle luminance and opacity increase retained. |
+| Remove the isolated timber near the final portal | Quay piling run ends before the final camera position. |
+| Step from the portal into its interior; then resume continuous scroll | Preserved; seventh sidebar stop is **Inside**, with an active-state marker. |
+| Match the stream inside the portal to the Lab Swarm | **Superseded by the explicit revert request.** Previous interior stream restored and retained. Original Swarm preserved separately in the reference Lab. |
+| Product-specific copy; general agent identity | Wardrail positioning, `workspace-agent`, per-call policy, approvals, assertions and hash-linked audit copy retained. No “one watch” headline. Simulations are distinguished from the real console. |
+| Move Lab out and clean the deployable project | Standalone `reference/visual-lab`; no `/lab` product route or imports. Only production scene primitives live in `apps/web/src/scene`. Historical briefs and unused playground source are in `reference/product-history`. Private pitch files and screenshots are ignored, not deleted. |
+
+## Product improvements in this pass
+
+- Console: consistent cool-dark visual system, legible action contrast, shared logo, task-oriented overview and integration checklist, agent search/status filters, mobile layouts and meaningful empty states.
+- Reliability: refresh failures show stale-data status and a retry action; initial connection errors are recoverable; background polling pauses while hidden and avoids overlapping fetches; API requests have a timeout.
+- Audit integrity: network errors are reported as an unavailable check, never as proof of tampering. Audit event details are keyboard-accessible.
+- Identity workflows: masked owner-key input, explicit confirmation before key rotation, deliberate acknowledgment of one-time agent keys, keyboard focus containment and restoration in dialogs, and arrow-key navigation for tabs.
+- Policy safety: invalid numeric caps cannot become `null` (unlimited) through JSON serialization. Regression tests cover caps, windows and every template. A dedicated SDK-example template matches the runnable example's allow/deny/ask calls.
+- Integration content: actual repository URL, matching setup instructions, unpublished package caveat and remote/container path guidance. Marketing copy distinguishes decisions from agent-reported outcomes.
+- Loading: no forced 900 ms hold; routes load independently; Japanese display fonts stay with the landing experience. The optional light view and all its controls, preference handling and styling have been removed. Reduced motion retains a still scene and native reading.
+- Rendering lifecycle: adaptive quality and hidden-tab pausing retained; environment targets and bloom resources disposed on exit; late font callbacks cannot append objects to disposed scenes; GPU context loss falls back to the automatic graphics-unavailable fallback.
+- Delivery: build-time Brotli/gzip, streaming static files, correct content types/HEAD/caching, path-boundary checks, security headers and graceful shutdown.
+- Release hygiene: tracked lockfiles, MIT license, CI for tests/build/browser checks/container build, a non-root multi-stage Docker recipe, persistent-volume Compose setup, and a deployment/recovery guide.
+
+## Verification
+
+- Production build passes, including generation of precompressed assets. Three.js remains a separately loaded ~555 kB uncompressed chunk (~124 KiB Brotli on this build); the console does not request it.
+- 15 Node tests pass: policy, lifecycle, approval, budgets/rates, signed assertions, audit tamper detection, MCP proxy, ERC-8004 encoding/linking, owner recovery, static delivery console policy validation and adaptive render budgets.
+- `npm run test:web` passes against a temporary registry: owner setup, agent creation, saved-policy dry run, real authorization/approval, audit verification, keyboard-accessible audit details, mobile overflow, rotation confirmation, revocation, 404, 3D landing, continuous scroll in both directions, stack layout, quickstart and unavailable-server UI.
+- Visual review covers desktop hero/intro, passport, gate, policy, audit and portal; mobile layouts; seven progress stops and the return to continuous scrolling. Reduced motion and GPU context-loss fallback pass. Particle buffers remain finite. Desktop and mobile portal bounds fit below the navigation and within the viewport. On the local Chrome desktop check at 1600×1000/DPR 1, the world became ready in 1,116 ms and the settled portal averaged 16.6 ms per frame. These are local measurements, not a cross-device performance guarantee.
+- Runtime dependency audit: no known vulnerabilities reported by npm at the time of this pass. This is not a penetration test or security certification.
+- Standalone visual Lab build passes. It is independent of the product build.
+- `git diff --check` passes.
+
+## Deployment status and limits
+
+**Not pushed or deployed.** The Docker daemon is stopped on this machine, so the image has not been built locally; CI includes the build, but has not run remotely. Validate it on the deployment host. See [DEPLOYMENT.md](DEPLOYMENT.md) for exact commands, initial-owner setup, TLS, backups and restore checks.
+
+Keep one process per data directory, persistent disk, and a single owner. Enforce every protected action at the tool boundary. Agent-reported receipts do not prove execution, and revocation cannot undo a call that already ran. On-chain registration remains optional; identity is not a safety endorsement.
+
+## Repeat the checks
+
+```sh
+npm ci
+npm ci --prefix apps/web
+npm test
+npm run build
+npx playwright install chromium
+npm run test:web
+```
+
+For an existing local Chrome install, set `CHROME_PATH` when running `npm run test:web`. Browser screenshots are written to ignored `output/smoke`. The one-off artistic review images are in ignored `output/product-final`.
+
+## October 25 scroll and layout correction
+
+Removed free-section proximity snapping and the finale snap target: passport, integrations and stack remain continuous in both directions after the portal entry. The gateway retains its deliberate step. Renamed the stack highlight class and scoped the MAGI core styles to prevent the Action row inheriting absolute positioning. Removed the optional light view throughout.
+
+## Final rendering and responsive audit
+
+- Device hints now include coarse-pointer tablets, exposed memory and CPU concurrency. These select conservative startup geometry/particle budgets; they are not treated as GPU benchmarks. Unknown hardware retains the desktop default. Runtime frame timing still adjusts resolution after sustained slowdown and restores it only after sustained recovery.
+- Full-resolution color, depth and postprocessing targets are capped at 3.2 million pixels on desktop, 2 million on compact devices and 1.4 million on constrained devices. DPR is bounded by both this area budget and the existing per-device cap. Desktop MSAA uses two samples instead of four; compact devices use zero. Brightness and palette remain unchanged.
+- Returning from a hidden tab resets timing warmup so the visibility gap cannot count as slow rendering. GPU draw statistics include the complete postprocessing frame. Static scenery shadows still update only when requested, particle physics sleeps when idle, and hidden tabs stop scene rendering.
+- Verified all 12 landing stages and docs/verify/console entry at 320×568, 390×844, 844×390, 768×1024, 1024×768, 1366×768, 1920×1080 and 2560×1440. No horizontal document overflow. Mobile/touch contexts use compact budgets; high-DPR and large screens respect the pixel ceiling. This is Chrome emulation, not a physical-phone GPU benchmark or Safari certification.
+- Reviewed both local UWI frontend snapshots (`UWI/frontend/src` and `Universal-Web3-Identity-UWI/frontend/src`). Neither contains device-tier/GPU-budget code; no unverified UWI implementation was copied.
+- Reference: [MDN WebGL best practices](https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/WebGL_best_practices), particularly smaller back buffers, per-pixel VRAM budgets and avoiding blocking GPU reads. No GPU fingerprinting or synchronous per-frame GPU queries were added.
+- Prior requested outcomes remain reconciled in the table above. Light view remains removed; the restored interior stream and portal proportions are unchanged. Docker daemon remains unavailable; image build and deployment-host smoke test are still required before a public release.

@@ -1,7 +1,7 @@
 import {createServer} from 'node:http';
 import {randomUUID} from 'node:crypto';
-import {existsSync, readFileSync, statSync} from 'node:fs';
-import {resolve, extname} from 'node:path';
+import {existsSync, createReadStream, statSync} from 'node:fs';
+import {resolve, extname, sep} from 'node:path';
 import {cleanScopes, cleanLimits, parseRequest, decide, fail} from './policy.js';
 import {sha256, newToken, now, safeEqual, GENESIS} from './store.js';
 import {verifyAssertion} from '../../../packages/sdk/src/verify.js';
@@ -81,9 +81,9 @@ export function createApp(store, {webDist, root = process.cwd()} = {}) {
   const routes = [];
   const route = (method, pattern, fn, opts = {}) => routes.push({method, pattern, fn, public: !!opts.public});
 
-  route('GET', /^\/health$/, () => ({ok: true, product: 'Mihari', storage: 'local', events: events.length}), {public: true});
+  route('GET', /^\/health$/, () => ({ok: true, product: 'Wardrail', storage: 'local', events: events.length}), {public: true});
   route('GET', /^\/api\/registry$/, () => ({
-    product: 'Mihari', issuer: issuer(), algorithm: 'Ed25519', publicKey: store.publicKey(), fingerprint: store.fingerprint(),
+    product: 'Wardrail', issuer: issuer(), algorithm: 'Ed25519', publicKey: store.publicKey(), fingerprint: store.fingerprint(),
   }), {public: true});
   route('GET', /^\/api\/status$/, () => ({
     configured: !!state.owner, owner: state.owner?.name ?? null, agentCount: state.agents.length, eventCount: events.length,
@@ -375,21 +375,35 @@ export function createApp(store, {webDist, root = process.cwd()} = {}) {
   });
 
   // ── Static + HTTP plumbing ──────────────────────────────────────────────
-  function serveStatic(path, res, head) {
+  function serveStatic(path, req, res, head) {
     if (!webDist) return false;
     let file = resolve(webDist, '.' + decodeURIComponent(path));
-    if (!file.startsWith(webDist)) return false;
+    if (file !== resolve(webDist) && !file.startsWith(resolve(webDist) + sep)) return false;
     if (!existsSync(file) || statSync(file).isDirectory()) {
       if (extname(path)) return false;
       file = resolve(webDist, 'index.html'); // single-page app fallback
       if (!existsSync(file)) return false;
     }
     const immutable = file.includes('/assets/');
+    const type = MIME[extname(file)] ?? 'application/octet-stream';
+    const encodings = String(req.headers['accept-encoding'] || '').split(',').map(part => {
+      const [name, ...params] = part.trim().split(';');
+      const q = params.find(p => p.trim().startsWith('q='));
+      return {name, quality: q ? Number(q.trim().slice(2)) : 1};
+    }).filter(e => e.quality > 0).sort((a, b) => b.quality - a.quality);
+    let encoding;
+    for (const e of encodings) {
+      const suffix = e.name === 'br' ? '.br' : e.name === 'gzip' ? '.gz' : null;
+      if (suffix && existsSync(file + suffix)) { encoding = e.name; file += suffix; break; }
+    }
     res.writeHead(200, {
-      'content-type': MIME[extname(file)] ?? 'application/octet-stream', 'x-content-type-options': 'nosniff',
-      'content-security-policy': CSP, 'cache-control': immutable ? 'public, max-age=31536000, immutable' : 'no-cache',
+      'content-type': type, 'content-length': statSync(file).size, 'x-content-type-options': 'nosniff',
+      vary: 'Accept-Encoding', ...(encoding ? {'content-encoding': encoding} : {}),
+      'content-security-policy': CSP, 'referrer-policy': 'strict-origin-when-cross-origin',
+      'permissions-policy': 'camera=(), microphone=(), geolocation=()', 'cache-control': immutable ? 'public, max-age=31536000, immutable' : 'no-cache',
     });
-    res.end(head ? undefined : readFileSync(file));
+    if (head) res.end();
+    else createReadStream(file).on('error', () => res.destroy()).pipe(res);
     return true;
   }
 
@@ -416,7 +430,7 @@ export function createApp(store, {webDist, root = process.cwd()} = {}) {
         return res.end();
       }
       if (!match) {
-        if (['GET', 'HEAD'].includes(req.method) && !path.startsWith('/api/') && serveStatic(path, res, req.method === 'HEAD')) return;
+        if (['GET', 'HEAD'].includes(req.method) && !path.startsWith('/api/') && serveStatic(path, req, res, req.method === 'HEAD')) return;
         return send(404, {error: 'Not found'});
       }
       const b = ['POST', 'PUT', 'PATCH'].includes(req.method) ? await readBody(req) : {};

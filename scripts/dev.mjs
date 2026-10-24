@@ -10,4 +10,4 @@ const children = [
 const stop = () => children.forEach(c => c.kill());
 process.on('SIGINT', stop); process.on('SIGTERM', stop);
 children.forEach(c => c.on('exit', code => { if (code) { stop(); process.exitCode = code; } }));
-console.log('Mihari console  http://127.0.0.1:5173   API  http://127.0.0.1:5055');
+console.log('Wardrail console  http://127.0.0.1:5173   API  http://127.0.0.1:5055');

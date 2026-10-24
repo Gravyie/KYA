@@ -1,4 +1,5 @@
 import {useMemo} from 'react';
+import {Mark} from '../components/ui.jsx';
 
 /** A pseudo-QR: a deterministic grid that reads as a machine-readable seal. Decorative. */
 function Seal() {
@@ -17,14 +18,14 @@ function Seal() {
 /** The agent passport as a physical object: tilts with the pointer, foil catches the light. */
 export default function HoloPassport() {
   return (
-    <div className="holo tilt" role="img" aria-label="Agent passport for research-bot, operated by Acme Inc., registered on ERC-8004">
+    <div className="holo tilt" role="img" aria-label="Agent passport for workspace-agent, operated by Acme Inc., registered on ERC-8004">
       <div className="holo-face">
         <svg className="guilloche" viewBox="0 0 400 250" aria-hidden="true" preserveAspectRatio="none">
           {Array.from({length: 26}, (_, i) => <path key={i} d={`M0 ${150 + i * 2} C 90 ${60 + i * 5}, 190 ${230 - i * 3}, 400 ${110 + i * 3}`} />)}
         </svg>
         <div className="holo-foil" aria-hidden="true" />
-        <header><span className="mono">MIHARI · AGENT PASSPORT</span><svg width="26" height="26" viewBox="0 0 32 32"><circle cx="16" cy="16" r="11" fill="none" stroke="currentColor" strokeWidth="3.2" /><circle cx="16" cy="16" r="3.4" fill="var(--allow-glow)" /></svg></header>
-        <h4>research-bot</h4>
+        <header><span className="mono">WARDRAIL · AGENT PASSPORT</span><Mark size={26} /></header>
+        <h4>workspace-agent</h4>
         <dl>
           <dt>Operator</dt><dd>Acme Inc.</dd>
           <dt>Scopes</dt><dd>read_file · web.search</dd>

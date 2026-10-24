@@ -23,16 +23,16 @@ function Token() {
   return (
     <div className="viz token" aria-hidden="true">
       <code><s>eyJhbGciOiJFZERTQSJ9</s>.<u>eyJzdWIiOiI4ZjNhLi4u</u>.<i>Mq81…vPz</i></code>
-      <dl><dt>agent</dt><dd>research-bot</dd><dt>operator</dt><dd>Acme Inc.</dd><dt>audience</dt><dd>api.partner.com</dd><dt>expires</dt><dd>in 2 min</dd></dl>
+      <dl><dt>agent</dt><dd>workspace-agent</dd><dt>operator</dt><dd>Acme Inc.</dd><dt>audience</dt><dd>api.partner.com</dd><dt>expires</dt><dd>in 2 min</dd></dl>
       <p><b className="ok">✓</b> signature · <b className="ok">✓</b> not revoked</p>
     </div>
   );
 }
 
 const CASES = [
-  {icon: GitBranch, tag: 'Coding agents', title: 'In the repo, never in your secrets.', body: 'Put the MCP firewall in front of filesystem and shell servers. Reads are free, .env is denied, pushes wait for you.', viz: <Tree />, span: 'a'},
-  {icon: Wallet, tag: 'Spending agents', title: 'A card with a ceiling.', body: 'Small invoices pass. Larger ones pause for your approval. A daily budget stops the rest, even when a rule is too loose.', viz: <Budget />, span: 'b'},
-  {icon: Handshake, tag: 'Agents calling services', title: 'Prove who is on the other end.', body: 'Short-lived signed assertions name the accountable operator. Partners verify in six lines. Revoke, and every check fails.', viz: <Token />, span: 'c'},
+  {icon: GitBranch, tag: 'Coding agents', title: 'Code access without secret access.', body: 'Put the MCP firewall in front of filesystem and shell servers. Allow source reads, deny secret files, and pause pushes for your approval.', viz: <Tree />, span: 'a'},
+  {icon: Wallet, tag: 'Spending agents', title: 'Spend limits before a payment runs.', body: 'Small invoices pass. Larger ones pause for your approval. A daily budget stops the rest, even when a rule is too loose.', viz: <Budget />, span: 'b'},
+  {icon: Handshake, tag: 'Agents calling services', title: 'Prove who is on the other end.', body: 'Short-lived signed assertions name the accountable operator. Partners verify signatures and check live status. Revoke an agent and subsequent live status checks reject it.', viz: <Token />, span: 'c'},
 ];
 
 export default function Cases() {

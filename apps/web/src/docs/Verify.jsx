@@ -21,7 +21,7 @@ export default function Verify() {
   const [audience, setAudience] = useState('');
   const [out, setOut] = useState(null);
   const [busy, setBusy] = useState(false);
-  document.title = 'Verify an agent — Mihari';
+  document.title = 'Verify an agent — Wardrail';
 
   async function run(e) {
     e.preventDefault(); setBusy(true); setOut(null);
@@ -36,7 +36,7 @@ export default function Verify() {
 
       let claims;
       try { claims = JSON.parse(new TextDecoder().decode(b64(token.trim().split('.')[1]))); } catch { claims = null; }
-      if (!claims) { add('Token is a Mihari assertion', 'fail', 'Could not parse it'); setOut({...result, verdict: 'fail'}); return; }
+      if (!claims) { add('Token is a Wardrail assertion', 'fail', 'Could not parse it'); setOut({...result, verdict: 'fail'}); return; }
 
       try {
         const ok = await checkSignature(token.trim(), reg.publicKey);

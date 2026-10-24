@@ -8,6 +8,7 @@ import {useConsole} from './ctx.js';
 import RuleEditor from './RuleEditor.jsx';
 import KeyReveal from './KeyReveal.jsx';
 import {TEMPLATES, toPayload, fromAgent} from './templates.js';
+import {useDialog} from '../lib/useDialog.js';
 
 export const statusTone = s => (s === 'active' ? 'allow' : s === 'expired' ? 'ask' : 'deny');
 
@@ -20,6 +21,7 @@ function NewAgent({onClose}) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [issued, setIssued] = useState(null);
+  const dialogRef = useDialog(!issued, () => { if (!busy) onClose(); });
 
   const pick = t => { setTpl(t); setDraft({scopes: structuredClone(t.scopes), limits: structuredClone(t.limits)}); };
   async function submit(e) {
@@ -33,23 +35,24 @@ function NewAgent({onClose}) {
 
   if (issued) return <KeyReveal agent={issued.agent} secret={issued.key} onClose={() => { onClose(); navigate(`/app/agents/${issued.agent.id}`); }} />;
   return (
-    <div className="modal-back" onMouseDown={e => e.target === e.currentTarget && onClose()}>
-      <form className="modal wide" onSubmit={submit} role="dialog" aria-modal="true" aria-label="Register an agent">
-        <div className="modal-head"><h2>Register an agent</h2><button type="button" className="icon-btn" onClick={onClose} aria-label="Close"><X size={17} /></button></div>
+    <div className="modal-back" onMouseDown={e => e.target === e.currentTarget && !busy && onClose()}>
+      <form ref={dialogRef} className="modal wide" onSubmit={submit} role="dialog" aria-modal="true" aria-label="Register an agent">
+        <div className="modal-head"><h2>Register an agent</h2><button type="button" className="icon-btn" disabled={busy} onClick={onClose} aria-label="Close"><X size={17} /></button></div>
         <div className="tpls">
           {TEMPLATES.map(t => (
             <button type="button" key={t.id} className={`tpl ${t.id === tpl.id ? 'on' : ''}`} onClick={() => pick(t)}><b>{t.name}</b><span>{t.blurb}</span></button>
           ))}
         </div>
+        {tpl.id === 'coding' && <p className="hint">Replace <code>/Users/me/project</code> in each rule with your project’s absolute path. MCP tools must use these exact action names. A template is a starting point; review every permission.</p>}
         <label className="field"><span>Agent name</span>
           <input className="input" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Claude Code — billing repo" required minLength={2} maxLength={80} autoFocus />
         </label>
         <RuleEditor value={draft} onChange={setDraft} expiry={
           <label className="field"><span>Credential expires</span>
-            <div className="inline"><input className="input mono" placeholder="never" inputMode="numeric" value={expires} onChange={e => setExpires(e.target.value)} aria-label="Expiry in hours" /><span className="hint">hours from now</span></div>
+            <div className="inline"><input type="number" min="1" className="input mono" placeholder="never" inputMode="numeric" value={expires} onChange={e => setExpires(e.target.value)} aria-label="Expiry in hours" /><span className="hint">hours from now</span></div>
           </label>} />
         {error && <p className="error" role="alert">{error}</p>}
-        <div className="modal-foot"><button type="button" className="btn ghost" onClick={onClose}>Cancel</button><button className="btn" disabled={busy || !name.trim()}>Register agent</button></div>
+        <div className="modal-foot"><button type="button" className="btn ghost" disabled={busy} onClick={onClose}>Cancel</button><button className="btn" disabled={busy || !name.trim()}>Register agent</button></div>
       </form>
     </div>
   );
@@ -58,6 +61,9 @@ function NewAgent({onClose}) {
 export default function Agents() {
   const {data} = useConsole();
   const [open, setOpen] = useState(() => new URLSearchParams(location.search).get('new') === '1');
+  const [search, setSearch] = useState('');
+  const [status, setStatus] = useState('all');
+  const filtered = data.agents.filter(a => (status === 'all' || a.status === status) && `${a.name} ${a.description} ${a.id}`.toLowerCase().includes(search.toLowerCase()));
   const close = () => { setOpen(false); if (location.search) history.replaceState(null, '', '/app/agents'); };
 
   return (
@@ -66,6 +72,7 @@ export default function Agents() {
         <div><p className="eyebrow">Agents</p><h1>Every agent, its limits, its record.</h1></div>
         <button className="btn" onClick={() => setOpen(true)}><Plus size={16} /> Register an agent</button>
       </header>
+      {data.agents.length > 0 && <div className="filters"><input type="search" className="input" aria-label="Search agents" placeholder="Search name or agent ID" value={search} onChange={e => setSearch(e.target.value)} /><select className="input" aria-label="Agent status" value={status} onChange={e => setStatus(e.target.value)}><option value="all">All statuses</option><option value="active">Active</option><option value="revoked">Revoked</option><option value="expired">Expired</option></select><span className="hint">{filtered.length} of {data.agents.length} agents</span></div>}
       {data.agents.length === 0 ? (
         <section className="empty"><h2>Nothing registered</h2><p>An agent is any program that calls tools: a coding assistant, a research bot, an MCP client. Register it to give it its own key and rules.</p><button className="btn" onClick={() => setOpen(true)}>Register an agent</button></section>
       ) : (
@@ -73,7 +80,7 @@ export default function Agents() {
           <table className="table">
             <thead><tr><th>Agent</th><th>Status</th><th>Rules</th><th>Allowed</th><th>Blocked</th><th>Last used</th></tr></thead>
             <tbody>
-              {data.agents.map(a => (
+              {filtered.map(a => (
                 <tr key={a.id} className="click" onClick={() => navigate(`/app/agents/${a.id}`)}>
                   <td><Link to={`/app/agents/${a.id}`} className="strong">{a.name}</Link><div className="sub-line">…{a.keyHint}{a.description ? ` · ${a.description}` : ''}</div></td>
                   <td><Badge tone={statusTone(a.status)}>{a.status}</Badge></td>
@@ -81,6 +88,7 @@ export default function Agents() {
                   <td className="muted">{a.lastUsedAt ? ago(a.lastUsedAt) : 'never'}</td>
                 </tr>
               ))}
+              {filtered.length === 0 && <tr><td colSpan={6} className="pad muted">No agents match. Try another name or status.</td></tr>}
             </tbody>
           </table>
         </section>

@@ -1,6 +1,6 @@
-# Mihari
+# Wardrail
 
-> Mihari is an open-source identity, permissions and audit layer for AI agents. Each agent gets its own key and a signed identity card. Every tool call is checked against a policy (allow, ask a human, or deny), spend and rate limits apply, and each decision is written to a hash-linked audit log that can be verified offline. Free and self-hosted. Know your agent.
+> Wardrail is an open-source identity, permissions and audit layer for AI agents. Each agent gets its own key and a signed identity card. Every tool call is checked against a policy (allow, ask a human, or deny), spend and rate limits apply, and each decision is written to a hash-linked audit log that can be verified offline. Free and self-hosted. Know your agent.
 
 ## Integrate
 
@@ -19,7 +19,7 @@ Rules are `{action, resources[], mode: allow|ask|deny, maxAmount}`. `*` or a tra
 
 ## Limits
 
-Mihari decides and records; it cannot stop a tool call that bypasses the check. Outcome receipts are agent-reported. The audit log is tamper-evident relative to a known head, not a distributed ledger.
+Wardrail decides and records; it cannot stop a tool call that bypasses the check. Outcome receipts are agent-reported. The audit log is tamper-evident relative to a known head, not a distributed ledger.
 
 ## Docs
 

@@ -52,7 +52,7 @@ export default function Audit() {
         <select className="input" aria-label="Agent" value={agent} onChange={e => setAgent(e.target.value)}>
           <option value="all">All agents</option>{data.agents.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
         </select>
-        <div className="seg">{KINDS.map(([k, l]) => <button key={k} className={kind === k ? 'on' : ''} onClick={() => setKind(k)}>{l}</button>)}</div>
+        <div className="seg">{KINDS.map(([k, l]) => <button key={k} aria-pressed={kind === k} className={kind === k ? 'on' : ''} onClick={() => setKind(k)}>{l}</button>)}</div>
       </div>
       <section className="panel flush">
         <table className="table">
@@ -63,7 +63,7 @@ export default function Audit() {
               return (
                 <Fragment key={e.id}>
                   <tr className="click" onClick={() => setOpen(open === e.id ? null : e.id)}>
-                    <td className="mono muted">{e.seq ?? ''}</td><td className="muted nowrap">{dateTime(e.at)}</td>
+                    <td className="mono muted"><button className="audit-expand" aria-label={`Inspect event ${e.seq}`} aria-expanded={open === e.id} onClick={ev => { ev.stopPropagation(); setOpen(open === e.id ? null : e.id); }}>{open === e.id ? '−' : '+'} {e.seq ?? ''}</button></td><td className="muted nowrap">{dateTime(e.at)}</td>
                     <td><Badge tone={d.tone}>{d.label}</Badge></td><td>{d.who}</td><td><code>{d.text}</code> <span className="muted">{d.note}</span></td>
                   </tr>
                   {open === e.id && (

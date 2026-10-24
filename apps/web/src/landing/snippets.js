@@ -17,7 +17,7 @@ export const SNIPPETS = {
   sdk: {
     label: 'Node SDK',
     title: 'agent.mjs',
-    note: 'Wrap any function. If Mihari is unreachable the call fails closed, and an “ask” rule waits for a human.',
+    note: 'Wrap any function. If Wardrail is unreachable the call fails closed, and an “ask” rule waits for a human.',
     code: `// npm install /path/to/mihari/packages/sdk
 import { createMihari } from '@mihari/sdk';
 
@@ -79,7 +79,7 @@ curl -s $MIHARI_URL/api/agents/$AGENT_ID/erc8004 -H "authorization: Bearer $OWNE
 cast send 0x8004A818BFB912233c491871b3d84c89A494BD9e "register(string)" "$AGENT_URI" \\
   --rpc-url https://sepolia.base.org --private-key $PRIVATE_KEY
 
-# 3. link the minted agentId back to Mihari (it verifies ownership on-chain)
+# 3. link the minted agentId back to Wardrail (it verifies ownership on-chain)
 curl -s $MIHARI_URL/api/agents/$AGENT_ID/onchain -H "authorization: Bearer $OWNER_KEY" \\
   -d '{"chainId":84532,"agentId":10353}'`,
 };

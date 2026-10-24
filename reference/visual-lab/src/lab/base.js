@@ -95,7 +95,7 @@ export function signMesh(word, colr, height, vertical) {
 export const WORDS = ['承認', '監査', '識別', '関門', '代理人', '封鎖', '見張り', '認証', '記録', '審判', 'AGENT', '可決', '否決', '通行証', '24H', '警告'];
 
 /** Towers with lit windows, neon edges and banding, fogged with distance. Instanced boxes; aDim carries size. */
-export function towerMaterial({fogColor = 0x0b0820, fogFar = 90, windowScale = [0.55, 0.62]} = {}) {
+export function towerMaterial({fogColor = 0x0b0820, fogFar = 90, windowScale = [0.55, 0.62], windowBrightness = 0.85, edgeBrightness = 1.3} = {}) {
   return new THREE.ShaderMaterial({
     uniforms: {uTime: {value: 0}, uFog: {value: new THREE.Color(fogColor)}, uFogFar: {value: fogFar}, uAlert: {value: 0}, uWire: {value: 0}},
     vertexShader: `attribute vec3 aDim; attribute float aSeed; varying vec3 vObj; varying vec3 vN; varying float vSeed; varying float vDepth; varying vec3 vDim;
@@ -115,7 +115,7 @@ export function towerMaterial({fogColor = 0x0b0820, fogFar = 90, windowScale = [
         float topRim = step(vDim.y - 0.12, v);
         vec3 neon = mix(vec3(0.1, 0.85, 1.0), vec3(1.0, 0.18, 0.66), step(0.5, fract(vSeed * 13.0)));
         neon = mix(neon, vec3(1.0, 0.1, 0.2), uAlert);
-        vec3 col = base + wc * on * 0.85 + neon * (edge * 1.3 + topRim * 0.6);
+        vec3 col = base + wc * on * ${windowBrightness.toFixed(2)} + neon * (edge * ${edgeBrightness.toFixed(2)} + topRim * 0.6);
         // wireframe mode (for the cyberspace twin): only edges and floor lines
         float wireE = max(smoothstep(hw - 0.035, hw, abs(u)), max(smoothstep(0.04, 0.0, v), smoothstep(vDim.y - 0.04, vDim.y, v))) * step(abs(vN.y), 0.5);
         wireE = max(wireE, step(0.5, abs(vN.y)) * max(smoothstep(hw - 0.04, hw, abs(vObj.x)), smoothstep(vDim.z * 0.5 - 0.04, vDim.z * 0.5, abs(vObj.z))));
@@ -127,14 +127,14 @@ export function towerMaterial({fogColor = 0x0b0820, fogFar = 90, windowScale = [
   });
 }
 /** Fill an InstancedMesh of unit boxes as towers. place(i) returns {x, z, w, d, h, y0}. */
-export function towers(count, mat, place) {
+export function towers(count, mat, place, {random = Math.random} = {}) {
   const geo = new THREE.BoxGeometry(1, 1, 1);
   const dims = new Float32Array(count * 3), seeds = new Float32Array(count);
   const mesh = new THREE.InstancedMesh(geo, mat, count), dm = new THREE.Object3D();
   for (let i = 0; i < count; i++) {
     const {x, z, w, d, h, y0 = 0} = place(i);
     dm.position.set(x, y0 + h / 2, z); dm.scale.set(w, h, d); dm.updateMatrix(); mesh.setMatrixAt(i, dm.matrix);
-    dims[i * 3] = w; dims[i * 3 + 1] = h; dims[i * 3 + 2] = d; seeds[i] = Math.random();
+    dims[i * 3] = w; dims[i * 3 + 1] = h; dims[i * 3 + 2] = d; seeds[i] = random();
   }
   geo.setAttribute('aDim', new THREE.InstancedBufferAttribute(dims, 3)); geo.setAttribute('aSeed', new THREE.InstancedBufferAttribute(seeds, 1));
   return mesh;

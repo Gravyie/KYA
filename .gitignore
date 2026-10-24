@@ -1,5 +1,7 @@
 # deps
 node_modules/
+# Also exclude local dependency symlinks.
+node_modules
 .pnpm-store/
 
 # legacy foundry
@@ -32,7 +34,6 @@ apps/server/data/
 deployments/*.local.json
 
 # locks
-package-lock.json
 contracts/foundry.lock
 
 # python cache
@@ -48,3 +49,10 @@ agents/runtime/research-agent/.runs/
 # documentation & development reports
 /docs/
 
+
+# Local design output and working documents
+output/
+.shuin-demo/
+/*.pdf
+/*.pptx
+/pitchdeck.md

@@ -13,12 +13,12 @@ if (!upstream.length || flags.includes('--help')) {
   mihari-mcp [--url http://127.0.0.1:5055] [--key mia_…] [--resource-arg path] [--no-filter] -- <server command> [args…]
 
   --key           agent key (or set MIHARI_AGENT_KEY)
-  --url           Mihari registry (or MIHARI_URL), default http://127.0.0.1:5055
+  --url           Wardrail registry (or MIHARI_URL), default http://127.0.0.1:5055
   --resource-arg  tool argument that names the resource (default: first of path, url, uri, query, command…)
   --no-filter     do not hide tools the agent has no rule for
 
   Claude Desktop / Cursor config:
-    "command": "npx", "args": ["@mihari/mcp", "--", "npx", "@modelcontextprotocol/server-filesystem", "/path"],
+    "command": "node", "args": ["/path/to/KYA/packages/mcp/bin/mihari-mcp.js", "--", "npx", "@modelcontextprotocol/server-filesystem", "/path"],
     "env": {"MIHARI_AGENT_KEY": "mia_…"}`);
   process.exit(upstream.length ? 0 : 2);
 }

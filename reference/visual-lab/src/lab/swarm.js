@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import {makeStage, rand, PI, TAU, NEON, softPoints} from './base.js';
+import {SWARM_LIGHT_GLSL} from './swarm-style.js';
+import {buildSwarmGate} from './swarm-gate.js';
 
 /* 9 · SWARM. Every agent at once: tens of thousands of points flowing like a murmuration, snaking toward
    one gate and squeezing through it. In the gate each is judged: the allowed fan out cyan and green, the held
@@ -18,7 +20,7 @@ export function create(canvas) {
   const mat = new THREE.ShaderMaterial({
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
     uniforms: {uTime: {value: 0}, uPx: {value: 1}, uLock: {value: 0}},
-    vertexShader: `attribute vec4 aSeed; uniform float uTime, uPx, uLock; varying vec3 vCol; varying float vA;
+    vertexShader: `attribute vec4 aSeed; uniform float uTime, uPx, uLock; varying vec3 vCol; varying float vA; ${SWARM_LIGHT_GLSL}
       void main(){
         float s = fract(aSeed.x + uTime * (0.05 + 0.02 * aSeed.w));   // 0 far upstream → 1 far downstream
         float z = mix(90.0, -90.0, s);
@@ -28,7 +30,7 @@ export function create(canvas) {
         vec3 p = vec3(cos(a) * r, sin(a) * r * 0.7, z);
         p.x += sin(z * 0.045 + uTime * 0.35) * 18.0 * smoothstep(5.0, 60.0, z) + sin(z * 0.11 + uTime * 0.6 + aSeed.y * 3.0) * 3.0;
         p.y += cos(z * 0.037 + uTime * 0.28) * 10.0 * smoothstep(5.0, 60.0, z) + cos(z * 0.13 + uTime * 0.5) * 2.0;
-        vec3 col = mix(vec3(0.75, 0.85, 1.0), vec3(0.2, 0.8, 1.0), aSeed.w);
+        vec3 col = swarmLight(aSeed.w);
         float verdict = aSeed.z * 7.0 - floor(aSeed.z * 7.0);
         if (z < 0.0) {
           float k = -z;
@@ -54,15 +56,7 @@ export function create(canvas) {
   });
   const swarm = new THREE.Points(geo, mat); swarm.frustumCulled = false; scene.add(swarm);
 
-  // the gate: a heavy ring with ticks and a faint field
-  const gate = new THREE.Group(); scene.add(gate);
-  const gateMat = new THREE.MeshBasicMaterial({color: new THREE.Color(NEON.cyan).multiplyScalar(2.2), toneMapped: false});
-  gate.add(new THREE.Mesh(new THREE.TorusGeometry(7.6, 0.18, 12, 200), gateMat));
-  gate.add(new THREE.Mesh(new THREE.TorusGeometry(8.4, 0.04, 6, 200), new THREE.MeshBasicMaterial({color: new THREE.Color(NEON.mag).multiplyScalar(2), toneMapped: false})));
-  const ticks = new THREE.InstancedMesh(new THREE.BoxGeometry(0.06, 0.6, 0.06), new THREE.MeshBasicMaterial({color: new THREE.Color(NEON.cyan).multiplyScalar(1.6), toneMapped: false}), 120), dm = new THREE.Object3D();
-  for (let i = 0; i < 120; i++) { const a = (i / 120) * TAU; dm.position.set(Math.cos(a) * 9.2, Math.sin(a) * 9.2, 0); dm.rotation.set(0, 0, a - PI / 2); dm.scale.set(1, i % 10 === 0 ? 2 : 1, 1); dm.updateMatrix(); ticks.setMatrixAt(i, dm.matrix); }
-  gate.add(ticks);
-  gate.add(new THREE.Mesh(new THREE.CircleGeometry(7.5, 96), new THREE.MeshBasicMaterial({color: new THREE.Color(NEON.cyan).multiplyScalar(0.12), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide})));
+  const gateway=buildSwarmGate();scene.add(gateway.group);
   // dust in the void
   const D = 1500, dpos = new Float32Array(D * 3); for (let i = 0; i < D; i++) dpos.set([rand(-120, 120), rand(-60, 60), rand(-120, 120)], i * 3);
   scene.add(softPoints(dpos, {size: 1.2, color: 0x6a7cff, opacity: 0.4}));
@@ -73,8 +67,7 @@ export function create(canvas) {
     camera.lookAt(-8, 0, 10);
     mat.uniforms.uTime.value = t; mat.uniforms.uPx.value = st.renderer.getPixelRatio();
     const lock = st.ctx?.lock ?? 0; mat.uniforms.uLock.value = lock;
-    gateMat.color.set(NEON.cyan).lerp(new THREE.Color(NEON.red), lock).multiplyScalar(2.2 + lock * Math.max(0, Math.sin(t * 9)) * 1.5);
-    ticks.rotation.z = t * 0.1; gate.rotation.z = Math.sin(t * 0.3) * 0.05;
+    gateway.update(t,lock);
   });
   return st;
 }

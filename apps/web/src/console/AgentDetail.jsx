@@ -10,6 +10,7 @@ import KeyReveal from './KeyReveal.jsx';
 import {EventRow} from './Overview.jsx';
 import {fromAgent, toPayload} from './templates.js';
 import Onchain from './Onchain.jsx';
+import {useDialog, tabKeys} from '../lib/useDialog.js';
 
 const statusTone = s => (s === 'active' ? 'allow' : s === 'expired' ? 'ask' : 'deny');
 
@@ -70,6 +71,7 @@ export default function AgentDetail({id}) {
   const [error, setError] = useState('');
   const [secret, setSecret] = useState(null);
   const [confirm, setConfirm] = useState(false);
+  const confirmRef = useDialog(!!confirm, () => { if (!busy) setConfirm(false); });
 
   const saved = useMemo(() => (agent ? JSON.stringify(fromAgent(agent)) : ''), [agent]);
   useEffect(() => { if (agent) setDraft(fromAgent(agent)); }, [saved]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -87,8 +89,8 @@ export default function AgentDetail({id}) {
       await api.updatePolicy(id, body); setExtend(''); await refresh(); notify('Policy saved');
     } catch (e) { setError(e.message); } finally { setBusy(false); }
   }
-  async function rotate() { try { const r = await api.rotate(id); setSecret(r.key); refresh(); } catch (e) { notify(e.message); } }
-  async function revoke() { try { await api.revoke(id); setConfirm(false); await refresh(); notify(`${agent.name} revoked`); } catch (e) { notify(e.message); } }
+  async function rotate() { setBusy(true); try { const r = await api.rotate(id); setConfirm(false); setSecret(r.key); await refresh(); } catch (e) { notify(e.message); } finally { setBusy(false); } }
+  async function revoke() { setBusy(true); try { await api.revoke(id); setConfirm(false); await refresh(); notify(`${agent.name} revoked`); } catch (e) { notify(e.message); } finally { setBusy(false); } }
 
   return (
     <>
@@ -97,18 +99,19 @@ export default function AgentDetail({id}) {
         <div><p className="eyebrow">Agent</p><h1>{agent.name}</h1>{agent.description && <p className="muted">{agent.description}</p>}</div>
         {!revoked && (
           <div className="actions">
-            <button className="btn ghost" onClick={rotate}><RotateCw size={15} /> Rotate key</button>
-            <button className="btn danger" onClick={() => setConfirm(true)}><Ban size={15} /> Revoke</button>
+            <button className="btn ghost" onClick={() => setConfirm('rotate')}><RotateCw size={15} /> Rotate key</button>
+            <button className="btn danger" onClick={() => setConfirm('revoke')}><Ban size={15} /> Revoke</button>
           </div>
         )}
       </header>
 
-      <div className="tabs" role="tablist">
+      <div className="tabs" role="tablist" aria-label="Agent details" onKeyDown={tabKeys}>
         {[['policy', 'Policy'], ['activity', `Activity (${mine.length})`], ['identity', 'Identity']].map(([k, l]) => (
-          <button key={k} role="tab" aria-selected={tab === k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{l}</button>
+          <button key={k} id={`agent-tab-${k}`} role="tab" aria-controls="agent-panel" tabIndex={tab === k ? 0 : -1} aria-selected={tab === k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{l}</button>
         ))}
       </div>
 
+      <div role="tabpanel" id="agent-panel" aria-labelledby={`agent-tab-${tab}`}>
       {tab === 'policy' && (
         <>
           <section className="panel">
@@ -134,13 +137,14 @@ export default function AgentDetail({id}) {
 
       {tab === 'identity' && <><Identity agent={agent} /><Onchain agent={agent} /></>}
 
+      </div>
       {secret && <KeyReveal agent={agent} secret={secret} rotated onClose={() => setSecret(null)} />}
       {confirm && (
-        <div className="modal-back" onMouseDown={e => e.target === e.currentTarget && setConfirm(false)}>
-          <div className="modal" role="alertdialog" aria-modal="true" aria-label="Revoke agent">
-            <h2>Revoke {agent.name}?</h2>
-            <p className="muted">Its next call is denied, pending approvals are cancelled, and every service checking its status stops trusting it. This can’t be undone. Register a new agent to restore access.</p>
-            <div className="modal-foot"><button className="btn ghost" onClick={() => setConfirm(false)}>Cancel</button><button className="btn danger" onClick={revoke}>Revoke now</button></div>
+        <div className="modal-back" onMouseDown={e => e.target === e.currentTarget && !busy && setConfirm(false)}>
+          <div ref={confirmRef} className="modal" role="alertdialog" aria-modal="true" aria-label={confirm === 'rotate' ? 'Rotate agent key' : 'Revoke agent'}>
+            <h2>{confirm === 'rotate' ? 'Rotate the key for' : 'Revoke'} {agent.name}?</h2>
+            <p className="muted">{confirm === 'rotate' ? 'The current key will stop working immediately. Save the replacement key and update your agent configuration. Its identity and audit history stay intact.' : 'Its next authorization request is denied and pending approvals are cancelled. Services checking its live status can stop trusting it. This cannot be undone. Register a new agent to restore access.'}</p>
+            <div className="modal-foot"><button className="btn ghost" disabled={busy} onClick={() => setConfirm(false)}>Cancel</button><button className="btn danger" disabled={busy} onClick={confirm === 'rotate' ? rotate : revoke}>{busy ? 'Saving…' : confirm === 'rotate' ? 'Rotate key now' : 'Revoke now'}</button></div>
           </div>
         </div>
       )}

@@ -17,8 +17,8 @@ function flatGeo() { const g = new THREE.ShapeGeometry(rounded(W, H, 0.12), 16);
 export function printTexture() {
   const c = document.createElement('canvas'); c.width = 1360; c.height = 856; const g = c.getContext('2d');
   const mono = (px, w = 500) => `${w} ${px}px "Geist Mono Variable", ui-monospace, monospace`;
-  g.fillStyle = '#7fefff'; g.font = mono(28); g.fillText('MIHARI · AGENT PASSPORT · 通行証', 80, 110);
-  g.fillStyle = '#ffffff'; g.font = '700 118px "Chakra Petch", sans-serif'; g.fillText('RESEARCH-BOT', 76, 290);
+  g.fillStyle = '#7fefff'; g.font = mono(28); g.fillText('WARDRAIL · AGENT PASSPORT · 通行証', 80, 110);
+  g.fillStyle = '#ffffff'; g.font = '700 104px "Chakra Petch", sans-serif'; g.fillText('WORKSPACE AGENT', 76, 290);
   g.fillStyle = '#b9cbe0'; g.font = mono(34);
   ['OPERATOR   ACME INC.', 'SCOPES     read_file · web.search', 'ERC-8004   eip155:84532 · #10353', 'KEY        ed25519 · 8f3a·91c2·77de'].forEach((l, i) => g.fillText(l, 82, 400 + i * 54));
   g.strokeStyle = '#2dff9a'; g.lineWidth = 3; g.strokeRect(82, 650, 230, 62); g.fillStyle = '#2dff9a'; g.font = mono(28, 600); g.fillText('● ACTIVE', 108, 692);
@@ -35,13 +35,13 @@ function labelTexture(n, title, sub, colr) {
 
 /** The passport object itself: six layers (shell, circuit, chip, foil, print, glass) with labels that
  *  appear when it opens. Reused by the site's journey. */
-export function buildPassport() {
+export function buildPassport({labels = true} = {}) {
   const card = new THREE.Group();
   const layers = [];
   const add = (obj, z, label) => { const g = new THREE.Group(); g.add(obj); g.userData = {z, label}; card.add(g); layers.push(g); return g; };
   // 0 · shell: brushed dark metal with a bevel
   const shellGeo = new THREE.ExtrudeGeometry(rounded(W, H, 0.12), {depth: 0.07, bevelEnabled: true, bevelThickness: 0.02, bevelSize: 0.02, bevelSegments: 3, curveSegments: 16}); shellGeo.translate(0, 0, -0.07);
-  add(new THREE.Mesh(shellGeo, new THREE.MeshPhysicalMaterial({color: 0x0b0d16, metalness: 0.9, roughness: 0.32, clearcoat: 0.6, clearcoatRoughness: 0.2})), 0, ['04', 'KILL SWITCH', 'revoke once · closed everywhere', '#ff3b4a']);
+  add(new THREE.Mesh(shellGeo, new THREE.MeshPhysicalMaterial({color: 0x0b0d16, metalness: 0.9, roughness: 0.32, clearcoat: 0.6, clearcoatRoughness: 0.2})), 0, ['04', 'REVOCATION', 'stop access · keep the audit history', '#ff3b4a']);
   // 1 · circuit: traces with pulses running along them
   const circuit = new THREE.Mesh(flatGeo(), new THREE.ShaderMaterial({
     transparent: true, depthWrite: false, uniforms: {uTime: {value: 0}},
@@ -87,7 +87,7 @@ export function buildPassport() {
   add(new THREE.Mesh(flatGeo(), new THREE.MeshPhysicalMaterial({color: 0xbfd8ff, metalness: 0, roughness: 0.05, clearcoat: 1, transparent: true, opacity: 0.1, envMapIntensity: 0.6, depthWrite: false})), 0.14, null);
   fontsReady().then(() => {
     printMat.map = printTexture(); printMat.needsUpdate = true;
-    layers.forEach(l => {
+    if (labels) layers.forEach(l => {
       if (!l.userData.label) return;
       const [n, title, sub, colr] = l.userData.label;
       const m = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 0.4), new THREE.MeshBasicMaterial({map: labelTexture(n, title, sub, colr), transparent: true, depthWrite: false, toneMapped: false, opacity: 0}));
