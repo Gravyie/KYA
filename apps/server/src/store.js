@@ -1,19 +1,9 @@
-import {randomBytes, randomUUID, createHash, generateKeyPairSync, sign, verify, timingSafeEqual} from 'node:crypto';
+import {generateKeyPairSync} from 'node:crypto';
 import {existsSync, mkdirSync, readFileSync, writeFileSync, renameSync, appendFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 
-export const GENESIS = '0'.repeat(64);
-export const sha256 = value => createHash('sha256').update(value).digest('hex');
-export const newToken = prefix => `${prefix}_${randomBytes(32).toString('base64url')}`;
-export const now = () => new Date().toISOString();
-export function safeEqual(a, b) {
-  if (!a || !b) return false;
-  const x = Buffer.from(a), y = Buffer.from(b);
-  return x.length === y.length && timingSafeEqual(x, y);
-}
-
-/** Hash of an event exactly as a third party would recompute it from an export. */
-export const eventHash = ({hash: _ignored, ...rest}) => sha256(JSON.stringify(rest));
+import {createStoreCore, newToken, sha256} from './store-core.js';
+export {GENESIS, sha256, newToken, now, safeEqual, eventHash, verify} from './store-core.js';
 
 /**
  * File layout: state.json holds owner, agents, approvals and the signing key.
@@ -62,51 +52,9 @@ export function createStore(dataDir) {
   if (!existsSync(stateFile)) save();
   if (!existsSync(eventsFile)) writeFileSync(eventsFile, '', {mode: 0o600});
 
-  function append(agentId, kind, details = {}) {
-    const entry = {
-      seq: events.length + 1, id: randomUUID(), at: now(), agentId, kind, details,
-      previousHash: events.at(-1)?.hash ?? GENESIS,
-    };
-    entry.hash = eventHash(entry);
-    events.push(entry);
-    appendFileSync(eventsFile, JSON.stringify(entry) + '\n');
-    return entry;
-  }
-
-  /** Spend and call count inside the agent's own budget / rate windows. */
-  function usage(agent, at = Date.now()) {
-    const {budget, rate} = agent.limits ?? {};
-    const spendSince = budget ? at - budget.windowHours * 3600e3 : Infinity;
-    const callSince = rate ? at - rate.windowMinutes * 60e3 : Infinity;
-    let spent = 0, calls = 0;
-    for (let i = events.length - 1; i >= 0; i--) {
-      const e = events[i];
-      const t = Date.parse(e.at);
-      if (t < Math.min(spendSince, callSince)) break;
-      if (e.agentId !== agent.id || (e.kind !== 'action.allowed' && e.kind !== 'approval.granted')) continue;
-      if (t >= spendSince) spent += Number(e.details.amount) || 0;
-      if (t >= callSince) calls += 1;
-    }
-    return {spent, calls};
-  }
-
-  const publicKey = () => state.publicKey;
-  const fingerprint = () => sha256(state.publicKey);
-  const signBytes = data => sign(null, Buffer.from(data), state.privateKey);
-  const signJson = payload => signBytes(JSON.stringify(payload)).toString('base64url');
-
-  return {
-    state, events, save, append, usage, publicKey, fingerprint, signBytes, signJson,
+  return createStoreCore(state, events, {
+    save,
+    writeEvent: entry => appendFileSync(eventsFile, JSON.stringify(entry) + '\n'),
     recoveryHash: () => sha256(readFileSync(recoveryFile, 'utf8').trim()),
-    verifyChain() {
-      let previous = GENESIS;
-      for (const e of events) {
-        if (e.previousHash !== previous || eventHash(e) !== e.hash) return {valid: false, at: e.id, seq: e.seq};
-        previous = e.hash;
-      }
-      return {valid: true, count: events.length, head: previous};
-    },
-  };
+  });
 }
-
-export {verify};

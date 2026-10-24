@@ -8,13 +8,31 @@ Import `Gravyie/KYA` into Vercel with production branch `main` and **Root Direct
 
 This deploys the landing page, docs and browser UI. The console, identity APIs and server-backed verification still require a backend; `/api` is intentionally not rewritten to HTML. Vercel's static build does not run `npm start` or deploy the Node server. Backend URLs are not secrets; owner keys and signing keys must never be frontend build variables.
 
-## Free backend path (not deployed)
+## Cloudflare Free backend
 
-For zero ongoing hosting spend, the recommended next adaptation is a Cloudflare **Workers Free** API with **D1 Free** persistent storage. The current filesystem-backed Node server cannot be deployed there unchanged: extract portable HTTP handlers, implement transactional database storage, persist signing identity safely, and verify policy/approval/audit concurrency and free-plan CPU limits. Then proxy the frontend's `/api/*` requests to the Worker and configure the public identity origin. The local SDK and MCP wrappers remain client-side integrations.
+The Worker uses one SQLite-backed Durable Object for the single-owner registry. It shares API routes, policy evaluation, token formats and audit hashing with the local Node server. Requests are serialized, and state plus appended events commit atomically before a successful response. Keys and events survive worker restarts. This replaces the previous proposed D1 migration; no separate D1 instance is needed.
 
-Stay on Free plans, use the provider's supplied hostname initially and do not enable paid products or automatic upgrades. Free quotas limit availability; they are not unlimited capacity. D1 Free returns errors at its included limits rather than charging overages: https://developers.cloudflare.com/d1/platform/pricing/. Workers Free limits: https://developers.cloudflare.com/workers/platform/pricing/.
+Use **Workers Free**. Do not enable Workers Paid, containers, R2 or other paid products. Free-plan requests and storage operations fail at quota limits. The hosted adapter additionally caps a registry at 100 agents and 10,000 audit events to bound memory and read costs. Export audit history regularly; no data is silently pruned.
 
-No backend has been deployed for the current release. The old Render `kya-api` service was deleted during project-scoped cleanup; no KYA/Wardrail AWS resources were identified. Unrelated cloud resources were left untouched. The Docker/VM instructions below remain available for self-hosting, but paid infrastructure is not authorized.
+```sh
+npm ci
+npm run test:worker
+npx wrangler login
+# Verify Workers Free in the dashboard before provisioning.
+npx wrangler secret put OWNER_KEY_HASH
+npx wrangler secret put RECOVERY_KEY_HASH
+npm run deploy:worker
+```
+
+`OWNER_KEY_HASH` is the SHA-256 hash of a randomly generated `mio_` owner key; `RECOVERY_KEY_HASH` hashes a separate `mir_` recovery key. Preserve the original keys securely outside Git. The hosted registry is provisioned with its owner before public traffic, so the public setup route is disabled. The owner key signs into `/app`. For lost owner keys, POST to `/api/operator/recover` with the recovery key as a Bearer credential; the returned owner key replaces the old one. Recovery requires the operator credential, not a browser session.
+
+`ALLOWED_ORIGINS` lists exact permitted browser origins, separated by commas. Update it when adding frontend domains. `PUBLIC_URL` sets the public API origin used in identity registration files. Proxy Vercel `/api/*` and `/health` to the Worker to keep browser API calls on the website origin. SDK and MCP clients can use the Worker URL directly. MCP and SDK still run on users' own machines; no agent execution or model billing is provided by this API.
+
+Check health, owner authentication, agent allow/ask/deny, approval, signed assertions, audit export/verify and revocation after deployment. Local runtime checks also exercise concurrent rate limits, persistence across restarts, operator recovery, CORS and body limits.
+
+Cloudflare references: https://developers.cloudflare.com/durable-objects/platform/pricing/ and https://developers.cloudflare.com/workers/platform/pricing/.
+
+The old Render `kya-api` service was deleted during project-scoped cleanup; no KYA/Wardrail AWS resources were identified. Unrelated cloud resources were left untouched. Docker/VM instructions remain below for self-hosting; paid infrastructure is not authorized.
 
 ## Run on a host
 

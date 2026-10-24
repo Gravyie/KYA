@@ -56,3 +56,9 @@ output/
 /*.pdf
 /*.pptx
 /pitchdeck.md
+
+# Cloudflare local state and bundled output
+.wrangler/
+.worker-build/
+.dev.vars
+.vercel/

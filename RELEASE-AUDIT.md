@@ -79,3 +79,11 @@ Removed free-section proximity snapping and the finale snap target: passport, in
 - Reviewed both local UWI frontend snapshots (`UWI/frontend/src` and `Universal-Web3-Identity-UWI/frontend/src`). Neither contains device-tier/GPU-budget code; no unverified UWI implementation was copied.
 - Reference: [MDN WebGL best practices](https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/WebGL_best_practices), particularly smaller back buffers, per-pixel VRAM budgets and avoiding blocking GPU reads. No GPU fingerprinting or synchronous per-frame GPU queries were added.
 - Prior requested outcomes remain reconciled in the table above. Light view remains removed; the restored interior stream and portal proportions are unchanged. Docker daemon remains unavailable; image build and deployment-host smoke test are still required before a public release.
+
+## Hosted backend adaptation
+
+- Vercel production failure traced to project Root Directory `apps/web`; changed it to the repository root. The existing deployment was rebuilt successfully and is Ready at `https://kyaa.vercel.app`.
+- Shared the existing policy/API and storage-core semantics with a Cloudflare Worker. SQLite-backed Durable Object storage commits state and audit events atomically; a per-registry queue serializes asynchronous requests. Local runtime checks prove a simultaneous eight-request burst cannot bypass a one-call rate limit, and signing identity plus events survive a runtime restart.
+- Hosted owner is provisioned before public traffic; public setup is disabled. A separate hashed recovery credential can rotate a lost owner key. Initial credentials are private local files under ignored `.data`, never committed or embedded in frontend assets.
+- Worker checks cover allow/deny, pending approval/resolution, signatures, audit validation, durable restart, revocation, operator recovery, origin restrictions and 64 KiB body limits. The complete Node suite still passes. Deployment tooling dependencies are pinned; the patched HTTP dependency reports zero npm advisories after installation.
+- Worker deployment awaits confirmation that the authorized Cloudflare account is on Workers Free; no paid plan or paid product has been enabled. Production backend routing will be added after its URL is verified.

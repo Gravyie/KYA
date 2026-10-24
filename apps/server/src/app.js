@@ -3,7 +3,7 @@ import {randomUUID} from 'node:crypto';
 import {existsSync, createReadStream, statSync} from 'node:fs';
 import {resolve, extname, sep} from 'node:path';
 import {cleanScopes, cleanLimits, parseRequest, decide, fail} from './policy.js';
-import {sha256, newToken, now, safeEqual, GENESIS} from './store.js';
+import {sha256, newToken, now, safeEqual, GENESIS} from './store-core.js';
 import {verifyAssertion} from '../../../packages/sdk/src/verify.js';
 import {registrationFile, toDataUri, agentRegistryId, encodeRegister} from '../../../packages/sdk/src/erc8004.js';
 import {chainList, getChain, readIdentity} from './chain.js';
@@ -19,11 +19,11 @@ const CSP = [
   "object-src 'none'", "base-uri 'self'", "frame-ancestors 'none'",
 ].join('; ');
 
-export function createApp(store, {webDist, root = process.cwd()} = {}) {
+export function createHandler(store, {webDist, root = process.cwd(), publicUrl} = {}) {
   const {state, events} = store;
   const bearer = req => /^Bearer (.+)$/i.exec(req.headers.authorization || '')?.[1] || '';
   const issuer = () => `mihari:${store.fingerprint().slice(0, 16)}`;
-  const origin = req => process.env.MIHARI_PUBLIC_URL?.replace(/\/$/, '') || `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers.host}`;
+  const origin = req => (publicUrl || process.env.MIHARI_PUBLIC_URL)?.replace(/\/$/, '') || `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers.host}`;
   const lookups = new Map(); // tiny per-IP limiter for the public chain reader
   const allowLookup = req => {
     const ip = req.socket.remoteAddress, now = Date.now(), hits = (lookups.get(ip) ?? []).filter(t => now - t < 60e3);
@@ -81,7 +81,7 @@ export function createApp(store, {webDist, root = process.cwd()} = {}) {
   const routes = [];
   const route = (method, pattern, fn, opts = {}) => routes.push({method, pattern, fn, public: !!opts.public});
 
-  route('GET', /^\/health$/, () => ({ok: true, product: 'Wardrail', storage: 'local', events: events.length}), {public: true});
+  route('GET', /^\/health$/, () => ({ok: true, product: 'Wardrail', storage: store.storage || 'local', events: events.length}), {public: true});
   route('GET', /^\/api\/registry$/, () => ({
     product: 'Wardrail', issuer: issuer(), algorithm: 'Ed25519', publicKey: store.publicKey(), fingerprint: store.fingerprint(),
   }), {public: true});
@@ -414,7 +414,7 @@ export function createApp(store, {webDist, root = process.cwd()} = {}) {
     req.on('error', bad);
   });
 
-  return createServer(async (req, res) => {
+  return async (req, res) => {
     const path = new URL(req.url, 'http://localhost').pathname;
     const send = (status, obj, cors) => {
       res.writeHead(status, {
@@ -439,5 +439,9 @@ export function createApp(store, {webDist, root = process.cwd()} = {}) {
       send(e.status || 500, {error: e.status ? e.message : 'Internal error'}, true);
       if (!e.status) console.error(e);
     }
-  });
+  };
+}
+
+export function createApp(store, options) {
+  return createServer(createHandler(store, options));
 }

@@ -15,9 +15,17 @@
     "test": "node --test --test-timeout=20000 apps/server/test/*.test.mjs",
     "owner:recover": "node scripts/recover-owner.mjs",
     "demo:mcp": "node packages/mcp/bin/mihari-mcp.js -- node examples/demo-mcp-server.mjs",
-    "test:web": "node scripts/smoke-web.mjs"
+    "test:web": "node scripts/smoke-web.mjs",
+    "build:worker": "wrangler deploy --dry-run --outdir .worker-build",
+    "test:worker": "npm run build:worker && WORKER_BUNDLE=.worker-build/index.js node scripts/smoke-worker.mjs",
+    "deploy:worker": "wrangler deploy"
   },
   "devDependencies": {
-    "playwright": "1.64.1"
+    "playwright": "1.64.1",
+    "wrangler": "4.152.0",
+    "miniflare": "5.20261019.2-beta"
+  },
+  "overrides": {
+    "undici": "^7.30.1"
   }
 }
