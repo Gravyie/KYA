@@ -2,9 +2,19 @@
 
 Wardrail is a single-owner, single-process registry with persistent local storage. Deploy the Node server and the built web app together. A static-only host cannot provide the console, approvals or API.
 
-## Vercel or a server?
+## Vercel frontend
 
-Vercel alone is not sufficient for the current product: the API keeps registry state, signing keys and the audit log on a persistent filesystem in one Node process. Vercel can host the frontend separately, but the API still needs a persistent server and same-origin proxy routing. The simplest deployment is the included Docker Compose setup on a VM with persistent disk, serving both the website and API behind HTTPS. No separate frontend host is required.
+Import `Gravyie/KYA` into Vercel with production branch `main` and **Root Directory left at the repository root (`.`)**. Select Node 24 in the project settings. The root `vercel.json` supplies installation, build, output directory and client-side page routing. Remove stale dashboard overrides that point at an older app directory or start command. Add your existing domain under the project's Domains settings.
+
+This deploys the landing page, docs and browser UI. The console, identity APIs and server-backed verification still require a backend; `/api` is intentionally not rewritten to HTML. Vercel's static build does not run `npm start` or deploy the Node server. Backend URLs are not secrets; owner keys and signing keys must never be frontend build variables.
+
+## Free backend path (not deployed)
+
+For zero ongoing hosting spend, the recommended next adaptation is a Cloudflare **Workers Free** API with **D1 Free** persistent storage. The current filesystem-backed Node server cannot be deployed there unchanged: extract portable HTTP handlers, implement transactional database storage, persist signing identity safely, and verify policy/approval/audit concurrency and free-plan CPU limits. Then proxy the frontend's `/api/*` requests to the Worker and configure the public identity origin. The local SDK and MCP wrappers remain client-side integrations.
+
+Stay on Free plans, use the provider's supplied hostname initially and do not enable paid products or automatic upgrades. Free quotas limit availability; they are not unlimited capacity. D1 Free returns errors at its included limits rather than charging overages: https://developers.cloudflare.com/d1/platform/pricing/. Workers Free limits: https://developers.cloudflare.com/workers/platform/pricing/.
+
+No backend has been deployed for the current release. The old Render `kya-api` service was deleted during project-scoped cleanup; no KYA/Wardrail AWS resources were identified. Unrelated cloud resources were left untouched. The Docker/VM instructions below remain available for self-hosting, but paid infrastructure is not authorized.
 
 ## Run on a host
 

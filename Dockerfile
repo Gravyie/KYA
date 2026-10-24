@@ -5,6 +5,7 @@ RUN npm ci --prefix apps/web
 COPY apps/web ./apps/web
 COPY scripts/compress-web.mjs ./scripts/compress-web.mjs
 COPY apps/server/src/policy.js ./apps/server/src/policy.js
+COPY packages/sdk/src ./packages/sdk/src
 RUN npm run build --prefix apps/web
 
 FROM node:24-bookworm-slim AS runtime
