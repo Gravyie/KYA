@@ -22,7 +22,7 @@ export class Registry extends DurableObject {
         const key=newToken('mio');store.state.owner.keyHash=sha256(key);store.append(null,'owner.key.recovered',{method:'operator-recovery-key'});store.save();store.commit();await this.ctx.storage.sync();
         return Response.json({key,notice:'Previous owner key invalidated; store this key securely.'});
       }
-      const response=await handleRequest(request,store,{root:'/local-checkout',publicUrl:this.env.PUBLIC_URL});
+      const response=await handleRequest(request,store,{root:'/path/to/KYA',publicUrl:this.env.PUBLIC_URL});
       if(response.ok){store.commit();await this.ctx.storage.sync();}else this.store=null;
       return response;
     } catch(e){this.store=null;console.error('Registry request failed:',e.message);return Response.json({error:'Registry temporarily unavailable; no successful decision was returned.'},{status:503});}
@@ -35,7 +35,10 @@ export default {
     if(url.pathname!='/health'&&!url.pathname.startsWith('/api/'))return Response.json({error:'Not found'},{status:404});
     const origin=request.headers.get('origin');
     const allowed=(env.ALLOWED_ORIGINS||'').split(',').map(s=>s.trim()).filter(Boolean);
-    if(origin&&!allowed.includes(origin))return Response.json({error:'Origin not allowed'},{status:403});
+    // Vercel's same-origin proxy supports the site's custom domains. This only
+    // controls browser CORS; every protected API route still checks its Bearer key.
+    const viaFrontend=origin&&request.headers.has('x-vercel-id')&&request.headers.get('x-forwarded-host')===new URL(origin).host;
+    if(origin&&!allowed.includes(origin)&&!viaFrontend)return Response.json({error:'Origin not allowed'},{status:403});
     if(request.method==='OPTIONS')return new Response(null,{status:204,headers:{
       'Access-Control-Allow-Origin':origin||'*','Access-Control-Allow-Methods':'GET,POST,PUT,OPTIONS',
       'Access-Control-Allow-Headers':'Authorization,Content-Type','Access-Control-Max-Age':'600','Vary':'Origin'}});

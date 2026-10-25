@@ -86,7 +86,7 @@ export function createHandler(store, {webDist, root = process.cwd(), publicUrl} 
     product: 'Wardrail', issuer: issuer(), algorithm: 'Ed25519', publicKey: store.publicKey(), fingerprint: store.fingerprint(),
   }), {public: true});
   route('GET', /^\/api\/status$/, () => ({
-    configured: !!state.owner, owner: state.owner?.name ?? null, agentCount: state.agents.length, eventCount: events.length,
+    configured: !!state.owner, storage: store.storage || 'local', owner: state.owner?.name ?? null, agentCount: state.agents.length, eventCount: events.length,
   }), {public: true});
 
   route('POST', /^\/api\/preview$/, (_req, b) => {

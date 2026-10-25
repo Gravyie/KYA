@@ -40,6 +40,8 @@ try {
  const recovered=await api('/api/operator/recover',{},'mir_worker-recovery');assert.equal(recovered.status,200);
  assert.equal((await api('/api/dashboard')).status,401);assert.equal((await api('/api/dashboard',null,recovered.body.key)).status,200);
  const evil=await mf.dispatchFetch('https://worker.test/api/status',{headers:{origin:'https://evil.test'}});assert.equal(evil.status,403);
+ const proxy=await mf.dispatchFetch('https://worker.test/api/status',{headers:{origin:'https://custom.example','x-vercel-id':'proxy-test','x-forwarded-host':'custom.example'}});assert.equal(proxy.status,200);
+ const protectedProxy=await mf.dispatchFetch('https://worker.test/api/dashboard',{headers:{origin:'https://custom.example','x-vercel-id':'proxy-test','x-forwarded-host':'custom.example'}});assert.equal(protectedProxy.status,401);
  const preflight=await mf.dispatchFetch('https://worker.test/api/status',{method:'OPTIONS',headers:{origin:'https://frontend.test'}});assert.equal(preflight.status,204);
  const large=await mf.dispatchFetch('https://worker.test/api/preview',{method:'POST',body:'x'.repeat(70000)});assert.equal(large.status,413);
  console.log('WORKER CHECKS PASSED: provisioned owner, authorization, concurrent rate limit, signed identity, audit, durable restart, revocation, CORS and size limits.');

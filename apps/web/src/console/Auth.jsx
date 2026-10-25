@@ -77,7 +77,7 @@ export function Unlock({status, onDone, reason}) {
         {error && <p className="error" role="alert">{error}</p>}
         <button className="btn" disabled={busy || !key.trim()}>Unlock</button>
       </form>
-      <p className="hint">Lost it? On the machine running Wardrail, run <code className="inline-code">npm run owner:recover</code> to rotate to a new key. Agents and audit history are kept.</p>
+      <p className="hint">{status?.storage === 'cloudflare-sqlite' ? 'Lost it? Use your separate operator recovery key with the hosted recovery endpoint described in DEPLOYMENT.md. Your agents and audit history are kept.' : <>Lost it? On the machine running Wardrail, run <code className="inline-code">npm run owner:recover</code> to rotate to a new key. Agents and audit history are kept.</>}</p>
     </Shell>
   );
 }

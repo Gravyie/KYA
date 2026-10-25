@@ -3,10 +3,32 @@
   "name": "wardrail-api",
   "main": "apps/worker/src/index.js",
   "compatibility_date": "2026-10-24",
-  "compatibility_flags": ["nodejs_compat"],
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
   "workers_dev": true,
-  "durable_objects": {"bindings": [{"name": "REGISTRY", "class_name": "Registry"}]},
-  "migrations": [{"tag": "v1", "new_sqlite_classes": ["Registry"]}],
-  "vars": {"OWNER_NAME": "Wardrail workspace", "ALLOWED_ORIGINS": ""},
-  "observability": {"enabled": false}
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "REGISTRY",
+        "class_name": "Registry"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": [
+        "Registry"
+      ]
+    }
+  ],
+  "vars": {
+    "OWNER_NAME": "Wardrail workspace",
+    "PUBLIC_URL": "https://kyaa.vercel.app",
+    "ALLOWED_ORIGINS": "https://kyaa.vercel.app,https://kya-web-garvs-projects-af68f8e2.vercel.app,https://kya-web-git-main-garvs-projects-af68f8e2.vercel.app"
+  },
+  "observability": {
+    "enabled": false
+  }
 }

@@ -26,7 +26,7 @@ npm run deploy:worker
 
 `OWNER_KEY_HASH` is the SHA-256 hash of a randomly generated `mio_` owner key; `RECOVERY_KEY_HASH` hashes a separate `mir_` recovery key. Preserve the original keys securely outside Git. The hosted registry is provisioned with its owner before public traffic, so the public setup route is disabled. The owner key signs into `/app`. For lost owner keys, POST to `/api/operator/recover` with the recovery key as a Bearer credential; the returned owner key replaces the old one. Recovery requires the operator credential, not a browser session.
 
-`ALLOWED_ORIGINS` lists exact permitted browser origins, separated by commas. Update it when adding frontend domains. `PUBLIC_URL` sets the public API origin used in identity registration files. Proxy Vercel `/api/*` and `/health` to the Worker to keep browser API calls on the website origin. SDK and MCP clients can use the Worker URL directly. MCP and SDK still run on users' own machines; no agent execution or model billing is provided by this API.
+`ALLOWED_ORIGINS` lists exact permitted browser origins, separated by commas. Same-origin requests through the Vercel proxy also support newly added frontend domains; direct browser calls to the Worker need an origin in this allowlist. Bearer authentication is required for protected routes regardless of proxy/CORS headers. `PUBLIC_URL` sets the public API origin used in identity registration files. Proxy Vercel `/api/*` and `/health` to the Worker to keep browser API calls on the website origin. SDK and MCP clients can use the Worker URL directly. MCP and SDK still run on users' own machines; no agent execution or model billing is provided by this API.
 
 Check health, owner authentication, agent allow/ask/deny, approval, signed assertions, audit export/verify and revocation after deployment. Local runtime checks also exercise concurrent rate limits, persistence across restarts, operator recovery, CORS and body limits.
 
@@ -88,3 +88,12 @@ For a lost owner key, run `npm run owner:recover` on the host using the same dat
 - This is not a multi-tenant hosted service or a security certification. Enforcement only applies to calls routed through the SDK/MCP boundary. Receipts remain agent-reported; revocation cannot undo a tool that already executed.
 
 Implementation references: [Docker build guidance](https://docs.docker.com/build/building/best-practices/), [OWASP HTTP headers](https://cheatsheetseries.owasp.org/cheatsheets/HTTP_Headers_Cheat_Sheet.html), and [reduced motion](https://web.dev/articles/prefers-reduced-motion).
+
+## Current live deployment
+
+- Frontend and console: https://kyaa.vercel.app
+- API: https://wardrail-api.garvaditya0-082.workers.dev
+- Cloudflare Workers Free plan confirmed in the account dashboard; no paid plan enabled. SQLite-backed Durable Objects are used with no separate paid database.
+- Vercel Root Directory is the repository root. The checked-in rewrites forward `/api/*` and `/health` to Cloudflare. Add your existing frontend domain in Vercel as usual.
+- Initial owner/recovery credentials are in the operator's private, ignored `.data/wardrail-production-credentials.json`. Copy both to a password manager. Use `ownerKey` to unlock the console; never share `recoveryKey` with agents.
+- Launch verification leaves clearly labelled, revoked validation agents and their audit history. No real external actions are executed by these checks.
