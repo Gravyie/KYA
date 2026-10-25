@@ -617,7 +617,7 @@ export function createWorld(canvas, {onDecision, onFrame, onPassState, reduced =
     pointerField.uPress.value += ((pointer.down ? 1 : 0) - pointerField.uPress.value) * (1 - Math.exp(-dt * 8));
     pointerField.uPointerVelocity.value.set(pointer.vx, -pointer.vy, 0).applyQuaternion(camera.quaternion);
     pointer.vx *= Math.exp(-dt * 10); pointer.vy *= Math.exp(-dt * 10);
-    gateway.update(time, renderer.getPixelRatio(), lock, reduced ? 0 : dt, journeyVisibility);
+    gateway.update(time, renderer.getPixelRatio(), lock, reduced || !portal.visible ? 0 : dt, journeyVisibility);
     checkpoint.visible = cz < -40 && cz > -240;
     swarmU.uInside.value = inTube ? 1 : smooth(span(-cz, -PORTAL.z - 20, -PORTAL.z - 1));
     swarmU.uLock.value = lock; swarmU.uPx.value = renderer.getPixelRatio();
@@ -728,11 +728,13 @@ export function createWorld(canvas, {onDecision, onFrame, onPassState, reduced =
   const start = () => { if (running || reduced) return; running = true; clock.getDelta(); raf = requestAnimationFrame(frame); };
   const stop = () => { running = false; cancelAnimationFrame(raf); };
   const onVis = () => { if(document.hidden){onLeave();stop();}else {ema=.016;slowFrames=fastFrames=0;settleUntil=frames+90;start();} };
-  const onMove = e => { const x=(e.clientX/innerWidth-0.5)*2, y=(e.clientY/innerHeight-0.5)*2;
+  // Touch is page navigation; it must not leave a synthetic hover running the
+  // particle physics after release. Passport manipulation has its own input path.
+  const onMove = e => { if(e.pointerType==='touch'){pointer.active=false;pointer.down=false;return;} const x=(e.clientX/innerWidth-0.5)*2, y=(e.clientY/innerHeight-0.5)*2;
     pointer.vx=Math.max(-3,Math.min(3,(x-pointer.x)*25));pointer.vy=Math.max(-3,Math.min(3,(y-pointer.y)*25));
     pointer.x=x;pointer.y=y;pointer.active=!e.target.closest?.('button,a,input,.sheet,.magi,.nav'); };
-  const onDown = e => { if (!e.target.closest?.('button,a,input,.sheet,.magi,.nav,.pass-stage')) pointer.down=true; };
-  const onUp = () => { pointer.down=false; };
+  const onDown = e => { if(e.pointerType==='touch')return; if (!e.target.closest?.('button,a,input,.sheet,.magi,.nav,.pass-stage')) pointer.down=true; };
+  const onUp = e => { pointer.down=false;if(e.pointerType==='touch')pointer.active=false; };
   const onLeave = () => { pointer.active=false; pointer.down=false; };
   addEventListener('blur',onLeave);
   addEventListener('pointerdown', onDown);addEventListener('pointerup',onUp);addEventListener('pointercancel',onUp);document.documentElement.addEventListener('pointerleave',onLeave);

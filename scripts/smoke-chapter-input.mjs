@@ -11,12 +11,14 @@ const browser=await chromium.launch({...(process.env.CHROME_PATH?{executablePath
 const failures=[];await mkdir(root+'/output/mobile',{recursive:true});
 try{
  const p=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
- await p.addInitScript(()=>sessionStorage.setItem('mihari.boot','1'));
- await p.goto(`http://127.0.0.1:${server.address().port}`);await p.waitForSelector('.w-ready');await p.evaluate(()=>document.fonts.ready);
+ // Keep this timing-specific input test independent of a CI runner's software GPU.
+ // The full mobile suite separately exercises this controller with the real 3D scene.
+ await p.addInitScript(()=>{sessionStorage.setItem('mihari.boot','1');HTMLCanvasElement.prototype.getContext=()=>null;});
+ await p.goto(`http://127.0.0.1:${server.address().port}`);await p.waitForSelector('.w-static');await p.evaluate(()=>document.fonts.ready);
  const c=await p.context().newCDPSession(p);
- async function swipe(distance=170,interval=20){
+ async function swipe(distance=170,interval=20,steps=8){
   await c.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:12,y:650}]});
-  for(let i=1;i<=8;i++){await c.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:12,y:650-distance*i/8}]});await p.waitForTimeout(interval);}
+  for(let i=1;i<=steps;i++){await c.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:12,y:650-distance*i/steps}]});await p.waitForTimeout(interval);}
   await c.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
  }
  const railHidden=await p.locator('.rail').evaluate(e=>getComputedStyle(e).display==='none');
@@ -33,14 +35,25 @@ try{
  await swipe();await p.waitForTimeout(1900);
  const caption=await p.locator('.gate-card').evaluate(e=>{const r=e.getBoundingClientRect();return {top:r.top,bottom:r.bottom,h:innerHeight};});console.log('Gate arrival:',caption);await p.screenshot({path:root+'/output/mobile/gate-arrival.png'});
  if(caption.bottom>caption.h-16||caption.top<80)failures.push('Gate arrival hides the caption');
- // A rapid burst spanning the end of the animation must never queue another chapter.
+ // Distinct rapid swipes must be queued, then read the arriving chapter at a paced rate.
  await p.evaluate(()=>{const r=document.querySelector('#gate').getBoundingClientRect();window.__lenis.scrollTo(r.bottom+scrollY-innerHeight,{immediate:true,force:true});});await p.waitForTimeout(500);
- await swipe(60,8);
- for(let i=0;i<9;i++){await p.waitForTimeout(100);await swipe(300,8);}
- await p.waitForTimeout(1900);
- const policy=await p.evaluate(()=>{const r=document.querySelector('#decide').getBoundingClientRect();return {top:r.top+scrollY,y:scrollY};});console.log('Rapid swipe landing:',policy);
- if(policy.y>policy.top+3)failures.push('Rapid swipe burst continues scrolling after a chapter transition');
- await swipe();await p.waitForTimeout(350);
- if((await p.evaluate(()=>scrollY))<=policy.top+30)failures.push('Reading must resume after the rapid-swipe burst ends');
+ await swipe(60,8);await swipe(100,8);await swipe(100,8);
+ await p.waitForTimeout(4500);
+ const policy=await p.evaluate(()=>{const r=document.querySelector('#decide').getBoundingClientRect();return {top:r.top+scrollY,end:r.bottom+scrollY-innerHeight,y:scrollY};});console.log('Queued swipe landing:',policy);
+ if(policy.y<policy.top+100||policy.y>policy.end+3)failures.push('Queued swipes must read the next chapter without skipping its contents');
+ // Holding during a chapter transition brakes it and clears queued intent.
+ await p.evaluate(()=>{const r=document.querySelector('#gate').getBoundingClientRect();window.__lenis.scrollTo(r.bottom+scrollY-innerHeight,{immediate:true,force:true});});await p.waitForTimeout(500);
+ await swipe(60,8,2);await swipe(100,8,2);await p.waitForTimeout(100);
+ await c.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:12,y:650}]});
+ await p.waitForTimeout(700);const stopped=await p.evaluate(()=>scrollY);
+ await p.waitForTimeout(400);const held=await p.evaluate(()=>scrollY);
+ await c.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await p.waitForTimeout(500);
+ console.log('Hold brake:',{stopped,held,afterRelease:await p.evaluate(()=>scrollY)});
+ if(stopped>=policy.top-5||Math.abs(stopped-held)>2||Math.abs((await p.evaluate(()=>scrollY))-held)>2)failures.push('A hold must brake before arrival and clear the queued movement');
+ await swipe(-100,8);await p.waitForTimeout(2200);
+ if((await p.evaluate(()=>scrollY))>=held-20)failures.push('Reverse gesture must return from a held transition');
+ const gate=await p.evaluate(()=>scrollY);
+ await swipe(60,8,2);await swipe(100,8,2);await swipe(-100,8,2);await p.waitForTimeout(2400);
+ if(Math.abs((await p.evaluate(()=>scrollY))-gate)>3)failures.push('Reversal during travel must replace the forward backlog');
  assert.deepEqual(failures,[]);console.log('CHAPTER INPUT CHECKS PASSED');
 }finally{await browser.close();await new Promise(r=>server.close(r));await rm(dir,{recursive:true,force:true});}

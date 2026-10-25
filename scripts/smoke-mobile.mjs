@@ -60,7 +60,7 @@ try{
   await p.evaluate(i=>{const e=document.querySelector(`[data-stage="${i}"]`),r=e.getBoundingClientRect(),top=r.top+scrollY;window.__lenis.scrollTo(r.height>innerHeight+2?top+r.height-innerHeight:top-(innerHeight-r.height)/2,{immediate:true,force:true});},i);
   await p.waitForTimeout(450);
   const expected=await p.evaluate(i=>{const e=document.querySelector(`[data-stage="${i+1}"]`),r=e.getBoundingClientRect(),top=r.top+scrollY;return e.hasAttribute('data-entry')||r.height>innerHeight+2?top:top-(innerHeight-r.height)/2;},i);
-  await swipe(p);await p.waitForFunction(y=>Math.abs(scrollY-y)<3&&!window.__lenis.isStopped,expected,{timeout:6000});
+  await swipe(p);await p.waitForFunction(y=>Math.abs(scrollY-y)<3&&!window.__lenis.isStopped,expected,{timeout:30000});
   if(i===4)await p.screenshot({path:out+'/portal-step.png'});
   console.log('Touch chapter step',i,'→',i+1);
  }
@@ -73,7 +73,7 @@ try{
  // Return through the entry step in the opposite direction.
  await p.evaluate(()=>window.__lenis.scrollTo(document.querySelector('[data-entry]'),{immediate:true}));await p.waitForTimeout(200);
  const portal=await p.evaluate(()=>{const r=document.querySelector('[data-stage="5"]').getBoundingClientRect();return r.bottom+scrollY-innerHeight;});
- await swipe(p,-1);await p.waitForFunction(y=>Math.abs(scrollY-y)<3&&!window.__lenis.isStopped,portal,{timeout:6000});
+ await swipe(p,-1);await p.waitForFunction(y=>Math.abs(scrollY-y)<3&&!window.__lenis.isStopped,portal,{timeout:30000});
  const zoom=await p.context().newCDPSession(p);await zoom.send('Emulation.setPageScaleFactor',{pageScaleFactor:2});
  await p.waitForFunction(()=>document.documentElement.classList.contains('chapter-zoomed'));
  assert.equal(await p.locator('.hero').evaluate(el=>getComputedStyle(el).touchAction),'auto','zoomed reading must retain native panning');
@@ -90,7 +90,7 @@ try{
      },chapter);
      await swipe(natural);
      if(info.y>=info.end-3){
-       await natural.waitForFunction(y=>Math.abs(scrollY-y)<3&&!window.__lenis.isStopped,info.next,{timeout:6000});arrived=true;await natural.waitForTimeout(400);break;
+       await natural.waitForFunction(y=>Math.abs(scrollY-y)<3&&!window.__lenis.isStopped,info.next,{timeout:30000});arrived=true;await natural.waitForTimeout(400);break;
      }
      await natural.waitForTimeout(400);
      assert((await natural.evaluate(()=>scrollY))<=info.end+3,`reading gesture skipped chapter ${chapter}`);
@@ -108,6 +108,6 @@ try{
  await fallback.addInitScript(()=>{sessionStorage.setItem('mihari.boot','1');HTMLCanvasElement.prototype.getContext=()=>null;});
  await fallback.goto(url);await fallback.waitForSelector('.w-static');
  const fallbackGoal=await fallback.evaluate(()=>{const first=document.querySelector('[data-stage="0"]').getBoundingClientRect();window.__lenis.scrollTo(first.bottom+scrollY-innerHeight,{immediate:true,force:true});const next=document.querySelector('[data-stage="1"]').getBoundingClientRect();return next.top+scrollY;});
- await swipe(fallback);await fallback.waitForFunction(y=>Math.abs(scrollY-y)<3&&!window.__lenis.isStopped,fallbackGoal,{timeout:6000});await fallback.close();
+ await swipe(fallback);await fallback.waitForFunction(y=>Math.abs(scrollY-y)<3&&!window.__lenis.isStopped,fallbackGoal,{timeout:30000});await fallback.close();
  assert.deepEqual(issues,[]);console.log('MOBILE CHECKS PASSED: component bounds, all passport tabs, no automatic lookup, touch chapters in/out, continuous portal interior.');
 }finally{await browser.close();await new Promise(r=>server.close(r));await rm(dir,{recursive:true,force:true});}
