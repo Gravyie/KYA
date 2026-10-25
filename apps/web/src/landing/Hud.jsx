@@ -55,7 +55,7 @@ export default function Hud({canvasRef, beat, countApi, frameApi, onJump, alert}
       <div className="ro ro-r" aria-hidden="true"><span>判定数 · VERDICTS (SIM)</span><b ref={countEl}>000000</b></div>
     </div>
       <ol className="rail" aria-label="Story progress" hidden={beat > 6}>
-        {BEATS.map((x, i) => <li key={x.key}><button type="button" className={i === beat ? 'on' : ''} onClick={() => onJump(i)} aria-label={x.label} aria-current={i === beat ? 'step' : undefined}><span lang="ja">{x.jp}</span></button></li>)}
+        {BEATS.map((x, i) => <li key={x.key}><button type="button" className={i === beat ? 'on' : ''} onClick={() => onJump(i)} data-step={i+1} aria-label={x.label} aria-current={i === beat ? 'step' : undefined}><span lang="ja">{x.jp}</span></button></li>)}
       </ol>
     </>
   );

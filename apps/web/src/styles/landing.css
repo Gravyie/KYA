@@ -809,3 +809,55 @@
 @media (prefers-reduced-motion: reduce) {
   .landing .nav .btn, .landing .scrollbar i { transition: none; }
 }
+
+/* Mobile content must shrink within its grid track; clipping the page cannot fix layout. */
+.passport-grid > *, .p-left, .p-steps li > div, .inspector, .insp-body, .lookup { min-width: 0; }
+.p-left { grid-template-columns: minmax(0, 1fr); }
+.lookup-form { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) auto; }
+.lookup-form > * { min-width: 0; }
+.lookup-hint { color: var(--bone-3); font-size: 13px; line-height: 1.65; margin: 0; }
+@media (max-width: 960px) {
+  .passport-grid { grid-template-columns: minmax(0, 1fr); }
+  .lookup-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .passport-grid > *, .p-left > * { max-width: 100%; }
+  .p-left .holo { margin-inline: auto; }
+  .insp-body, .lookup-out { min-height: 0; }
+  .landing > .rail:not([hidden]) { display: flex; top: auto; right: auto; left: 50%; bottom: max(12px, env(safe-area-inset-bottom)); transform: translateX(-50%); width: min(340px, calc(100% - 32px)); padding: 4px; gap: 0; border: 1px solid var(--line-2); background: #07101df2; }
+  .rail li { flex: 1; min-width: 0; }
+  .rail button { display: block; width: 100%; height: 40px; border-color: transparent; }
+  .rail button::before { inset: 0; }
+  .rail button::after { content: attr(data-step); font: 11px var(--mono); color: var(--bone-3); }
+  .rail button.on { transform: none; background: #153140; border-color: var(--cyan); box-shadow: none; }
+  .rail button.on::after { color: var(--cyan); }
+  .rail button span { display: none; }
+}
+@media (max-width: 600px) {
+  .holo { aspect-ratio: auto; }
+  .holo-face { position: relative; min-height: 240px; padding: 18px 60px 18px 16px; }
+  .holo-face::after { width: 40px; font-size: 24px; }
+  .holo header, .holo dl, .holo footer { margin-right: 0; }
+  .holo header { font-size: 8px; letter-spacing: .1em; }
+  .holo h4 { font-size: clamp(25px, 7.6vw, 38px); margin: 18px 0 14px; }
+  .holo dl { grid-template-columns: 64px minmax(0, 1fr); gap: 7px 8px; font-size: 12px; }
+  .holo dt { font-size: 9px; letter-spacing: .08em; }
+  .holo dd { overflow-wrap: anywhere; }
+  .holo footer { padding-top: 18px; }
+  .holo .seal { width: 36px; flex: none; }
+  .holo .chip-live { font-size: 9px; padding: 6px 8px; }
+  .p-steps li { grid-template-columns: 30px minmax(0, 1fr); gap: 12px; padding: 20px 0; }
+  .p-steps h3 { font-size: 24px; }
+  .p-steps p { font-size: 14px; line-height: 1.65; }
+  .inspector { padding: 8px; }
+  .insp-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); overflow: visible; }
+  .insp-tabs button { min-width: 0; min-height: 48px; padding: 8px 4px; font-size: 10px; letter-spacing: .05em; white-space: normal; line-height: 1.5; }
+  .insp-body { padding: 16px 4px 8px; }
+  .landing .lookup-form .input { height: 44px; font-size: 16px; }
+  .lookup-form .btn { min-height: 44px; }
+  .id-card { padding: 16px; }
+  .id-top { flex-wrap: wrap; gap: 8px; }
+  .id-card dl { grid-template-columns: 60px minmax(0, 1fr); gap: 8px; }
+  .id-card .ext { width: auto; }
+}
+@media (max-width: 380px) {
+  .lookup-form { grid-template-columns: minmax(0, 1fr); }
+}

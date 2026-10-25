@@ -21,6 +21,7 @@ jobs:
       - run: npm run build
       - run: npx playwright install --with-deps chromium
       - run: npm run test:web
+      - run: npm run test:mobile
       - run: git diff --check
       - name: Build deployment image
         run: docker build -t wardrail:check .

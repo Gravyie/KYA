@@ -1,4 +1,4 @@
-import {useEffect, useRef, useState} from 'react';
+import {useState} from 'react';
 import {ExternalLink, Search} from 'lucide-react';
 import {api} from '../lib/api.js';
 import {Badge, Code} from '../components/ui.jsx';
@@ -38,10 +38,8 @@ const short = a => `${a.slice(0, 6)}…${a.slice(-4)}`;
 
 function Lookup() {
   const [chainId, setChainId] = useState(84532);
-  const [agentId, setAgentId] = useState('1');
+  const [agentId, setAgentId] = useState('');
   const [state, setState] = useState({status: 'idle'});
-  const ran = useRef(false);
-  const rootRef = useRef(null);
 
   async function run(e) {
     e?.preventDefault();
@@ -49,23 +47,18 @@ function Lookup() {
     try { setState({status: 'ok', data: await api.lookup(chainId, agentId.trim())}); }
     catch (err) { setState({status: 'error', message: err.status === 404 ? `No agent #${agentId} on ${CHAINS[chainId].name}.` : err.message}); }
   }
-  useEffect(() => {
-    const io = new IntersectionObserver(([en]) => { if (en.isIntersecting && !ran.current) { ran.current = true; run(); } }, {threshold: 0.4});
-    io.observe(rootRef.current);
-    return () => io.disconnect();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
   const d = state.data;
   return (
-    <div className="lookup" ref={rootRef}>
+    <div className="lookup">
       <form onSubmit={run} className="lookup-form">
         <select className="input" aria-label="Network" value={chainId} onChange={e => setChainId(Number(e.target.value))}>
           {Object.values(CHAINS).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
-        <input className="input mono" aria-label="Agent ID" inputMode="numeric" value={agentId} onChange={e => setAgentId(e.target.value)} placeholder="agent id" />
+        <input className="input mono" aria-label="Agent ID" inputMode="numeric" pattern="[0-9]+" value={agentId} onChange={e => setAgentId(e.target.value)} placeholder="Agent ID" />
         <button className="btn sm" disabled={!agentId.trim() || state.status === 'loading'}><Search size={14} /> {state.status === 'loading' ? 'Reading chain…' : 'Look up'}</button>
       </form>
       <div className="lookup-out" aria-live="polite">
+        {state.status === 'idle' && <p className="lookup-hint">Choose a network and enter an agent ID to read its public identity. No wallet required.</p>}
         {state.status === 'error' && <p className="lookup-err">{state.message}</p>}
         {state.status === 'loading' && <p className="muted">Reading the registry over public RPC…</p>}
         {d && (

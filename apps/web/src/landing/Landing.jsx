@@ -45,17 +45,31 @@ function useWorld(canvasRef, frameApi, handlers) {
       setMode('ready');
 
       // Stage centres are measured once (and on resize), then mapped from scrollY: no layout reads while scrolling.
-      let centers = [];
+      let centers = [], stops = [], mobileStory = false;
       const measure = () => {
         const beats = [...document.querySelectorAll('[data-stage]')].sort((a, b) => a.dataset.stage - b.dataset.stage);
-        centers = beats.map(el => { const r = el.getBoundingClientRect(); return r.top + scrollY + (el.hasAttribute('data-entry')?Math.min(r.height,innerHeight):r.height) / 2; });
+        const bounds=beats.map(el=>{const r=el.getBoundingClientRect();return {top:r.top+scrollY,height:r.height,entry:el.hasAttribute('data-entry'),snap:el.hasAttribute('data-snap')};});
+        centers=bounds.map(r=>r.top+(r.entry?Math.min(r.height,innerHeight):r.height)/2);
+        mobileStory=innerWidth<=960&&matchMedia('(pointer: coarse)').matches;
+        stops=bounds.map(r=>{
+          const start=r.entry?r.top:r.snap?r.top-Math.max(0,(innerHeight-r.height)/2):r.top+r.height/2-innerHeight/2;
+          return {start:Math.max(0,start),end:r.snap&&!r.entry?Math.max(start,r.top+r.height-innerHeight):start};
+        });
       };
       const update = () => {
         raf = 0;
         if (!centers.length) return;
         const mid = scrollY + innerHeight * 0.5;
         let f = 0;
-        if (mid >= centers.at(-1)) f = centers.length - 1;
+        if(mobileStory){
+          // Hold the camera at its chapter while a phone reader scrolls tall content.
+          // Only the travel between chapter edges changes the camera; interior reading stays continuous.
+          const y=scrollY;f=stops.length-1;
+          for(let i=0;i<stops.length;i++){
+            if(y<=stops[i].end){f=i;break;}
+            if(stops[i+1]&&y<stops[i+1].start){f=i+(y-stops[i].end)/(stops[i+1].start-stops[i].end);break;}
+          }
+        }else if (mid >= centers.at(-1)) f = centers.length - 1;
         else if (mid > centers[0]) for (let i = 0; i < centers.length - 1; i++) {
           if (mid >= centers[i] && mid < centers[i + 1]) { f = i + (mid - centers[i]) / (centers[i + 1] - centers[i]); break; }
         }
@@ -72,7 +86,7 @@ function useWorld(canvasRef, frameApi, handlers) {
       }
       // Story chapters move one at a time, like a sequence of scenes: one gesture glides to the next chapter while
       // the camera flies there. Chapters taller than the screen scroll normally until their edge. The product
-      // sections in the middle scroll freely. Touch keeps native scrolling.
+      // sections after portal entry scroll freely. Tall chapters keep native reading until their edge.
       if (!reduced) {
         const ease = t => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
         let busyUntil = 0, lastWheel = 0, settledAt = 0;
@@ -81,7 +95,7 @@ function useWorld(canvasRef, frameApi, handlers) {
         const place = (sec, dir) => sec.entry?sec.top:(sec.h <= innerHeight + 2 ? sec.top - (innerHeight - sec.h) / 2 : dir > 0 ? sec.top : sec.bottom - innerHeight);
         // while a glide runs, Lenis is stopped so no stray wheel event can redirect it
         const go = y => { busyUntil = performance.now() + 1400; lenis.stop(); lenis.scrollTo(Math.max(0, y), {duration: 1.35, easing: ease, force: true, onComplete: () => { lenis.start(); settledAt = performance.now(); busyUntil = 0; }}); setTimeout(() => { if (lenis.isStopped) { lenis.start(); settledAt = performance.now(); } }, 1500); };
-        const step = dir => {
+        const stepTarget = dir => {
           const list = snaps(), y = Math.round(lenis.targetScroll ?? scrollY), mid = y + innerHeight / 2;   // where Lenis is heading, not where it is
           const i = list.findIndex(sec => mid >= sec.top - 1 && mid < sec.bottom + 1);
           // Beyond the gateway, no later section can recapture ordinary reading.
@@ -92,8 +106,9 @@ function useWorld(canvasRef, frameApi, handlers) {
           if (sec.h > innerHeight + 2 && (dir > 0 ? y + innerHeight < sec.bottom - 4 : y > sec.top + 4)) return false;   // tall chapter: read it first
           const next = list[i + dir];
           if (!next || (dir > 0 ? next.top - sec.bottom : sec.top - next.bottom) > 240) return false;                     // the free part begins: scroll on
-          go(place(next, dir)); return true;
+          return next;
         };
+        const step = dir => { const next=stepTarget(dir); if(!next)return false; go(place(next,dir)); return true; };
         const onWheel = e => {
           const now = performance.now(), gap = now - lastWheel; lastWheel = now;
           if (Math.abs(e.deltaY) < 2 || e.ctrlKey || e.target.closest?.('[data-lenis-prevent]')) return;
@@ -107,29 +122,42 @@ function useWorld(canvasRef, frameApi, handlers) {
           if (busy()) { e.preventDefault(); return; }
           if (step(dir)) e.preventDefault();
         };
-        let touchY=null,touchGateway=false,touchCaptured=false;
+        let touch=null;
         const onTouchStart=e=>{
-          if(e.touches.length!==1||e.target.closest?.('button,a,input,[role="button"],[data-lenis-prevent]'))return;
-          const y=scrollY,mid=y+innerHeight/2,sec=snaps().find(s=>mid>=s.top-1&&mid<s.bottom+1);
-          touchY=e.touches[0].clientY;touchGateway=sec?.stage===5||(sec?.entry&&Math.abs(y-sec.top)<5);touchCaptured=false;
+          touch=null;
+          if(e.touches.length!==1||(window.visualViewport?.scale||1)>1.05)return;
+          if(e.target.closest?.('button,a,input,textarea,select,.nav,[contenteditable],[data-lenis-prevent],[role="tab"],[role="button"]:not(.pass-stage)'))return;
+          const y=scrollY,entry=snaps().find(sec=>sec.entry);
+          if(!entry||y>entry.top+4)return;
+          touch={x:e.touches[0].clientX,y:e.touches[0].clientY,captured:busy(),passport:!!e.target.closest?.('.pass-stage')};
         };
         const onTouchMove=e=>{
-          if(touchCaptured&&busy()){e.preventDefault();return;}
-          if(!touchGateway||touchY===null||e.touches.length!==1)return;
-          const delta=touchY-e.touches[0].clientY;
-          if(Math.abs(delta)>24&&step(Math.sign(delta))){touchGateway=false;touchCaptured=true;e.preventDefault();}
+          if(!touch)return;
+          if(e.touches.length!==1){touch=null;return;}
+          if(touch.captured){if(e.cancelable)e.preventDefault();return;}
+          const dx=e.touches[0].clientX-touch.x,dy=touch.y-e.touches[0].clientY;
+          if(Math.abs(dx)>Math.abs(dy)&&Math.abs(dx)>8){touch=null;return;}
+          if(Math.abs(dy)<4)return;
+          if(touch.passport)world.passInput('cancel');
+          const dir=Math.sign(dy),next=stepTarget(dir);
+          // A gesture that starts within tall content stays native for its entire duration.
+          if(!next){touch=null;return;}
+          // Reserve an edge swipe before the browser begins panning, then commit one chapter.
+          if(e.cancelable)e.preventDefault();
+          if(Math.abs(dy)>=24){touch.captured=true;go(place(next,dir));}
         };
-        const onTouchEnd=()=>{touchY=null;touchGateway=touchCaptured=false;};
+        const onTouchEnd=()=>{touch=null;};
         addEventListener('wheel', onWheel, {passive: false, capture: true});
         addEventListener('keydown', onKey);
         addEventListener('touchstart',onTouchStart,{passive:true});addEventListener('touchmove',onTouchMove,{passive:false});addEventListener('touchend',onTouchEnd);addEventListener('touchcancel',onTouchEnd);
         world.snapCleanup = () => { removeEventListener('wheel', onWheel, {capture: true}); removeEventListener('keydown', onKey);removeEventListener('touchstart',onTouchStart);removeEventListener('touchmove',onTouchMove);removeEventListener('touchend',onTouchEnd);removeEventListener('touchcancel',onTouchEnd); };
       }
       const remeasure = () => { measure(); queue(); };
+      addEventListener('resize',remeasure);
       const ro = new ResizeObserver(remeasure); ro.observe(document.body);
       addEventListener('scroll', queue, {passive: true});
       measure(); update();
-      world.cleanup = () => { removeEventListener('scroll', queue); ro.disconnect(); world.snapCleanup?.(); };
+      world.cleanup = () => { removeEventListener('resize',remeasure); removeEventListener('scroll', queue); ro.disconnect(); world.snapCleanup?.(); };
     }).catch(e => { console.error(e); setMode('static'); });
 
     return () => { cancelled = true; canvas?.removeEventListener('webglcontextlost', contextLost); cancelAnimationFrame(raf); cancelAnimationFrame(rafLenis); lenis?.destroy(); window.__lenis = null; world?.cleanup?.(); world?.destroy(); worldRef.current = null; if (import.meta.env.DEV) delete window.__world; };
