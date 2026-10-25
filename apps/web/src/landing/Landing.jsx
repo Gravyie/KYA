@@ -45,7 +45,7 @@ function useWorld(canvasRef, frameApi, handlers) {
       setMode('ready');
 
       // Stage centres are measured once (and on resize), then mapped from scrollY: no layout reads while scrolling.
-      let centers = [], stops = [], mobileStory = false;
+      let centers = [], stops = [], mobileStory = false, reportedStage = NaN;
       const measure = () => {
         const beats = [...document.querySelectorAll('[data-stage]')].sort((a, b) => a.dataset.stage - b.dataset.stage);
         const bounds=beats.map(el=>{const r=el.getBoundingClientRect();return {top:r.top+scrollY,height:r.height,entry:el.hasAttribute('data-entry'),snap:el.hasAttribute('data-snap')};});
@@ -73,8 +73,9 @@ function useWorld(canvasRef, frameApi, handlers) {
         else if (mid > centers[0]) for (let i = 0; i < centers.length - 1; i++) {
           if (mid >= centers[i] && mid < centers[i + 1]) { f = i + (mid - centers[i]) / (centers[i + 1] - centers[i]); break; }
         }
-        world.setStage(f);
-        cb.current.onStage?.(f);
+        // Long mobile chapters hold their camera. Do not recompute the camera
+        // aim or dispatch React state for every pixel of ordinary reading.
+        if(f!==reportedStage){reportedStage=f;world.setStage(f);cb.current.onStage?.(f);}
       };
       const queue = () => { if (!raf) raf = requestAnimationFrame(update); };
       const lenis=window.__lenis;
@@ -200,7 +201,7 @@ function useScrollBar(rootRef) {
     const on = () => { raf = 0; const max = document.documentElement.scrollHeight - innerHeight; bar.style.transform = `scaleX(${max > 0 ? Math.min(1, scrollY / max) : 0})`; };
     const q = () => { if (!raf) raf = requestAnimationFrame(on); };
     addEventListener('scroll', q, {passive: true}); on();
-    return () => removeEventListener('scroll', q);
+    return () => { removeEventListener('scroll', q); cancelAnimationFrame(raf); };
   }, [rootRef]);
 }
 
@@ -213,7 +214,7 @@ export default function Landing() {
   const [alert, setAlert] = useState(false);
   const [passportOpen, setPassportOpen] = useState(false);
   const [booted, setBooted] = useState(() => { try { return sessionStorage.getItem('mihari.boot') === '1'; } catch { return false; } });
-  const countRef = useRef(0), lastTick = useRef(0);
+  const countRef = useRef(0), lastTick = useRef(0), alertRef = useRef(false);
 
   const handlers = useRef({
     onPassState: setPassportOpen,
@@ -225,7 +226,7 @@ export default function Landing() {
       el.dataset.kind = kind; el.querySelector('b').textContent = kind === 'allow' ? '可決 ALLOW' : kind === 'ask' ? '保留 ASK' : '否決 DENY'; el.querySelector('code').textContent = pool[Math.floor(Math.random() * pool.length)];
       el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
     },
-    onFrame: info => { if(info.accent&&rootRef.current&&rootRef.current.dataset.chapterAccent!==info.accent){rootRef.current.dataset.chapterAccent=info.accent;rootRef.current.style.setProperty('--chapter-accent','#'+info.accent);} const a = info.alert > 0.5; setAlert(prev => (prev === a ? prev : a)); },
+    onFrame: info => { if(info.accent&&rootRef.current&&rootRef.current.dataset.chapterAccent!==info.accent){rootRef.current.dataset.chapterAccent=info.accent;rootRef.current.style.setProperty('--chapter-accent','#'+info.accent);} const a = info.alert > 0.5; if(alertRef.current!==a){alertRef.current=a;setAlert(a);} },
   }).current;
   const {mode, worldRef} = useWorld(canvasRef, frameApi, handlers);
   useReveal(booted);

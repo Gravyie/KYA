@@ -8,8 +8,23 @@ export function useChapterScroll() {
     const lenis=reduced?null:new Lenis({lerp:.085,wheelMultiplier:.9});
     const abort=new AbortController();
     let raf=0,timer=0,busyUntil=0,lastWheel=0,settledAt=0,touch=null,returnBoundary=null;
-    const loop=t=>{lenis.raf(t);raf=requestAnimationFrame(loop);};
-    if(lenis){window.__lenis=lenis;raf=requestAnimationFrame(loop);}
+    let pendingY=null,coast=null,quietUntil=0;
+    // One write per display frame, independent of touch-event frequency. A release
+    // continues at the finger's velocity and loses speed exponentially (never eases in).
+    const loop=t=>{
+      raf=0;lenis?.raf(t);
+      if(coast&&(lenis?.isScrolling==='smooth'||Math.abs(scrollY-coast.written)>3))coast=null;
+      if(pendingY!==null){scroll.to(pendingY,{immediate:true,force:true});if(coast)coast.written=scrollY;pendingY=null;}
+      else if(coast){
+        const dt=Math.min(50,t-coast.time),decay=Math.exp(-dt/240);
+        coast.y=Math.max(coast.min,Math.min(coast.max,coast.y+coast.v*240*(1-decay)));
+        coast.v*=decay;coast.time=t;scroll.to(coast.y,{immediate:true,force:true});coast.written=scrollY;
+        if(Math.abs(coast.v)<.025||coast.y===coast.min||coast.y===coast.max)coast=null;
+      }
+      if(lenis||pendingY!==null||coast)raf=requestAnimationFrame(loop);
+    };
+    const wake=()=>{if(!raf)raf=requestAnimationFrame(loop);};
+    if(lenis){window.__lenis=lenis;wake();}
     const scroll={
       get target(){return lenis?.targetScroll??scrollY;},
       to(y,options={}){if(lenis)lenis.scrollTo(y,options);else{window.scrollTo({top:Math.max(0,y),behavior:'instant'});options.onComplete?.();}},
@@ -24,8 +39,8 @@ export function useChapterScroll() {
     const place=(sec,dir)=>sec.entry?sec.top:sec.h<=innerHeight+2?sec.top-(innerHeight-sec.h)/2:dir>0?sec.top:sec.bottom-innerHeight;
     const bounds=sec=>{const min=place(sec,1);return {min,max:sec.entry?min:Math.max(min,sec.bottom-innerHeight)};};
     const go=y=>{
-      const target=Math.max(0,y);returnBoundary=null;clearTimeout(timer);
-      const finish=()=>{clearTimeout(timer);scroll.start();settledAt=performance.now();busyUntil=0;};
+      const target=Math.max(0,y);returnBoundary=null;coast=null;pendingY=null;clearTimeout(timer);
+      const finish=()=>{clearTimeout(timer);scroll.start();settledAt=performance.now();quietUntil=Math.max(quietUntil,settledAt+360);busyUntil=0;};
       busyUntil=performance.now()+1800;scroll.stop();
       if(!reduced)timer=setTimeout(()=>{scroll.to(target,{immediate:true,force:true});finish();},1800);
       scroll.to(target,{duration:reduced?0:1.35,easing:ease,force:true,onComplete:finish});
@@ -64,15 +79,18 @@ export function useChapterScroll() {
       if(y>entry.top+4){returnBoundary=entry.top;return;}
       const mid=y+innerHeight/2,i=list.findIndex(sec=>mid>=sec.top-1&&mid<sec.bottom+1);
       if(i<0)return;
-      if(!busy())scroll.to(y,{immediate:true,force:true}); // stop any previous reading inertia
+      const guarded=busy()||performance.now()<quietUntil;
+      if(guarded)quietUntil=performance.now()+360;
+      coast=null;pendingY=null;
+      if(!guarded)scroll.to(y,{immediate:true,force:true});
       const sec=list[i],range=bounds(sec);
       touch={x:e.touches[0].clientX,y:e.touches[0].clientY,start:y,last:y,lastTime:performance.now(),velocity:0,
-        min:range.min,max:range.max,list,index:i,sec,captured:busy(),mode:null,passport:!!e.target.closest?.('.pass-stage')};
+        min:range.min,max:range.max,list,index:i,sec,captured:guarded,mode:null,passport:!!e.target.closest?.('.pass-stage')};
     };
     const onTouchMove=e=>{
       if(!touch)return;
       if(e.touches.length!==1){touch=null;return;}
-      if(touch.captured){if(e.cancelable)e.preventDefault();return;}
+      if(touch.captured){quietUntil=performance.now()+360;if(e.cancelable)e.preventDefault();return;}
       const dx=e.touches[0].clientX-touch.x,dy=touch.y-e.touches[0].clientY;
       if(!touch.mode&&Math.abs(dx)>Math.abs(dy)&&Math.abs(dx)>8){touch=null;return;}
       if(!touch.mode&&Math.abs(dy)<8)return;
@@ -92,15 +110,15 @@ export function useChapterScroll() {
       // A reading gesture can reach its chapter edge, but never advance past it.
       const target=Math.max(touch.min,Math.min(touch.max,touch.start+dy)),now=performance.now();
       touch.velocity=.5*touch.velocity+.5*(target-touch.last)/Math.max(16,now-touch.lastTime);
-      touch.last=target;touch.lastTime=now;scroll.to(target,{immediate:true,force:true});
+      touch.last=target;touch.lastTime=now;pendingY=target;wake();
     };
     const worldCancelPassport=()=>window.dispatchEvent(new Event('wardrail:cancel-passport-drag'));
     const onTouchEnd=()=>{
       const t=touch;touch=null;
-      if(!t||t.mode!=='read'||t.captured||reduced)return;
-      // Familiar release inertia, confined to the same chapter as the finger drag.
-      const target=Math.max(t.min,Math.min(t.max,t.last+Math.max(-2,Math.min(2,t.velocity))*140));
-      scroll.to(target,{duration:.28,easing:ease,force:true});
+      if(t?.captured){quietUntil=performance.now()+360;return;}
+      if(!t||t.mode!=='read'||reduced)return;
+      if(performance.now()-t.lastTime>90)return;
+      coast={y:t.last,written:scrollY,v:Math.max(-3,Math.min(3,t.velocity)),time:performance.now(),min:t.min,max:t.max};wake();
     };
     const containReturn=()=>{if(returnBoundary!==null&&scrollY<returnBoundary)scroll.to(returnBoundary,{immediate:true,force:true});};
     const viewport=window.visualViewport;
@@ -109,7 +127,7 @@ export function useChapterScroll() {
     addEventListener('wheel',onWheel,{passive:false,capture:true});addEventListener('keydown',onKey);
     addEventListener('touchstart',onTouchStart,{passive:true,capture:true});
     addEventListener('touchmove',onTouchMove,{passive:false,capture:true});
-    addEventListener('touchend',onTouchEnd);addEventListener('touchcancel',()=>{touch=null;},{signal:abort.signal});
+    addEventListener('touchend',onTouchEnd);addEventListener('touchcancel',()=>{touch=null;coast=null;pendingY=null;},{signal:abort.signal});
     addEventListener('scroll',containReturn,{passive:true});
     return()=>{
       clearTimeout(timer);cancelAnimationFrame(raf);abort.abort();lenis?.destroy();if(window.__lenis===lenis)window.__lenis=null;

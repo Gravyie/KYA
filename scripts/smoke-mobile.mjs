@@ -40,7 +40,9 @@ try{
   await p.getByRole('tab',{name:'Live lookup',exact:true}).click();await p.getByLabel('Agent ID',{exact:true}).fill('999');await p.getByRole('button',{name:'Look up',exact:true}).click();await p.getByText('No agent #999',{exact:false}).waitFor();
   await fit(p,selectors);assert(await p.locator('.insp-body').evaluate(el=>el.getBoundingClientRect().height<300),'empty/error lookup should not reserve a desktop-sized blank panel');
   if(w===360)await p.screenshot({path:out+'/lookup.png'});
-  await p.close();console.log('Passport bounds/tabs/lookup fit',w,h);
+  await p.evaluate(()=>{const r=document.querySelector('#gate').getBoundingClientRect();scrollTo(0,r.top+scrollY);});await p.waitForTimeout(200);
+  assert(await p.locator('.gate-card').evaluate(el=>{const r=el.getBoundingClientRect();return r.top>=70&&r.bottom<=innerHeight-16;}),'gate caption must fit at the arrival stop');
+  await p.close();console.log('Passport bounds/tabs/lookup and gate caption fit',w,h);
  }
  const p=await open(390,844,false);
  // Reproduce a normal phone flick that starts within tall content, not exactly at an edge.
@@ -53,12 +55,10 @@ try{
  const afterFling=await p.evaluate(()=>scrollY);console.log('Within-chapter flick boundary:',{heroEnd,afterFling});
  assert(afterFling<=heroEnd+3,'a gesture begun inside a chapter must stop at its bottom, not continuously cross into the next');
 
- assert.equal(await p.locator('.rail button').count(),7);
- await fit(p,['.rail']);
- assert(await p.locator('.rail button').first().evaluate(el=>el.getBoundingClientRect().height>=40));
+ assert(await p.locator('.rail').evaluate(el=>getComputedStyle(el).display==='none'),'mobile story rail must be removed from view and tab order');
  for(let i=0;i<=5;i++){
   await p.evaluate(i=>{const e=document.querySelector(`[data-stage="${i}"]`),r=e.getBoundingClientRect(),top=r.top+scrollY;window.__lenis.scrollTo(r.height>innerHeight+2?top+r.height-innerHeight:top-(innerHeight-r.height)/2,{immediate:true,force:true});},i);
-  await p.waitForTimeout(150);
+  await p.waitForTimeout(450);
   const expected=await p.evaluate(i=>{const e=document.querySelector(`[data-stage="${i+1}"]`),r=e.getBoundingClientRect(),top=r.top+scrollY;return e.hasAttribute('data-entry')||r.height>innerHeight+2?top:top-(innerHeight-r.height)/2;},i);
   await swipe(p);await p.waitForFunction(y=>Math.abs(scrollY-y)<3&&!window.__lenis.isStopped,expected,{timeout:6000});
   if(i===4)await p.screenshot({path:out+'/portal-step.png'});
@@ -90,7 +90,7 @@ try{
      },chapter);
      await swipe(natural);
      if(info.y>=info.end-3){
-       await natural.waitForFunction(y=>Math.abs(scrollY-y)<3&&!window.__lenis.isStopped,info.next,{timeout:6000});arrived=true;break;
+       await natural.waitForFunction(y=>Math.abs(scrollY-y)<3&&!window.__lenis.isStopped,info.next,{timeout:6000});arrived=true;await natural.waitForTimeout(400);break;
      }
      await natural.waitForTimeout(400);
      assert((await natural.evaluate(()=>scrollY))<=info.end+3,`reading gesture skipped chapter ${chapter}`);
