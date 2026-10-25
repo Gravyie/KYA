@@ -861,3 +861,12 @@
 @media (max-width: 380px) {
   .lookup-form { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* Vertical story gestures are bounded by the chapter controller before native panning starts. */
+@media (pointer: coarse) {
+  .chapter-touch:not(.chapter-zoomed) .landing [data-snap]:not([data-entry]) { touch-action: pan-x pinch-zoom; }
+}
+@media (pointer: coarse) {
+  .chapter-touch:not(.chapter-zoomed) .pass-stage { touch-action: pinch-zoom; }
+  .chapter-touch.chapter-zoomed .pass-stage { touch-action: auto; }
+}

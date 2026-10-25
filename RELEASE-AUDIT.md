@@ -96,3 +96,12 @@ Removed free-section proximity snapping and the finale snap target: passport, in
 - Touch gestures now follow the same chapter sequence through City, Passport, Gate, Policy, Record, Portal and Inside. Tall chapter content reads natively until its edge while the camera holds that chapter; only travel to the next chapter changes the camera. Horizontal gestures, forms, interactive controls and pinch zoom are preserved; portal-interior reading stays continuous. Added compact numbered mobile chapter controls.
 - `npm run test:mobile` checks real component bounds at 320, 360, 390, 430, 768 and landscape 844 px (not only document scrollWidth), all inspector tabs and lookup error state. Real Chrome touch events verify all six forward steps, reverse portal entry and continuous interior reading. CI includes this check.
 - Briefly inspected both available local UWI source copies; they do not contain the matching 3D/touch implementation, so no unverified optimization was copied.
+
+## Mobile chapter containment follow-up
+
+The prior boundary-only swipe tests missed the reported path: a flick starting inside a tall chapter continued natively across multiple chapters. The new regression reproduced a scroll to 2,389 px when the hero reading boundary was only 24.8 px.
+
+- A separate navigation hook now owns scrolling independently of WebGL. Reduced motion uses the same chapter sequence with instant travel; graphics-unavailable fallback retains the controller.
+- Touch intent is declared before the browser starts panning. Reading gestures and their release inertia are bounded to their starting chapter; a new gesture at the edge advances exactly one chapter. The portal interior retains continuous native scrolling, with a return boundary at its entrance.
+- The original failing flick now stops at 25 px. Tests also traverse the entire opening story from the initial page using ordinary repeated swipes with no manual repositioning, plus reduced-motion steps, unavailable WebGL and zoomed native panning.
+- Desktop chapter controls and console workflows pass their existing browser regression suite.

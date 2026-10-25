@@ -29,7 +29,7 @@ async function swipe(p,dir=1){
  await client.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await client.detach();
 }
 try{
- for(const [w,h] of [[320,568],[360,740],[390,844],[430,932],[768,1024],[844,390]]){
+ for(const [w,h] of (process.env.MOBILE_GESTURE_ONLY?[]:[[320,568],[360,740],[390,844],[430,932],[768,1024],[844,390]])){
   const p=await open(w,h);
   const selectors=['.passport-grid','.p-left','.holo','.holo-face','.p-steps','.p-steps p','.inspector','.insp-tabs','.insp-tabs button','.lookup-form','.lookup-form .input','.lookup-form .btn'];
   await fit(p,selectors);
@@ -43,6 +43,16 @@ try{
   await p.close();console.log('Passport bounds/tabs/lookup fit',w,h);
  }
  const p=await open(390,844,false);
+ // Reproduce a normal phone flick that starts within tall content, not exactly at an edge.
+ const heroEnd=await p.evaluate(()=>{const r=document.querySelector('[data-stage="0"]').getBoundingClientRect();return r.bottom+scrollY-innerHeight;});
+ await p.evaluate(y=>window.__lenis.scrollTo(Math.max(0,y-30),{immediate:true,force:true}),heroEnd);await p.waitForTimeout(100);
+ const fling=await p.context().newCDPSession(p);
+ await fling.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:10,y:650}]});
+ for(const y of [648,644,610,450,150]){await fling.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:10,y}]});await p.waitForTimeout(8);}
+ await fling.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await fling.detach();await p.waitForTimeout(800);
+ const afterFling=await p.evaluate(()=>scrollY);console.log('Within-chapter flick boundary:',{heroEnd,afterFling});
+ assert(afterFling<=heroEnd+3,'a gesture begun inside a chapter must stop at its bottom, not continuously cross into the next');
+
  assert.equal(await p.locator('.rail button').count(),7);
  await fit(p,['.rail']);
  assert(await p.locator('.rail button').first().evaluate(el=>el.getBoundingClientRect().height>=40));
@@ -64,5 +74,40 @@ try{
  await p.evaluate(()=>window.__lenis.scrollTo(document.querySelector('[data-entry]'),{immediate:true}));await p.waitForTimeout(200);
  const portal=await p.evaluate(()=>{const r=document.querySelector('[data-stage="5"]').getBoundingClientRect();return r.bottom+scrollY-innerHeight;});
  await swipe(p,-1);await p.waitForFunction(y=>Math.abs(scrollY-y)<3&&!window.__lenis.isStopped,portal,{timeout:6000});
- await p.close();assert.deepEqual(issues,[]);console.log('MOBILE CHECKS PASSED: component bounds, all passport tabs, no automatic lookup, touch chapters in/out, continuous portal interior.');
+ const zoom=await p.context().newCDPSession(p);await zoom.send('Emulation.setPageScaleFactor',{pageScaleFactor:2});
+ await p.waitForFunction(()=>document.documentElement.classList.contains('chapter-zoomed'));
+ assert.equal(await p.locator('.hero').evaluate(el=>getComputedStyle(el).touchAction),'auto','zoomed reading must retain native panning');
+ await zoom.send('Emulation.setPageScaleFactor',{pageScaleFactor:1});await zoom.detach();
+ await p.close();
+ // Traverse from the initial page using ordinary repeated gestures, with no test positioning.
+ const natural=await open(390,844,false);
+ for(let chapter=0;chapter<6;chapter++){
+   let arrived=false;
+   for(let gesture=0;gesture<35;gesture++){
+     const info=await natural.evaluate(i=>{
+       const r=document.querySelector(`[data-stage="${i}"]`).getBoundingClientRect(),n=document.querySelector(`[data-stage="${i+1}"]`),nr=n.getBoundingClientRect();
+       return {y:scrollY,end:r.bottom+scrollY-innerHeight,next:n.hasAttribute('data-entry')||nr.height>innerHeight+2?nr.top+scrollY:nr.top+scrollY-(innerHeight-nr.height)/2};
+     },chapter);
+     await swipe(natural);
+     if(info.y>=info.end-3){
+       await natural.waitForFunction(y=>Math.abs(scrollY-y)<3&&!window.__lenis.isStopped,info.next,{timeout:6000});arrived=true;break;
+     }
+     await natural.waitForTimeout(400);
+     assert((await natural.evaluate(()=>scrollY))<=info.end+3,`reading gesture skipped chapter ${chapter}`);
+   }
+   assert(arrived,`could not leave chapter ${chapter} with ordinary touch gestures`);
+   console.log('Natural touch journey reached chapter',chapter+1);
+ }
+ await natural.close();
+ // Reduced motion preserves the chapter sequence with instant transitions.
+ const still=await open(390,844,true);
+ const stillGoal=await still.evaluate(()=>{const first=document.querySelector('[data-stage="0"]').getBoundingClientRect();scrollTo(0,first.bottom+scrollY-innerHeight);const next=document.querySelector('[data-stage="1"]').getBoundingClientRect();return next.top+scrollY;});
+ await swipe(still);await still.waitForFunction(y=>Math.abs(scrollY-y)<3,stillGoal,{timeout:3000});await still.close();
+ // The scroll controller also exists when WebGL cannot initialize.
+ const fallback=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+ await fallback.addInitScript(()=>{sessionStorage.setItem('mihari.boot','1');HTMLCanvasElement.prototype.getContext=()=>null;});
+ await fallback.goto(url);await fallback.waitForSelector('.w-static');
+ const fallbackGoal=await fallback.evaluate(()=>{const first=document.querySelector('[data-stage="0"]').getBoundingClientRect();window.__lenis.scrollTo(first.bottom+scrollY-innerHeight,{immediate:true,force:true});const next=document.querySelector('[data-stage="1"]').getBoundingClientRect();return next.top+scrollY;});
+ await swipe(fallback);await fallback.waitForFunction(y=>Math.abs(scrollY-y)<3&&!window.__lenis.isStopped,fallbackGoal,{timeout:6000});await fallback.close();
+ assert.deepEqual(issues,[]);console.log('MOBILE CHECKS PASSED: component bounds, all passport tabs, no automatic lookup, touch chapters in/out, continuous portal interior.');
 }finally{await browser.close();await new Promise(r=>server.close(r));await rm(dir,{recursive:true,force:true});}
