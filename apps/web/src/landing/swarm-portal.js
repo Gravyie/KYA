@@ -4,7 +4,7 @@ import {SWARM_LIGHT_GLSL} from '../scene/swarm-style.js';
 import {buildSwarmGate} from '../scene/swarm-gate.js';
 
 /** The lab's three populations: a cyan murmuration, amber agents held at the rim, and rejected red sparks. */
-export function buildSwarmPortal({renderer, radius, small, time, alert, pointer, random = Math.random}) {
+export function buildSwarmPortal({renderer, radius, small, time, alert, pointer, interactive = true, random = Math.random}) {
   const group = new THREE.Group();
   const gateway=buildSwarmGate(radius,{organic:true});group.add(gateway.group);
   const side = small ? 128 : 256, count = side * side;
@@ -54,7 +54,7 @@ export function buildSwarmPortal({renderer, radius, small, time, alert, pointer,
       return p*uRadius;
     }
     vec3 restPosition(vec4 seed){vec3 col;float alpha;return portalAt(seed,col,alpha)*uScale+uCenter;}`;
-  const physics=createParticlePhysics(renderer,{side,seeds,restShader:path,uniforms,pointer});
+  const physics=createParticlePhysics(renderer,{side,seeds,restShader:path,uniforms,pointer,interactive});
   const geometry=new THREE.BufferGeometry();
   geometry.setAttribute('position',new THREE.BufferAttribute(new Float32Array(count*3),3));
   geometry.setAttribute('aSeed',new THREE.BufferAttribute(seeds,4));

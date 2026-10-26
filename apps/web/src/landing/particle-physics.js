@@ -2,7 +2,15 @@ import * as THREE from 'three';
 import {GPUComputationRenderer} from 'three/examples/jsm/misc/GPUComputationRenderer.js';
 
 /** Persistent position offsets and velocity, integrated independently of the flowing rest positions. */
-export function createParticlePhysics(renderer, {side, seeds, restShader, uniforms, pointer}) {
+export function createParticlePhysics(renderer, {side, seeds, restShader, uniforms, pointer, interactive = true}) {
+  // A touch-only or reduced-motion session never perturbs the shader's flowing
+  // rest positions. Sample one zero texel instead of allocating simulation targets
+  // and compiling compute shaders that cannot receive any interaction.
+  if(!interactive){
+    const zero=new THREE.DataTexture(new Uint8Array(4),1,1);zero.needsUpdate=true;
+    const uv=new Float32Array(side*side*2);uv.fill(.5);
+    return {texture:{value:zero},uv,enabled:false,update(){},measure(){return {enabled:false};},dispose(){zero.dispose();}};
+  }
   const gpu = new GPUComputationRenderer(side, side, renderer);
   const initialOffset = gpu.createTexture(), initialVelocity = gpu.createTexture(), metadata = gpu.createTexture();
   metadata.image.data.set(seeds);

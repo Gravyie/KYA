@@ -139,6 +139,7 @@ export function createWorld(canvas, {onDecision, onFrame, onPassState, reduced =
   let disposed = false;
   const budget = renderBudget({width: small ? Math.min(innerWidth,759) : innerWidth, coarse: matchMedia('(pointer: coarse)').matches, memory: navigator.deviceMemory, cores: navigator.hardwareConcurrency});
   small = budget.compact;
+  const interactiveParticles=!reduced&&matchMedia('(any-hover: hover)').matches;
   let quality = 2;
   const random=seededRandom(421231),rand=(a,b)=>a+(b-a)*random();
   const renderer = new THREE.WebGLRenderer({canvas, antialias: false, powerPreference: 'high-performance'});
@@ -340,7 +341,7 @@ export function createWorld(canvas, {onDecision, onFrame, onPassState, reduced =
   const calls = Array.from({length: C}, () => { const c = {}; respawn(c); c.z -= rand(0, TORII.z0 - TORII.z1); return c; });
 
   /* ── ONE GATEWAY, shared by every view of the journey ── */
-  const gateway = buildSwarmPortal({renderer, radius: PORTAL.r, small, time: shared.uTime, alert: shared.uAlert, pointer: pointerField,random});
+  const gateway = buildSwarmPortal({renderer, radius: PORTAL.r, small, time: shared.uTime, alert: shared.uAlert, pointer: pointerField,interactive:interactiveParticles,random});
   const portal = gateway.group; portal.position.set(0, PORTAL.y, PORTAL.z); scene.add(portal);
   const portalLight = new THREE.PointLight(NEON.cyan, 24, 70, 1.5); portalLight.position.set(0, PORTAL.y, PORTAL.z + 8); scene.add(portalLight);
   /* ── THE SWARM: one stream from the sky, through the portal, into the walls of the wormhole ── */
@@ -349,7 +350,7 @@ export function createWorld(canvas, {onDecision, onFrame, onPassState, reduced =
   for (let i = 0; i < SN; i++) seeds.set([random(), random(), random(), random()], i * 4);
   const swarmU = {uCoilScale:{value:1.4},uTime: shared.uTime, uLock: {value: 0}, uInside: {value: 0}, uPx: {value: 1}, uVisibility: {value: 1}};
   const swarmS = 'float speed(vec4 sd){ return 0.012 + 0.006 * sd.w; }';
-  const swarmPhysics = createParticlePhysics(renderer, {side: swarmSide, seeds, uniforms: swarmU, pointer: pointerField,
+  const swarmPhysics = createParticlePhysics(renderer, {side: swarmSide, seeds, uniforms: swarmU, pointer: pointerField, interactive:interactiveParticles,
     restShader: `${SWARM_FN} ${swarmS} vec3 restPosition(vec4 seed){vec3 col;float alpha;return swarmAt(seed,fract(seed.x+uTime*speed(seed)),col,alpha);}`});
   swarmU.uOffset = swarmPhysics.texture;
   const hGeo = new THREE.BufferGeometry(); hGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(SN * 3), 3)); hGeo.setAttribute('aSeed', new THREE.BufferAttribute(seeds, 4)); hGeo.setAttribute('aPhysicsUv', new THREE.BufferAttribute(swarmPhysics.uv, 2));
